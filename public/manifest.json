@@ -1,0 +1,21 @@
+{
+  "name": "나만나20260406",
+  "short_name": "나만나20260406",
+  "description": "과거의 내가 현재의 나를 만들었고 현재의 내가 미래의 나를 만든다. 나를 만드는 나, 자기관리앱입니다.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/emoji/192/000000/alarm-clock.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/emoji/512/000000/alarm-clock.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
