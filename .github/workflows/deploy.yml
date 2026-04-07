@@ -1,8 +1,8 @@
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: [main] # main 브랜치에 코드가 올라올 때마다 실행
-  workflow_dispatch: # 수동으로 실행하고 싶을 때 버튼 생성
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,13 +15,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22 # 최신 버전으로 업데이트
+
       - name: Install and Build
         run: |
           npm install
           npm run build
+
+      - name: Upload artifact
+        # 🌟 핵심: 조립된 결과물(dist 폴더)을 깃허브 페이지로 보낼 준비를 합니다.
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
       - name: Deploy
         uses: actions/deploy-pages@v4
