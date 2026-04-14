@@ -99,15 +99,12 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   const isCompleted = task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT;
   const isGivenUp = task.givenUp || task.status === TaskStatus.SKIP;
   
-  const showRestart = onRestart && isCompleted && !task.isClosingRoutine;
-  
-  const allOtherTasksDone = chunkTasks.filter(t => !t.isClosingRoutine).every(t => t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
+  const showRestart = onRestart && isCompleted;
   
   // "Start/Resume" button logic
   const showStartResume = onDoFirst && 
     task.id !== activeTaskId && 
-    !isLocked && 
-    (!task.isClosingRoutine ? true : (allOtherTasksDone && !isCompleted));
+    !isLocked;
 
   let startResumeLabel = '';
   if (task.isPaused || isCompleted) {
@@ -130,7 +127,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
           className={`font-bold truncate max-w-[120px] sm:max-w-[200px] ${task.completed ? 'line-through' : ''}`}
           style={{ fontFamily: phrases.settings.base_style.fontFamily ? `'${phrases.settings.base_style.fontFamily}', sans-serif` : 'inherit' }}
         >
-          {index === 0 && "⚡"}{task.text}{task.isClosingRoutine && "🥇"}
+          {index === 0 && "⚡"}{task.text}
         </span>
         
         {task.checklist && task.checklist.length > 0 && (
@@ -141,8 +138,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
         )}
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {!task.isClosingRoutine && (
-            <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-[10px] font-black text-[8px] uppercase tracking-widest">
+          <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-[10px] font-black text-[8px] uppercase tracking-widest">
               {task.taskType === TaskType.TIME_INDEPENDENT ? (
                 <Clock className="w-2.5 h-2.5 text-sky-400" />
               ) : task.taskType === TaskType.TIME_ACCUMULATED ? (
@@ -158,7 +154,6 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
                 <span>{targetDuration}분</span>
               )}
             </div>
-          )}
         </div>
       </div>
 

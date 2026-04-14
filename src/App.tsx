@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Sun,
   CheckCircle2, 
@@ -20,7 +20,7 @@ import {
   ChevronUp,
   ChevronDown,
   BarChart3,
-  Home as HomeIcon,
+  Home,
   Calendar,
   Edit2,
   AlertCircle,
@@ -197,7 +197,10 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   onRestart,
   resetChunk,
   setSettingsSubView,
-  setIsSettingsOpen
+  setIsSettingsOpen,
+  setSelectedChunkId,
+  handleCheckCheckClick,
+  isSad
 }) => {
   const chunk = userData.routineChunks.find(c => c.id === selectedChunkId);
   if (!chunk) return null;
@@ -216,8 +219,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   
   // 3. 미실행 루틴 중 가장 순서가 빠른 루틴
   if (!activeTask) {
-    const allOtherTasksDone = scheduledTasks.filter(t => !t.isClosingRoutine).every(t => t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
-    activeTask = scheduledTasks.find(t => !t.startTime && !t.completed && !t.givenUp && (!t.isClosingRoutine || allOtherTasksDone));
+    activeTask = scheduledTasks.find(t => !t.startTime && !t.completed && !t.givenUp);
   }
   
   // 4. 나중에 루틴 중 가장 순서가 빠른 루틴
@@ -227,15 +229,89 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   const isNotStarted = tasks.every(t => !t.startTime && !t.completed && !t.givenUp);
 
-  const [closingNote, setClosingNote] = useState('');
-  const [satisfaction, setSatisfaction] = useState(3);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [animationStage, setAnimationStage] = useState<'none' | 'whiteout' | 'rising' | 'title' | 'fireworks' | 'final'>('none');
+  const [visibleTasksCount, setVisibleTasksCount] = useState(0);
+  const [shakingTaskId, setShakingTaskId] = useState<string | null>(null);
+
+  const allTasksDone = scheduledTasks.length > 0 && scheduledTasks.every(t => t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
+  const wasDoneOnMount = useRef(allTasksDone);
+
+  // Re-completion logic: if it becomes not done, reset the mount flag
+  useEffect(() => {
+    if (!allTasksDone) {
+      wasDoneOnMount.current = false;
+    }
+  }, [allTasksDone]);
 
   useEffect(() => {
-    if (activeTask?.isClosingRoutine) {
-      setClosingNote(activeTask.closingNote || '');
-      setSatisfaction(activeTask.satisfaction || 3);
+    if (allTasksDone && !wasDoneOnMount.current && !isCompleted) {
+      // Start completion sequence after a short delay (0.3s after last task celebration)
+      const timer = setTimeout(() => {
+        setIsCompleted(true);
+        setAnimationStage('whiteout');
+        
+        // Whiteout for a brief moment then start rising
+        setTimeout(() => {
+          setAnimationStage('rising');
+        }, 500);
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [activeTask?.id]);
+  }, [allTasksDone, isCompleted]);
+
+  useEffect(() => {
+    if (animationStage === 'rising') {
+      if (visibleTasksCount < scheduledTasks.length) {
+        const timer = setTimeout(() => {
+          const nextTask = scheduledTasks[visibleTasksCount];
+          setVisibleTasksCount(prev => prev + 1);
+          setShakingTaskId(nextTask.id);
+          setTimeout(() => setShakingTaskId(null), 500);
+        }, 600); // Delay between each task rising
+        return () => clearTimeout(timer);
+      } else {
+        // All tasks risen, show title
+        setTimeout(() => {
+          setAnimationStage('title');
+        }, 500);
+      }
+    }
+  }, [animationStage, visibleTasksCount, scheduledTasks.length]);
+
+  useEffect(() => {
+    if (animationStage === 'title') {
+      setTimeout(() => {
+        setAnimationStage('fireworks');
+        // 루틴그룹완료축하애니메이션: 폭죽
+        const duration = 3 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
+
+        const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+        const interval: any = setInterval(function() {
+          const timeLeft = animationEnd - Date.now();
+
+          if (timeLeft <= 0) {
+            clearInterval(interval);
+            setAnimationStage('final');
+            return;
+          }
+
+          const particleCount = 100 * (timeLeft / duration);
+          // 화려한 불꽃놀이: 여러 위치에서 발사
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.4, 0.6), y: Math.random() - 0.1 } });
+          
+          if (timeLeft < duration * 0.5) {
+            confetti({ ...defaults, particleCount: particleCount * 0.5, origin: { x: randomInRange(0.2, 0.8), y: Math.random() } });
+          }
+        }, 150);
+      }, 1000);
+    }
+  }, [animationStage]);
 
   const emojis = [
     { value: 1, icon: '🥵' },
@@ -244,6 +320,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     { value: 4, icon: '😁' },
     { value: 5, icon: '🥳' }
   ];
+
+  const [closingNote, setClosingNote] = useState('');
+  const [satisfaction, setSatisfaction] = useState(3);
+
+  const memoRef = useRef<HTMLTextAreaElement>(null);
 
   const getElapsed = (task: Task) => {
     return calculateTaskDuration(task, currentTime);
@@ -276,6 +357,202 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
+
+  useEffect(() => {
+    if (animationStage === 'final') {
+      // Scroll to satisfaction/memo
+      setTimeout(() => {
+        memoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 500);
+    }
+  }, [animationStage]);
+
+  const handleFinalSave = () => {
+    // Save satisfaction and memo to the last task or as a group history
+    // For now, let's just complete the chunk and go home
+    setSelectedChunkId(null);
+    setActiveTab('home');
+  };
+
+  if (isCompleted && animationStage !== 'none') {
+    // 루틴그룹완료화면 (Routine Group Completion Screen)
+    return (
+      <div className={`fixed inset-0 z-[300] flex flex-col ${animationStage === 'whiteout' ? 'bg-white' : 'bg-[#F7FEE7]'} transition-colors duration-500`}>
+        {/* 홈아이콘줄 (Sticky Header Box) - Replicated from Home Screen */}
+        {(animationStage === 'final' || animationStage === 'fireworks' || animationStage === 'title') && (
+          <div className="sticky top-0 z-40 bg-[#F7FEE7]/80 backdrop-blur-md pt-2.5 pb-0 flex-shrink-0">
+            <div className="max-w-2xl mx-auto px-4">
+              <nav className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    setActiveTab('home');
+                    setSelectedChunkId(null);
+                  }}
+                  className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm`}
+                >
+                  <Home className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => {
+                    setActiveTab('settings');
+                    setSettingsSubView({ type: 'main' });
+                    setSelectedChunkId(null);
+                    setIsSettingsOpen(false);
+                  }}
+                  className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm`}
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => {
+                    setActiveTab('add');
+                    setSelectedChunkId(null);
+                    setIsSettingsOpen(false);
+                  }}
+                  className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm`}
+                >
+                  <PlusCircle className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => {
+                    setActiveTab('stats');
+                    setSelectedChunkId(null);
+                  }}
+                  className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm`}
+                >
+                  <BarChart3 className="w-5 h-5" />
+                </button>
+
+                {/* Check-Check Box in Nav */}
+                <button 
+                  onClick={handleCheckCheckClick}
+                  className={`transition-all w-10 h-10 flex flex-col items-center justify-center rounded-[10px] border shadow-sm relative overflow-hidden ${
+                    isSad 
+                      ? 'bg-white border-indigo-200 cursor-pointer hover:border-indigo-400' 
+                      : 'bg-white border-slate-100 cursor-default'
+                  }`}
+                >
+                  <span className="text-xl leading-none">
+                    {isSad ? '😞' : '😊'}
+                  </span>
+                  <span className="text-[8px] font-black text-slate-500 mt-0.5">
+                    {(userData.dailyCheckCheckCounts?.[todayStr]) || 0}
+                  </span>
+                  {isSad && (
+                    <div className="absolute top-1 right-1">
+                      <span className="flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
+                      </span>
+                    </div>
+                  )}
+                </button>
+              </nav>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-grow overflow-y-auto pb-20">
+          <div className="p-6 flex flex-col items-center">
+            {/* Rising Tasks List */}
+            <div className="w-full max-w-sm space-y-3 mt-8">
+            <AnimatePresence>
+              {scheduledTasks.slice(0, visibleTasksCount).map((task, idx) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ y: 1000, opacity: 0 }}
+                  animate={{ 
+                    y: 0, 
+                    opacity: 1,
+                    scale: shakingTaskId === task.id ? [1, 1.05, 1] : 1,
+                    x: shakingTaskId === task.id ? [0, -2, 2, -2, 2, 0] : 0
+                  }}
+                  transition={{ 
+                    y: { type: "spring", stiffness: 100, damping: 20 },
+                    scale: { duration: 0.3 },
+                    x: { duration: 0.3 }
+                  }}
+                  className={`p-4 rounded-[15px] border-2 flex items-center justify-between bg-white shadow-sm ${shakingTaskId === task.id ? 'border-indigo-500 shadow-indigo-100' : 'border-slate-100'}`}
+                >
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-slate-400">루틴 {idx + 1}</span>
+                    <span className="text-base font-black text-slate-900">{task.text}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                      task.status === TaskStatus.PERFECT ? 'bg-indigo-100 text-indigo-600' :
+                      task.status === TaskStatus.COMPLETED ? 'bg-emerald-100 text-emerald-600' :
+                      'bg-rose-100 text-rose-600'
+                    }`}>
+                      {task.status === TaskStatus.PERFECT ? '완벽' : task.status === TaskStatus.COMPLETED ? '완료' : '스킵'}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400 mt-1">{formatDuration(task.duration || 0)}</span>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {/* Completion Title */}
+          {(animationStage === 'title' || animationStage === 'fireworks' || animationStage === 'final') && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="mt-12 mb-8 text-center"
+            >
+              <h2 className="text-4xl font-black text-slate-900 leading-tight">
+                <span className="text-indigo-600">{chunk.name}</span><br />
+                완성!
+              </h2>
+            </motion.div>
+          )}
+
+          {/* Satisfaction and Memo (Final Stage) */}
+          {animationStage === 'final' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-sm space-y-8 mt-4"
+            >
+              <div className="space-y-4">
+                <h3 className="text-center text-lg font-black text-slate-700">오늘의 루틴은 어땠나요?</h3>
+                <div className="flex justify-around items-center py-4">
+                  {emojis.map((emoji) => (
+                    <button
+                      key={emoji.value}
+                      onClick={() => setSatisfaction(emoji.value)}
+                      className={`flex flex-col items-center gap-1 transition-all ${satisfaction === emoji.value ? 'scale-150' : 'opacity-40 grayscale hover:opacity-100 hover:grayscale-0'}`}
+                    >
+                      <span className="text-4xl">{emoji.icon}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-sm font-black text-slate-500 ml-1">오늘의 한 줄 메모</label>
+                <textarea
+                  ref={memoRef}
+                  value={closingNote}
+                  onChange={(e) => setClosingNote(e.target.value.slice(0, 140))}
+                  placeholder="오늘의 소감을 남겨주세요..."
+                  className="w-full bg-white border border-slate-200 rounded-[20px] p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[120px] resize-none shadow-sm"
+                />
+              </div>
+
+              <button 
+                onClick={handleFinalSave}
+                className="w-full py-5 bg-indigo-600 text-white rounded-[20px] font-black text-xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-[0.98]"
+              >
+                기록 완료하고 홈으로
+              </button>
+            </motion.div>
+          )}
+        </div>
+      </div>
+    </div>
+    );
+  }
 
   const sortedTasks = [...scheduledTasks].sort((a, b) => {
     if (a.completed && !b.completed) return 1;
@@ -344,149 +621,103 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
               key={activeTask.id}
               className="bg-white rounded-[10px] p-6 shadow-2xl shadow-indigo-100 border-2 border-indigo-500 relative overflow-hidden mb-6"
             >
-              {activeTask.isClosingRoutine ? (
-                <div className="space-y-6">
-                  {/* Active Indicator */}
-                  <div className="absolute top-0 right-0 bg-indigo-500 text-white px-4 py-1.5 rounded-bl-[10px] text-[10px] font-black uppercase tracking-widest">
-                    마무리루틴
-                  </div>
-
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                      <h3 className="text-[32px] font-black text-slate-900 tracking-tight leading-tight">
-                        {chunk.tasks.findIndex(t => t.id === activeTask.id) + 1}. {activeTask.text}🥇
-                      </h3>
-                    </div>
-
-                    <div className="space-y-6">
-                      <div className="space-y-3">
-                        <div className="flex justify-around items-center py-4">
-                          {emojis.map((emoji) => (
-                            <button
-                              key={emoji.value}
-                              onClick={() => setSatisfaction(emoji.value)}
-                              className={`flex flex-col items-center gap-1 transition-all ${satisfaction === emoji.value ? 'scale-150' : 'opacity-40 grayscale hover:opacity-100 hover:grayscale-0'}`}
-                            >
-                              <span className="text-4xl">{emoji.icon}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-end ml-1">
-                          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">오늘의 회고</p>
-                          <span className={`text-[10px] font-bold ${closingNote.length > 140 ? 'text-rose-500' : 'text-slate-400'}`}>
-                            {closingNote.length} / 140자
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-bold ml-1 mb-1">오늘의 회고는 한글 기준 140자까지 남길 수 있습니다.</p>
-                        <textarea
-                          value={closingNote}
-                          onChange={(e) => {
-                            if (e.target.value.length <= 140) {
-                              setClosingNote(e.target.value);
-                            }
-                          }}
-                          placeholder="오늘의 소감을 남겨주세요..."
-                          className="w-full bg-slate-50 border border-slate-100 rounded-[10px] p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[100px] resize-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <button 
-                        onClick={() => {
-                          toggleTask(activeTask.id, {
-                            note: closingNote,
-                            satisfaction: satisfaction || 3
-                          });
-                        }}
-                        className="w-full py-4 bg-indigo-600 text-white rounded-[10px] font-black text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-                      >
-                        <CheckCircle2 className="w-6 h-6" />
-                        마무리 완료!
-                      </button>
-                    </div>
-                  </div>
+              <>
+                {/* Active Indicator */}
+                <div className="absolute top-0 right-0 bg-indigo-500 text-white px-4 py-1.5 rounded-bl-[10px] text-[10px] font-black uppercase tracking-widest">
+                  현재루틴
                 </div>
-              ) : (
-                <>
-                  {/* Active Indicator */}
-                  <div className="absolute top-0 right-0 bg-indigo-500 text-white px-4 py-1.5 rounded-bl-[10px] text-[10px] font-black uppercase tracking-widest">
-                    현재루틴
+
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <h3 className="text-[32px] font-black text-slate-900 tracking-tight leading-tight">
+                        {chunk.tasks.findIndex(t => t.id === activeTask.id) + 1}. {activeTask.id === scheduledTasks[0]?.id && "⚡"}{activeTask.text}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 bg-slate-100 text-slate-500 px-2 py-1 rounded-[10px] font-bold text-xs">
+                          {activeTask.taskType === TaskType.TIME_INDEPENDENT ? (
+                            <Clock className="w-4 h-4 text-sky-500" />
+                          ) : activeTask.taskType === TaskType.TIME_ACCUMULATED ? (
+                            <BrickWall className="w-4 h-4 text-pink-500" />
+                          ) : (
+                            <Hourglass className="w-4 h-4 text-indigo-600" />
+                          )}
+                          <span>{activeTask.targetDuration}분</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <h3 className="text-[32px] font-black text-slate-900 tracking-tight leading-tight">
-                          {chunk.tasks.findIndex(t => t.id === activeTask.id) + 1}. {activeTask.id === scheduledTasks[0]?.id && "⚡"}{activeTask.text}{activeTask.isClosingRoutine && "🥇"}
-                        </h3>
+                  {/* Timer Display */}
+                  <div 
+                    onClick={() => {
+                      if (activeTask.isPaused || !activeTask.startTime) {
+                        togglePauseTask(activeTask.id);
+                      }
+                    }}
+                    className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden cursor-pointer ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200`}
+                  >
+                    {/* Filling Background */}
+                    {getElapsed(activeTask) > 0 && (
+                      <motion.div 
+                        initial={false}
+                        animate={{ 
+                          width: `${getStageInfo(activeTask).progress}%`,
+                          opacity: getStageInfo(activeTask).isFinished ? 0.4 : 0.2
+                        }}
+                        className={`absolute inset-y-0 left-0 ${getStageInfo(activeTask).color}`}
+                        transition={{ duration: 0.5 }}
+                      />
+                    )}
+                    
+                    <div className="relative z-10 flex flex-col items-center">
+                      <div className="text-sm font-bold text-slate-500 mb-1 tabular-nums">
+                        {`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}
+                      </div>
+                      <div className={`text-6xl font-black tabular-nums tracking-tighter ${activeTask.isPaused ? 'text-slate-300' : 'text-slate-900'}`}>
+                        {formatDuration(getElapsed(activeTask))}
+                        <span className="text-xl text-slate-400 ml-2">/ {activeTask.targetDuration}분</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${activeTask.isPaused ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {activeTask.isPaused ? 'Paused' : 'In Progress'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Checklist Section (Moved here) */}
+                  {activeTask.checklist && activeTask.checklist.length > 0 && (
+                    <div className="bg-slate-50 rounded-[10px] p-5 space-y-4 border-2 border-slate-100 shadow-inner mb-6">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 bg-slate-100 text-slate-500 px-2 py-1 rounded-[10px] font-bold text-xs">
-                            {activeTask.taskType === TaskType.TIME_INDEPENDENT ? (
-                              <Clock className="w-4 h-4 text-sky-500" />
-                            ) : activeTask.taskType === TaskType.TIME_ACCUMULATED ? (
-                              <BrickWall className="w-4 h-4 text-pink-500" />
-                            ) : (
-                              <Hourglass className="w-4 h-4 text-indigo-600" />
-                            )}
-                            <span>{activeTask.targetDuration}분</span>
+                          <div className="w-6 h-6 bg-indigo-100 rounded-[10px] flex items-center justify-center">
+                            <CheckCircle2 className="w-4 h-4 text-indigo-600" />
                           </div>
+                          <span className="text-sm font-black text-slate-700 uppercase tracking-tight">체크리스트</span>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Timer Display */}
-                    <div 
-                      onClick={() => {
-                        if (activeTask.isPaused || !activeTask.startTime) {
-                          togglePauseTask(activeTask.id);
-                        }
-                      }}
-                      className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden cursor-pointer ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200`}
-                    >
-                      {/* Filling Background */}
-                      {getElapsed(activeTask) > 0 && (
-                        <motion.div 
-                          initial={false}
-                          animate={{ 
-                            width: `${getStageInfo(activeTask).progress}%`,
-                            opacity: getStageInfo(activeTask).isFinished ? 0.4 : 0.2
+                        <button 
+                          onClick={() => {
+                            setUserData(prev => ({
+                              ...prev,
+                              routineChunks: prev.routineChunks.map(c => ({
+                                ...c,
+                                tasks: c.tasks.map(t => t.id === activeTask.id ? {
+                                  ...t,
+                                  checklist: t.checklist?.map(item => ({ ...item, completed: false }))
+                                } : t)
+                              }))
+                            }));
                           }}
-                          className={`absolute inset-y-0 left-0 ${getStageInfo(activeTask).color}`}
-                          transition={{ duration: 0.5 }}
-                        />
-                      )}
-                      
-                      <div className="relative z-10 flex flex-col items-center">
-                        <div className="text-sm font-bold text-slate-500 mb-1 tabular-nums">
-                          {`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}
-                        </div>
-                        <div className={`text-6xl font-black tabular-nums tracking-tighter ${activeTask.isPaused ? 'text-slate-300' : 'text-slate-900'}`}>
-                          {formatDuration(getElapsed(activeTask))}
-                          <span className="text-xl text-slate-400 ml-2">/ {activeTask.targetDuration}분</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${activeTask.isPaused ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {activeTask.isPaused ? 'Paused' : 'In Progress'}
-                          </p>
-                        </div>
+                          className="px-3 py-1.5 bg-white border border-slate-200 rounded-[10px] text-[10px] font-black text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
+                        >
+                          체크 전부 지우기
+                        </button>
                       </div>
-                    </div>
-
-                    {/* Checklist Section (Moved here) */}
-                    {activeTask.checklist && activeTask.checklist.length > 0 && (
-                      <div className="bg-slate-50 rounded-[10px] p-5 space-y-4 border-2 border-slate-100 shadow-inner mb-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-indigo-100 rounded-[10px] flex items-center justify-center">
-                              <CheckCircle2 className="w-4 h-4 text-indigo-600" />
-                            </div>
-                            <span className="text-sm font-black text-slate-700 uppercase tracking-tight">체크리스트</span>
-                          </div>
-                          <button 
+                      <div className="space-y-2">
+                        {activeTask.checklist.map((item) => (
+                          <button
+                            key={item.id}
                             onClick={() => {
                               setUserData(prev => ({
                                 ...prev,
@@ -494,128 +725,106 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                                   ...c,
                                   tasks: c.tasks.map(t => t.id === activeTask.id ? {
                                     ...t,
-                                    checklist: t.checklist?.map(item => ({ ...item, completed: false }))
+                                    checklist: t.checklist?.map(i => i.id === item.id ? { ...i, completed: !i.completed } : i)
                                   } : t)
                                 }))
                               }));
                             }}
-                            className="px-3 py-1.5 bg-white border border-slate-200 rounded-[10px] text-[10px] font-black text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
+                            className="w-full flex items-center gap-3 p-3.5 bg-white rounded-[10px] border border-slate-100 hover:border-indigo-200 transition-all group shadow-sm"
                           >
-                            체크 전부 지우기
+                            <div className={`w-6 h-6 rounded-[10px] border-2 flex items-center justify-center transition-all ${item.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-200 group-hover:border-indigo-300'}`}>
+                              {item.completed && <Check className="w-3.5 h-3.5 text-white" />}
+                            </div>
+                            <span className={`text-sm font-bold transition-all ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                              {item.text}
+                            </span>
                           </button>
-                        </div>
-                        <div className="space-y-2">
-                          {activeTask.checklist.map((item) => (
-                            <button
-                              key={item.id}
-                              onClick={() => {
-                                setUserData(prev => ({
-                                  ...prev,
-                                  routineChunks: prev.routineChunks.map(c => ({
-                                    ...c,
-                                    tasks: c.tasks.map(t => t.id === activeTask.id ? {
-                                      ...t,
-                                      checklist: t.checklist?.map(i => i.id === item.id ? { ...i, completed: !i.completed } : i)
-                                    } : t)
-                                  }))
-                                }));
-                              }}
-                              className="w-full flex items-center gap-3 p-3.5 bg-white rounded-[10px] border border-slate-100 hover:border-indigo-200 transition-all group shadow-sm"
-                            >
-                              <div className={`w-6 h-6 rounded-[10px] border-2 flex items-center justify-center transition-all ${item.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-200 group-hover:border-indigo-300'}`}>
-                                {item.completed && <Check className="w-3.5 h-3.5 text-white" />}
-                              </div>
-                              <span className={`text-sm font-bold transition-all ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                                {item.text}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
+                        ))}
                       </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="grid grid-cols-3 gap-3">
-                      <button 
-                        onClick={() => togglePauseTask(activeTask.id)}
-                        className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
-                          activeTask.isPaused || !activeTask.startTime
-                            ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
-                            : 'bg-sky-500 text-white hover:bg-sky-600'
-                        }`}
-                      >
-                        {activeTask.isPaused || !activeTask.startTime ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
-                        {activeTask.isPaused || !activeTask.startTime ? 'RESUME' : 'PAUSE'}
-                      </button>
-                      <button 
-                        onClick={() => laterTask(activeTask.id)}
-                        disabled={activeTask.id === scheduledTasks[0]?.id}
-                        className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
-                          activeTask.id === scheduledTasks[0]?.id
-                            ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
-                            : 'bg-sky-500 text-white hover:bg-sky-600'
-                        }`}
-                      >
-                        <ArrowRightCircle className="w-5 h-5" />
-                        LATER
-                      </button>
-                      <button 
-                        onClick={() => giveUpTask(activeTask.id)}
-                        disabled={activeTask.id === scheduledTasks[0]?.id}
-                        className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
-                          activeTask.id === scheduledTasks[0]?.id
-                            ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
-                            : 'bg-[#CC9900] text-white hover:opacity-90'
-                        }`}
-                      >
-                        <CircleMinus className="w-5 h-5" />
-                        SKIP
-                      </button>
                     </div>
+                  )}
 
-                    {(() => {
-                      const elapsed = getElapsed(activeTask);
-                      const target = (activeTask.targetDuration || 0) * 60;
-                      const isFinished = elapsed >= target;
-                      
-                      let btnText = "실행 완료";
-                      let btnColor = "bg-indigo-600";
-                      
-                      if (activeTask.taskType === TaskType.TIME_LIMITED) {
-                        if (isFinished) {
-                          btnText = "완료";
-                          btnColor = "bg-rose-500";
-                        } else {
-                          btnText = "완벽";
-                          btnColor = "bg-indigo-600";
-                        }
-                      } else if (activeTask.taskType === TaskType.TIME_ACCUMULATED) {
-                        if (isFinished) {
-                          btnText = "완벽";
-                          btnColor = "bg-indigo-600";
-                        } else {
-                          btnText = "완료";
-                          btnColor = "bg-rose-500";
-                        }
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <button 
+                      onClick={() => togglePauseTask(activeTask.id)}
+                      className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
+                        activeTask.isPaused || !activeTask.startTime
+                          ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
+                          : 'bg-sky-500 text-white hover:bg-sky-600'
+                      }`}
+                    >
+                      {activeTask.isPaused || !activeTask.startTime ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+                      {activeTask.isPaused || !activeTask.startTime ? 'RESUME' : 'PAUSE'}
+                    </button>
+                    <button 
+                      onClick={() => laterTask(activeTask.id)}
+                      disabled={activeTask.id === scheduledTasks[0]?.id}
+                      className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
+                        activeTask.id === scheduledTasks[0]?.id
+                          ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
+                          : 'bg-sky-500 text-white hover:bg-sky-600'
+                      }`}
+                    >
+                      <ArrowRightCircle className="w-5 h-5" />
+                      LATER
+                    </button>
+                    <button 
+                      onClick={() => giveUpTask(activeTask.id)}
+                      disabled={activeTask.id === scheduledTasks[0]?.id}
+                      className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
+                        activeTask.id === scheduledTasks[0]?.id
+                          ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
+                          : 'bg-[#CC9900] text-white hover:opacity-90'
+                      }`}
+                    >
+                      <CircleMinus className="w-5 h-5" />
+                      SKIP
+                    </button>
+                  </div>
+
+                  {(() => {
+                    const elapsed = getElapsed(activeTask);
+                    const target = (activeTask.targetDuration || 0) * 60;
+                    const isFinished = elapsed >= target;
+                    
+                    let btnText = "실행 완료";
+                    let btnColor = "bg-indigo-600";
+                    
+                    if (activeTask.taskType === TaskType.TIME_LIMITED) {
+                      if (isFinished) {
+                        btnText = "완료";
+                        btnColor = "bg-rose-500";
                       } else {
-                        // TIME_INDEPENDENT
                         btnText = "완벽";
                         btnColor = "bg-indigo-600";
                       }
+                    } else if (activeTask.taskType === TaskType.TIME_ACCUMULATED) {
+                      if (isFinished) {
+                        btnText = "완벽";
+                        btnColor = "bg-indigo-600";
+                      } else {
+                        btnText = "완료";
+                        btnColor = "bg-rose-500";
+                      }
+                    } else {
+                      // TIME_INDEPENDENT
+                      btnText = "완벽";
+                      btnColor = "bg-indigo-600";
+                    }
 
-                      return (
-                        <button 
-                          onClick={() => toggleTask(activeTask.id)}
-                          className={`w-full py-4 ${btnColor} text-white rounded-[10px] font-black text-lg shadow-xl shadow-indigo-200 hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-3`}
-                        >
-                          {btnText === "완벽" ? <DoubleCheckCircle className="w-6 h-6" /> : <CheckCircle2 className="w-6 h-6" />}
-                          {btnText}
-                        </button>
-                      );
-                    })()}
-                  </div>
-                </>
-              )}
+                    return (
+                      <button 
+                        onClick={() => toggleTask(activeTask.id)}
+                        className={`w-full py-4 ${btnColor} text-white rounded-[10px] font-black text-lg shadow-xl shadow-indigo-200 hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-3`}
+                      >
+                        {btnText === "완벽" ? <DoubleCheckCircle className="w-6 h-6" /> : <CheckCircle2 className="w-6 h-6" />}
+                        {btnText}
+                      </button>
+                    );
+                  })()}
+                </div>
+              </>
             </motion.div>
           )}
 
@@ -1050,12 +1259,14 @@ interface SortableChecklistItemProps {
   item: ChecklistItem;
   onRemove: (id: string) => void;
   onEdit: (id: string, newText: string) => void;
+  setConfirmModal: (modal: any) => void;
 }
 
 const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({ 
   item, 
   onRemove, 
-  onEdit 
+  onEdit,
+  setConfirmModal
 }) => {
   const {
     attributes,
@@ -1118,9 +1329,15 @@ const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
         </button>
         <button
           onClick={() => {
-            if (window.confirm('삭제하시겠습니까?')) {
-              onRemove(item.id);
-            }
+            setConfirmModal({
+              isOpen: true,
+              title: '항목 삭제',
+              message: '이 항목을 삭제하시겠습니까?',
+              onConfirm: () => {
+                onRemove(item.id);
+                setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
+              }
+            });
           }}
           className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors"
         >
@@ -1135,12 +1352,14 @@ const ChecklistModal = ({
   isOpen, 
   onClose, 
   checklist, 
-  setChecklist 
+  setChecklist,
+  setConfirmModal
 }: { 
   isOpen: boolean, 
   onClose: () => void, 
   checklist: ChecklistItem[], 
-  setChecklist: (items: ChecklistItem[]) => void 
+  setChecklist: (items: ChecklistItem[]) => void,
+  setConfirmModal: (modal: any) => void
 }) => {
   const [newItemText, setNewItemText] = useState('');
 
@@ -1181,7 +1400,7 @@ const ChecklistModal = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[180] flex items-center justify-center p-4">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1252,6 +1471,7 @@ const ChecklistModal = ({
                             item={item} 
                             onRemove={removeItem}
                             onEdit={editItem}
+                            setConfirmModal={setConfirmModal}
                           />
                         ))}
                       </div>
@@ -1631,7 +1851,6 @@ const RoutineGroupFormView: React.FC<{
   const [triggerTask, setTriggerTask] = useState({ text: '', duration: 1, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6] });
   const [routineList, setRoutineList] = useState<Array<{ id: string, text: string, duration: number, type: TaskType, scheduledDays: number[] }>>([]);
   const [currentRoutineInput, setCurrentRoutineInput] = useState({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6] });
-  const [isClosingRoutineEnabled, setIsClosingRoutineEnabled] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -1669,11 +1888,7 @@ const RoutineGroupFormView: React.FC<{
           checklist: (first as any).checklist || []
         });
 
-        const last = tasks[tasks.length - 1];
-        const hasClosing = !!last.isClosingRoutine;
-        setIsClosingRoutineEnabled(hasClosing);
-
-        const middle = tasks.slice(1, hasClosing ? -1 : undefined);
+        const middle = tasks.slice(1);
         setRoutineList(middle.map(t => ({
           id: t.id,
           text: t.text,
@@ -1844,22 +2059,8 @@ const RoutineGroupFormView: React.FC<{
       });
     }
     
-    // 4. Closing Task
-    if (isClosingRoutineEnabled) {
-      const existingClosing = initialChunk?.tasks.find(t => t.isClosingRoutine);
-      finalTasks.push({
-        id: mode === 'edit' && existingClosing ? existingClosing.id : `closing-${now}`,
-        text: '마무리 루틴',
-        completed: false,
-        targetDuration: 1,
-        taskType: TaskType.TIME_INDEPENDENT,
-        scheduledDays: scheduledDays,
-        isClosingRoutine: true
-      });
-    }
-    
-    if (finalTasks.length < 3) {
-      setErrorMessage('모든 루틴 그룹은 반드시 세 개 이상의 루틴이 들어가야 합니다. (트리거 + 개별 루틴 + 마무리 루틴 등)');
+    if (finalTasks.length < 2) {
+      setErrorMessage('모든 루틴 그룹은 반드시 두 개 이상의 루틴이 들어가야 합니다. (트리거 + 개별 루틴)');
       return;
     }
     setErrorMessage(null);
@@ -1967,6 +2168,7 @@ const RoutineGroupFormView: React.FC<{
             setCurrentRoutineInput({ ...currentRoutineInput, checklist: items } as any);
           }
         }}
+        setConfirmModal={setConfirmModal}
       />
       <div className="bg-white border border-slate-200 rounded-[10px] p-5 shadow-none space-y-5">
         <div className="space-y-1 mb-2">
@@ -2189,21 +2391,6 @@ const RoutineGroupFormView: React.FC<{
               </div>
             </div>
 
-            {/* 7. 마무리 루틴 설정 */}
-            <div className="space-y-3">
-              <SectionTitle>7. 마무리 루틴 설정</SectionTitle>
-              <div className="flex items-center justify-between px-1">
-                <div className="flex flex-col">
-                  <span className="text-[12px] font-bold text-slate-500">만족도 표시 및 메모 남기기</span>
-                </div>
-                <button 
-                  onClick={() => setIsClosingRoutineEnabled(!isClosingRoutineEnabled)}
-                  className={`w-12 h-6 rounded-full transition-all relative ${isClosingRoutineEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isClosingRoutineEnabled ? 'left-7' : 'left-1'}`} />
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -2267,39 +2454,7 @@ export default function App() {
         streak: 0,
         lastCheckInDate: null,
         targetWakeUpTime: '07:00',
-        routineChunks: [
-          {
-            id: 'morning',
-            name: '아침 루틴',
-            purpose: '아침시간을 낭비하지 않는 사람',
-            completionDates: [],
-            startTime: '07:00',
-            duration: 30,
-            endTime: '07:30',
-            scheduleType: 'days',
-            scheduledDays: [0, 1, 2, 3, 4, 5, 6],
-            tasks: [
-              { id: '1', text: '물 한 잔 마시기', completed: false, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
-              { id: '2', text: '이불 정리하기', completed: false, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
-              { id: '3', text: '명상 5분', completed: false, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
-            ]
-          },
-          {
-            id: 'evening',
-            name: '저녁 루틴',
-            purpose: '하루를 차분하게 마무리하는 사람',
-            completionDates: [],
-            startTime: '22:00',
-            duration: 20,
-            endTime: '22:20',
-            scheduleType: 'days',
-            scheduledDays: [0, 1, 2, 3, 4, 5, 6],
-            tasks: [
-              { id: '4', text: '일기 쓰기', completed: false, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
-              { id: '5', text: '스트레칭', completed: false, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
-            ]
-          }
-        ],
+        routineChunks: [],
         history: [],
         startDate: today,
         dailyCompletionRate: {},
@@ -2628,9 +2783,7 @@ export default function App() {
         if (task.endTime && (!lastEndTime || task.endTime > lastEndTime)) {
           lastEndTime = task.endTime;
         }
-        if (!task.isClosingRoutine) {
-          totalDuration += taskDuration;
-        }
+        totalDuration += taskDuration;
         if (!task.completed && !task.givenUp && task.status !== TaskStatus.SKIP && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.PERFECT) {
           allFinished = false;
         }
@@ -2645,9 +2798,8 @@ export default function App() {
       else if (allFinished) completionStatus = '전체완료';
       else if (anyStarted) completionStatus = '미완료';
 
-      const closingRoutine = scheduledTasks.find(t => t.isClosingRoutine);
-      const satisfaction = closingRoutine?.satisfaction;
-      const closingNote = closingRoutine?.closingNote;
+      const satisfaction = undefined;
+      const closingNote = undefined;
 
       const groupEntryIdx = newGroupHistory.findIndex(h => h.date === today && h.groupId === chunk.id);
       const groupEntry: RoutineGroupHistoryEntry = {
@@ -2864,7 +3016,7 @@ export default function App() {
           if (nextTask) {
             return {
               ...chunk,
-              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nextTask.isClosingRoutine ? undefined : nowStr } : t)
+              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr } : t)
             };
           }
 
@@ -2923,7 +3075,7 @@ export default function App() {
           if (nextTask) {
             return {
               ...chunk,
-              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nextTask.isClosingRoutine ? undefined : nowStr, isPaused: false } : t)
+              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr, isPaused: false } : t)
             };
           }
 
@@ -3199,9 +3351,8 @@ export default function App() {
               const updated = { ...t, completed: isBecomingCompleted, givenUp: false };
               if (isBecomingCompleted) {
                 updated.endTime = nowStr;
-                const totalSeconds = t.isClosingRoutine ? 0 : calculateTaskDuration(t, now);
+                const totalSeconds = calculateTaskDuration(t, now);
                 updated.duration = totalSeconds;
-                if (t.isClosingRoutine) updated.accumulatedDuration = 0;
                 
                 // Determine status (PERFECT or COMPLETED)
                 const targetSeconds = (t.targetDuration || 0) * 60;
@@ -3246,7 +3397,7 @@ export default function App() {
               return {
                 ...chunk,
                 completionDates: newCompletionDates,
-                tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nextTask.isClosingRoutine ? undefined : nowStr } : t)
+                tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr } : t)
               };
             }
             return {
@@ -3864,8 +4015,8 @@ export default function App() {
       </AnimatePresence>
 
       {/* 홈아이콘줄 (Sticky Header Box) */}
-      <div className="sticky top-0 z-40 bg-[#F7FEE7]/80 backdrop-blur-md pt-2.5 pb-0 px-4">
-        <div className="max-w-2xl mx-auto">
+      <div className="sticky top-0 z-40 bg-[#F7FEE7]/80 backdrop-blur-md pt-2.5 pb-0">
+        <div className="max-w-2xl mx-auto px-4">
           <nav className="flex items-center gap-3">
             <button 
               onClick={() => {
@@ -3874,7 +4025,7 @@ export default function App() {
               }}
               className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${activeTab === 'home' && !selectedChunkId ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'}`}
             >
-              <HomeIcon className="w-5 h-5" />
+              <Home className="w-5 h-5" />
             </button>
             <button 
               onClick={() => {
@@ -4019,6 +4170,9 @@ export default function App() {
                 resetChunk={resetChunk}
                 setSettingsSubView={setSettingsSubView}
                 setIsSettingsOpen={setIsSettingsOpen}
+                setSelectedChunkId={setSelectedChunkId}
+                handleCheckCheckClick={handleCheckCheckClick}
+                isSad={isSad}
               />
             </motion.div>
           ) : activeTab === 'add' ? (
@@ -4085,7 +4239,6 @@ export default function App() {
           <div className="flex items-center gap-4">
             <div className="text-xl font-black tabular-nums">
               {(() => {
-                if (globalActiveTask.task.isClosingRoutine) return '마무리 중';
                 const total = calculateTaskDuration(globalActiveTask.task, currentTime);
                 const h = Math.floor(total / 3600);
                 const m = Math.floor((total % 3600) / 60);

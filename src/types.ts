@@ -35,7 +35,6 @@ export interface Task {
   isPaused?: boolean;
   accumulatedDuration?: number; // seconds
   scheduledDays?: number[]; // 0-6 (Sun-Sat)
-  isClosingRoutine?: boolean;
   closingNote?: string;
   satisfaction?: number;
   checklist?: ChecklistItem[];
@@ -195,6 +194,9 @@ export interface ExecutionViewProps {
   resetChunk: (chunkId: string) => void;
   setSettingsSubView: (view: SettingsSubView) => void;
   setIsSettingsOpen: (isOpen: boolean) => void;
+  setSelectedChunkId: (id: string | null) => void;
+  handleCheckCheckClick: () => void;
+  isSad: boolean;
 }
 
 export interface AddRoutineGroupViewProps {
