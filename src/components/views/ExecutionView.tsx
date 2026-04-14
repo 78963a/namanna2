@@ -68,7 +68,9 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
     return calculateTaskDuration(task, currentTime);
   };
 
-  const activeTask = tasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+  const isFinished = (t: Task) => t.completed || t.givenUp || t.status === TaskStatus.PERFECT || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.SKIP;
+  const activeTask = tasks.find(t => t.startTime && !t.isPaused && !isFinished(t)) 
+                || tasks.find(t => t.isPaused && !isFinished(t));
   const otherTasks = tasks.filter(t => t.id !== activeTask?.id);
 
   return (
@@ -136,11 +138,13 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
         >
           <div className="flex justify-between items-start">
             <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">현재 진행 중</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">
+                {activeTask.isPaused ? '일시정지 중' : '현재 진행 중'}
+              </span>
               <h3 className="text-2xl font-black tracking-tight">{activeTask.text}</h3>
             </div>
             <div className="p-3 bg-white/10 rounded-[15px] backdrop-blur-sm">
-              <Timer className="w-6 h-6 text-white" />
+              {activeTask.isPaused ? <Pause className="w-6 h-6 text-white" /> : <Timer className="w-6 h-6 text-white" />}
             </div>
           </div>
 
@@ -155,10 +159,24 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
 
           <div className="flex gap-3">
             <button 
-              onClick={() => togglePauseTask(activeTask.id)}
+              onClick={() => {
+                if (activeTask.isPaused) {
+                  startTask(activeTask.id, false);
+                } else {
+                  togglePauseTask(activeTask.id);
+                }
+              }}
               className="flex-1 py-4 bg-white/10 hover:bg-white/20 rounded-[15px] backdrop-blur-sm transition-all flex items-center justify-center gap-2 font-black text-sm"
             >
-              <Pause className="w-5 h-5 fill-current" /> 일시정지
+              {activeTask.isPaused ? (
+                <>
+                  <Play className="w-5 h-5 fill-current" /> 재개하기
+                </>
+              ) : (
+                <>
+                  <Pause className="w-5 h-5 fill-current" /> 일시정지
+                </>
+              )}
             </button>
             {(() => {
               const currentDuration = calculateCurrentDuration(activeTask);

@@ -368,10 +368,44 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   }, [animationStage]);
 
   const handleFinalSave = () => {
-    // Save satisfaction and memo to the last task or as a group history
-    // For now, let's just complete the chunk and go home
+    if (selectedChunkId) {
+      setUserData(prev => {
+        const newGroupHistory = [...(prev.routineGroupHistory || [])];
+        const entryIdx = newGroupHistory.findIndex(h => h.date === todayStr && h.groupId === selectedChunkId);
+        
+        if (entryIdx >= 0) {
+          newGroupHistory[entryIdx] = {
+            ...newGroupHistory[entryIdx],
+            satisfaction,
+            closingNote
+          };
+        } else {
+          newGroupHistory.push({
+            date: todayStr,
+            groupId: selectedChunkId,
+            isActive: true,
+            firstTaskStartTime: null,
+            completionStatus: '전체완료',
+            completedAt: null,
+            totalDuration: 0,
+            satisfaction,
+            closingNote
+          });
+        }
+        
+        return {
+          ...prev,
+          routineGroupHistory: newGroupHistory
+        };
+      });
+    }
+    
+    // Reset states and go home
+    setClosingNote('');
+    setSatisfaction(3);
     setSelectedChunkId(null);
     setActiveTab('home');
+    setAnimationStage('none');
   };
 
   if (isCompleted && animationStage !== 'none') {
@@ -2489,6 +2523,7 @@ export default function App() {
     if (parsed.lastCheckCheckTime === undefined) parsed.lastCheckCheckTime = Date.now();
     if (parsed.lastResetDate === undefined) parsed.lastResetDate = null;
     if (parsed.dailyCheckCheckCounts === undefined) parsed.dailyCheckCheckCounts = {};
+    if (parsed.dailyCheckIn === undefined) parsed.dailyCheckIn = {};
     
     if (parsed.autoReorderGroups === undefined) parsed.autoReorderGroups = false;
     
@@ -2632,9 +2667,10 @@ export default function App() {
             isPaused: false,
             accumulatedDuration: 0,
             duration: 0,
-            earnedPoints: undefined,
             closingNote: undefined,
-            satisfaction: undefined
+            satisfaction: undefined,
+            status: TaskStatus.NOT_STARTED,
+            checklist: t.checklist?.map(c => ({ ...c, completed: false }))
           }))
         }))
       }));
@@ -2717,8 +2753,7 @@ export default function App() {
   }, [userData]);
 
   // --- Helpers ---
-  const syncHistory = (data: UserData): UserData => {
-    const today = formatDate(new Date());
+  const syncHistory = (data: UserData, today: string): UserData => {
     const now = new Date();
 
     let newTaskHistory = [...(data.taskHistory || [])];
@@ -2798,8 +2833,9 @@ export default function App() {
       else if (allFinished) completionStatus = '전체완료';
       else if (anyStarted) completionStatus = '미완료';
 
-      const satisfaction = undefined;
-      const closingNote = undefined;
+      const existingEntry = newGroupHistory.find(h => h.date === today && h.groupId === chunk.id);
+      const satisfaction = existingEntry?.satisfaction;
+      const closingNote = existingEntry?.closingNote;
 
       const groupEntryIdx = newGroupHistory.findIndex(h => h.date === today && h.groupId === chunk.id);
       const groupEntry: RoutineGroupHistoryEntry = {
@@ -2898,23 +2934,24 @@ export default function App() {
 
     // Find best task to start
     const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+    const isFinished = (t: Task) => t.completed || t.givenUp || t.status === TaskStatus.PERFECT || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.SKIP;
     
     // 1. Active task (already running)
-    let targetTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+    let targetTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !isFinished(t));
     
     // If no active task, find the next one to start
     if (!targetTask) {
       // 2. First unstarted task
-      targetTask = scheduledTasks.find(t => !t.startTime && !t.completed && !t.givenUp);
+      targetTask = scheduledTasks.find(t => !t.startTime && !isFinished(t));
       
       // 3. First paused task
       if (!targetTask) {
-        targetTask = scheduledTasks.find(t => t.startTime && t.isPaused && !t.completed && !t.givenUp);
+        targetTask = scheduledTasks.find(t => t.startTime && t.isPaused && !isFinished(t));
       }
       
       // 4. First later task
       if (!targetTask) {
-        targetTask = scheduledTasks.find(t => t.laterTimestamp && !t.completed && !t.givenUp);
+        targetTask = scheduledTasks.find(t => t.laterTimestamp && !isFinished(t));
       }
     }
 
@@ -2949,13 +2986,14 @@ export default function App() {
         ...prev,
         streak: newStreak,
         lastCheckInDate: todayStr,
+        dailyCheckIn: {
+          ...(prev.dailyCheckIn || {}),
+          [todayStr]: checkInTimeStr
+        },
         history: [...prev.history, { date: todayStr, time: checkInTimeStr }],
-        routineChunks: prev.routineChunks.map(chunk => ({
-          ...chunk,
-          tasks: chunk.tasks.map(t => ({ ...t, completed: false }))
-        }))
+        routineChunks: prev.routineChunks
       };
-      return syncHistory(next);
+      return syncHistory(next, todayStr);
     });
 
     // Show celebration
@@ -2978,12 +3016,13 @@ export default function App() {
     setUserData(prev => ({
       ...prev,
       lastCheckInDate: todayStr,
+      dailyCheckIn: {
+        ...(prev.dailyCheckIn || {}),
+        [todayStr]: checkInTimeStr
+      },
       history: [...prev.history, { date: todayStr, time: checkInTimeStr }],
       streak: 0,
-      routineChunks: prev.routineChunks.map(chunk => ({
-        ...chunk,
-        tasks: chunk.tasks.map(t => ({ ...t, completed: false }))
-      }))
+      routineChunks: prev.routineChunks
     }));
   };
 
@@ -3026,7 +3065,7 @@ export default function App() {
           };
         })
       };
-      return syncHistory(next);
+      return syncHistory(next, todayStr);
     });
   };
 
@@ -3085,7 +3124,7 @@ export default function App() {
           };
         })
       };
-      return syncHistory(next);
+      return syncHistory(next, todayStr);
     });
   };
 
@@ -3129,7 +3168,7 @@ export default function App() {
           return { ...chunk, tasks: newTasks };
         })
       };
-      return syncHistory(next);
+      return syncHistory(next, todayStr);
     });
   };
 
@@ -3191,7 +3230,7 @@ export default function App() {
           return { ...chunk, tasks: newTasks };
         })
       };
-      return syncHistory(next);
+      return syncHistory(next, todayStr);
     });
   };
 
@@ -3253,7 +3292,7 @@ export default function App() {
           };
         }),
       };
-      return syncHistory(next);
+      return syncHistory(next, todayStr);
     });
   };
 
@@ -3297,6 +3336,13 @@ export default function App() {
             return c;
           });
 
+          // Clear review from history for this day
+          const newGroupHistory = (prev.routineGroupHistory || []).map(h => 
+            (h.groupId === chunkId && h.date === todayStr) 
+              ? { ...h, closingNote: undefined, satisfaction: undefined } 
+              : h
+          );
+
           // Recalculate completion percentage for today
           const totalCompleted = newChunks.reduce((acc, chunk) => 
             acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && (t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP)).length, 0
@@ -3311,12 +3357,13 @@ export default function App() {
           const next = {
             ...prev,
             routineChunks: newChunks,
+            routineGroupHistory: newGroupHistory,
             dailyCompletionRate: {
               ...prev.dailyCompletionRate,
               [todayStr]: completionPercentage
             }
           };
-          return syncHistory(next);
+          return syncHistory(next, todayStr);
         });
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
@@ -3447,7 +3494,7 @@ export default function App() {
           [todayStr]: completionPercentage
         }
       };
-      return syncHistory(next);
+      return syncHistory(next, todayStr);
     });
   };
 
