@@ -1,4 +1,4 @@
-# Routine Management App
+# Routine Management App 이라는것은 너의 희망사항.
 
 A sophisticated, production-grade routine management application built with React, TypeScript, and Tailwind CSS. This app is designed to help users build and maintain healthy habits through structured routine groups, real-time tracking, and gamified progress.
 
