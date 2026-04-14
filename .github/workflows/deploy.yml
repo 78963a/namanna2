@@ -1,4 +1,5 @@
 name: Deploy to GitHub Pages
+
 on:
   push:
     branches: [main]
@@ -9,8 +10,16 @@ permissions:
   pages: write
   id-token: write
 
+# 동일한 워크플로우가 여러 번 실행될 때, 이전 실행을 취소하여 자원 낭비를 방지합니다.
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,7 +28,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22 # 최신 버전으로 업데이트
+          node-version: 22
 
       - name: Install and Build
         run: |
@@ -27,10 +36,10 @@ jobs:
           npm run build
 
       - name: Upload artifact
-        # 🌟 핵심: 조립된 결과물(dist 폴더)을 깃허브 페이지로 보낼 준비를 합니다.
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
       - name: Deploy
+        id: deployment
         uses: actions/deploy-pages@v4
