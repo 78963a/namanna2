@@ -51,7 +51,7 @@ export const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 group transition-all ${isDragging ? 'shadow-lg ring-2 ring-indigo-500/20' : ''}`}
+      className={`flex items-center gap-3 p-3 bg-slate-50 rounded-[10px] border border-slate-100 group transition-all ${isDragging ? 'shadow-lg ring-2 ring-indigo-500/20' : ''}`}
     >
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-400 transition-colors">
         <GripVertical className="w-4 h-4" />
@@ -65,7 +65,7 @@ export const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
           onChange={(e) => setEditText(e.target.value)}
           onBlur={handleEdit}
           onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
-          className="flex-grow bg-white border border-indigo-200 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          className="flex-grow bg-white border border-indigo-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
       ) : (
         <span className="flex-grow text-sm font-bold text-slate-700 truncate">
@@ -82,9 +82,7 @@ export const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
         </button>
         <button
           onClick={() => {
-            if (window.confirm('삭제하시겠습니까?')) {
-              onRemove(item.id);
-            }
+            onRemove(item.id);
           }}
           className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors"
         >

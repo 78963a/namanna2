@@ -1,353 +1,634 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   BarChart3, 
   Clock, 
   Calendar, 
   Target, 
-  Zap 
+  Zap,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Timer,
+  CheckCircle2,
+  AlertCircle,
+  TrendingUp,
+  History,
+  Hourglass,
+  BrickWall
 } from 'lucide-react';
-import { 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area, 
-  BarChart, 
-  Bar 
-} from 'recharts';
-import { UserData } from '../../types';
+import { UserData, TaskStatus, TaskType } from '../../types';
+import { timeToMinutes, minutesToTime, formatDate, formatDurationPrecise } from '../../utils';
 
 interface StatsViewProps {
   userData: UserData;
-  chartData: any[];
-  relativeChartData: any[];
-  absoluteChartData: any[];
-  averageWakeUpTime: string;
-  activeStatsTab: 'wake-up' | 'relative' | 'absolute';
-  setActiveStatsTab: (tab: 'wake-up' | 'relative' | 'absolute') => void;
+  currentTime: Date;
+  deleteReview: (groupId: string, date: string) => void;
 }
 
 export const StatsView: React.FC<StatsViewProps> = ({ 
-  userData, 
-  chartData, 
-  relativeChartData, 
-  absoluteChartData, 
-  averageWakeUpTime, 
-  activeStatsTab, 
-  setActiveStatsTab 
+  userData,
+  currentTime,
+  deleteReview
 }) => {
-  const completionRates = Object.values(userData.dailyCompletionRate);
-  const avgRate = completionRates.length > 0
-    ? (completionRates as number[]).reduce((acc: number, val: number) => acc + val, 0) / completionRates.length
-    : 0;
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [calendarYear, setCalendarYear] = useState(currentTime.getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(currentTime.getMonth());
+  const [selectedReview, setSelectedReview] = useState<{ date: string; note: string; satisfaction: number } | null>(null);
 
-  const renderTabContent = () => {
-    switch (activeStatsTab) {
-      case 'wake-up':
-        return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Summary Card */}
-            <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center text-center space-y-4">
-              <div className="bg-indigo-50 p-4 rounded-2xl">
-                <Clock className="w-8 h-8 text-indigo-600" />
-              </div>
-              <div className="space-y-1">
-                <span className="text-sm font-medium text-slate-500 uppercase tracking-widest">평균 기상 시각</span>
-                <h2 className="text-4xl font-black text-slate-900 tracking-tighter">{averageWakeUpTime}</h2>
-              </div>
-              <p className="text-sm text-slate-400">
-                총 {userData.history.length}회의 기상 기록을 바탕으로 계산되었습니다.
-              </p>
-            </section>
+  // Scroll to top when entering detailed view
+  useEffect(() => {
+    if (selectedGroupId) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      setCalendarYear(currentTime.getFullYear());
+      setCalendarMonth(currentTime.getMonth());
+    }
+  }, [selectedGroupId]);
 
-            {/* Graph Section */}
-            <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-indigo-500" />
-                최근 7일 기상 추이
-              </h3>
-              
-              <div className="h-64 w-full">
-                {userData.history.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="colorMinutes" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis 
-                        dataKey="date" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fontSize: 12, fill: '#94a3b8' }}
-                        dy={10}
-                      />
-                      <YAxis 
-                        hide 
-                        domain={['dataMin - 30', 'dataMax + 30']}
-                      />
-                      <Tooltip 
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div className="bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-xl">
-                                {payload[0].payload.displayTime}
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="minutes" 
-                        stroke="#6366f1" 
-                        strokeWidth={3}
-                        fillOpacity={1} 
-                        fill="url(#colorMinutes)" 
-                        animationDuration={1500}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-300 space-y-2">
-                    <BarChart3 className="w-12 h-12 opacity-20" />
-                    <p className="text-sm font-medium">아직 기록된 데이터가 없습니다.</p>
-                  </div>
-                )}
-              </div>
-            </section>
+  const satisfactionIcons = ['🥵', '🥲', '😊', '😁', '🥳'];
 
-            {/* History List */}
-            <section className="space-y-4">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-slate-400" />
-                기상 기록 히스토리
-              </h3>
-              
-              <div className="space-y-3">
-                {userData.history.length > 0 ? (
-                  userData.history.slice().reverse().map((record, idx) => (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      key={record.date}
-                      className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center">
-                          <span className="text-xs font-bold text-slate-400">{record.date.split('.').slice(2, 3)}</span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-800">{record.date}</p>
-                          <p className="text-xs text-slate-400 font-medium">체크인 완료</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-black text-indigo-600 tracking-tight">{record.time.slice(0, 5)}</p>
-                      </div>
-                    </motion.div>
-                  ))
-                ) : (
-                  <p className="text-center py-12 text-slate-400 text-sm font-medium">
-                    기록이 없습니다. 내일부터 시작해보세요!
-                  </p>
-                )}
-              </div>
-            </section>
-          </div>
-        );
-      case 'relative':
-        return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Summary Card */}
-            <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center text-center space-y-4">
-              <div className="bg-violet-50 p-4 rounded-2xl">
-                <Target className="w-8 h-8 text-violet-600" />
-              </div>
-              <div className="space-y-1">
-                <span className="text-sm font-medium text-slate-500 uppercase tracking-widest">평균 달성률</span>
-                <h2 className="text-4xl font-black text-slate-900 tracking-tighter">
-                  {avgRate.toFixed(1)}%
-                </h2>
-              </div>
-              <p className="text-sm text-slate-400">
-                루틴 완료율을 기반으로 계산된 성취도입니다.
-              </p>
-            </section>
-
-            {/* Graph Section */}
-            <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-violet-500" />
-                최근 7일 루틴 완료율
-              </h3>
-              
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={relativeChartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis 
-                      dataKey="date" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fontSize: 12, fill: '#94a3b8' }}
-                      dy={10}
-                    />
-                    <YAxis 
-                      domain={[0, 100]}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 10, fill: '#cbd5e1' }}
-                    />
-                    <Tooltip 
-                      cursor={{ fill: '#f8fafc' }}
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-xl">
-                              {Math.round(payload[0].value)}%
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Bar 
-                      dataKey="percentage" 
-                      fill="#8b5cf6" 
-                      radius={[6, 6, 0, 0]}
-                      animationDuration={1500}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-          </div>
-        );
-      case 'absolute':
-        return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Summary Card */}
-            <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center text-center space-y-4">
-              <div className="bg-emerald-50 p-4 rounded-2xl">
-                <Zap className="w-8 h-8 text-emerald-600" />
-              </div>
-              <div className="space-y-1">
-                <span className="text-sm font-medium text-slate-500 uppercase tracking-widest">누적 포인트</span>
-                <h2 className="text-4xl font-black text-slate-900 tracking-tighter">{userData.points || 0}P</h2>
-              </div>
-              <p className="text-sm text-slate-400">
-                기상 및 루틴 수행을 통해 획득한 총 포인트입니다.
-              </p>
-            </section>
-
-            {/* Graph Section */}
-            <section className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-emerald-500" />
-                최근 7일 획득 포인트
-              </h3>
-              
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={absoluteChartData}>
-                    <defs>
-                      <linearGradient id="colorPoints" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis 
-                      dataKey="date" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fontSize: 12, fill: '#94a3b8' }}
-                      dy={10}
-                    />
-                    <YAxis 
-                      hide
-                      domain={['dataMin', 'dataMax + 10']}
-                    />
-                    <Tooltip 
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-xl">
-                              {payload[0].value}P
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Area 
-                      type="stepAfter" 
-                      dataKey="points" 
-                      stroke="#10b981" 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorPoints)" 
-                      animationDuration={1500}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-          </div>
-        );
-      default:
-        return null;
+  const prevMonth = () => {
+    if (calendarMonth === 0) {
+      setCalendarYear(calendarYear - 1);
+      setCalendarMonth(11);
+    } else {
+      setCalendarMonth(calendarMonth - 1);
     }
   };
+  const nextMonth = () => {
+    if (calendarMonth === 11) {
+      setCalendarYear(calendarYear + 1);
+      setCalendarMonth(0);
+    } else {
+      setCalendarMonth(calendarMonth + 1);
+    }
+  };
+  const prevYear = () => setCalendarYear(calendarYear - 1);
+  const nextYear = () => setCalendarYear(calendarYear + 1);
+
+  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+  const firstDayOfMonth = new Date(calendarYear, calendarMonth, 1).getDay();
+  const calendarDays = useMemo(() => {
+    const days = [];
+    for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(i);
+    return days;
+  }, [calendarYear, calendarMonth, firstDayOfMonth, daysInMonth]);
+
+  const todayStr = formatDate(currentTime);
+  
+  const getDateRangeStr = (days: string[]) => {
+    if (days.length === 0) return '';
+    const start = days[0].split('-').slice(1).join('.');
+    const end = days[days.length - 1].split('-').slice(1).join('.');
+    return `${start} ~ ${end}`;
+  };
+
+  const last7Days = useMemo(() => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(currentTime);
+      d.setDate(d.getDate() - i);
+      days.push(formatDate(d));
+    }
+    return days;
+  }, [currentTime]);
+
+  const last30Days = useMemo(() => {
+    const days = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(currentTime);
+      d.setDate(d.getDate() - i);
+      days.push(formatDate(d));
+    }
+    return days;
+  }, [currentTime]);
+
+  // --- Wake-up Stats ---
+  const wakeUpStats = useMemo(() => {
+    const history = userData.wakeUpTimeHistory || [];
+    
+    const getAvgForPeriod = (days: string[]) => {
+      const periodHistory = days.map(date => {
+        const entry = history.find(h => h.date === date);
+        const isLate = entry ? timeToMinutes(entry.wakeUpTime) > timeToMinutes(userData.targetWakeUpTime) : false;
+        return {
+          date,
+          time: entry?.wakeUpTime || null,
+          status: entry ? (isLate ? '지각' : '달성') : '미기록'
+        };
+      });
+
+      const recordedTimes = periodHistory.filter(h => h.time).map(h => timeToMinutes(h.time!));
+      const avgMinutes = recordedTimes.length > 0 
+        ? recordedTimes.reduce((a, b) => a + b, 0) / recordedTimes.length 
+        : null;
+
+      return {
+        avgTime: avgMinutes !== null ? minutesToTime(avgMinutes) : 'N/A',
+        history: periodHistory
+      };
+    };
+
+    const stats7 = getAvgForPeriod(last7Days);
+    const stats30 = getAvgForPeriod(last30Days);
+
+    // Sort history with today at the top
+    const sortedHistory7 = [...stats7.history].reverse();
+
+    return {
+      avgTime7: stats7.avgTime,
+      avgTime30: stats30.avgTime,
+      history: sortedHistory7
+    };
+  }, [userData.wakeUpTimeHistory, userData.targetWakeUpTime, last7Days, last30Days]);
+
+  // --- Achievement Stats ---
+  const achievementStats = useMemo(() => {
+    const getAvgRateForPeriod = (days: string[]) => {
+      const rates = days.map(date => (userData.dailyCompletionRate?.[date]) || 0);
+      return rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+    };
+
+    const avgRate7 = getAvgRateForPeriod(last7Days);
+    const avgRate30 = getAvgRateForPeriod(last30Days);
+
+    const groupStats = userData.routineChunks.map(group => {
+      const groupHistory = (userData.routineGroupHistory || []).filter(h => h.groupId === group.id && last7Days.includes(h.date));
+      
+      const startTimes = groupHistory.filter(h => h.firstTaskStartTime).map(h => timeToMinutes(h.firstTaskStartTime!));
+      const avgStartMinutes = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
+      
+      const endTimes = groupHistory.filter(h => h.completedAt).map(h => timeToMinutes(h.completedAt!));
+      const avgEndMinutes = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
+
+      const durations = groupHistory.map(h => h.totalDuration);
+      const avgDurationSeconds = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+
+      const completionCount = groupHistory.filter(h => h.completionStatus === '전체완료').length;
+      const rate = groupHistory.length > 0 ? (completionCount / groupHistory.length) * 100 : 0;
+
+      return {
+        id: group.id,
+        name: group.name,
+        avgStartTime: avgStartMinutes !== null ? minutesToTime(avgStartMinutes) : 'N/A',
+        avgEndTime: avgEndMinutes !== null ? minutesToTime(avgEndMinutes) : 'N/A',
+        avgDuration: formatDurationPrecise(avgDurationSeconds),
+        rate: Math.floor(rate).toString()
+      };
+    });
+
+    return {
+      avgTotalRate7: Math.floor(avgRate7).toString(),
+      avgTotalRate30: Math.floor(avgRate30).toString(),
+      groups: groupStats
+    };
+  }, [userData.routineChunks, userData.routineGroupHistory, userData.dailyCompletionRate, last7Days, last30Days]);
+
+  // --- Detail View Data ---
+  const detailData = useMemo(() => {
+    if (!selectedGroupId) return null;
+    const group = userData.routineChunks.find(g => g.id === selectedGroupId);
+    if (!group) return null;
+
+    // Sort history with today at the top
+    const sortedLast7Days = [...last7Days].reverse();
+
+    const groupHistory = sortedLast7Days.map(date => {
+      const entry = (userData.routineGroupHistory || []).find(h => h.groupId === selectedGroupId && h.date === date);
+      
+      // Calculate achievement rate for this day
+      const tasksOnThisDay = group.tasks.filter(t => t.scheduledDays?.includes(new Date(date).getDay()) ?? true);
+      const taskEntries = (userData.taskHistory || []).filter(h => h.groupId === selectedGroupId && h.date === date);
+      const completedCount = taskEntries.filter(h => h.status === '완벽' || h.status === '완료').length;
+      const rate = tasksOnThisDay.length > 0 ? (completedCount / tasksOnThisDay.length) * 100 : 0;
+
+      return {
+        date,
+        startTime: entry?.firstTaskStartTime || '미실행',
+        duration: entry ? formatDurationPrecise(entry.totalDuration) : '0초',
+        endTime: entry?.completedAt || '미완료',
+        rate: Math.floor(rate) + '%'
+      };
+    });
+
+    const taskStats = group.tasks.map(task => {
+      const getStatsForPeriod = (days: string[]) => {
+        const entries = (userData.taskHistory || []).filter(h => h.taskId === task.id && days.includes(h.date));
+        const completedEntries = entries.filter(h => h.status === '완벽' || h.status === '완료');
+        
+        const rate = entries.length > 0 ? (completedEntries.length / entries.length) * 100 : 0;
+        const durations = completedEntries.map(e => e.duration);
+        
+        const avg = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+        const min = durations.length > 0 ? Math.min(...durations) : 0;
+        const max = durations.length > 0 ? Math.max(...durations) : 0;
+
+        return {
+          rate: Math.floor(rate) + '%',
+          avg: formatDurationPrecise(avg),
+          min: formatDurationPrecise(min),
+          max: formatDurationPrecise(max)
+        };
+      };
+
+      return {
+        name: task.text,
+        type: task.taskType,
+        targetDuration: task.targetDuration || task.duration || 0,
+        last30: getStatsForPeriod(last30Days),
+        last7: getStatsForPeriod(last7Days)
+      };
+    });
+
+    return {
+      name: group.name,
+      history: groupHistory,
+      tasks: taskStats
+    };
+  }, [selectedGroupId, userData, last7Days, last30Days]);
+
+  if (selectedGroupId && detailData) {
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setSelectedGroupId(null)}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+          >
+            <ChevronLeft className="w-6 h-6 text-slate-600" />
+          </button>
+          <h2 className="text-xl font-black text-slate-900">{detailData.name} 상세 통계</h2>
+        </div>
+
+        {/* 7-Day History Table */}
+        <section className="bg-white rounded-[15px] shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-4 bg-slate-50 border-b border-slate-100">
+            <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
+              <History className="w-4 h-4 text-indigo-500" />
+              최근 7일 기록
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
+                  <th className="px-4 py-3">날짜</th>
+                  <th className="px-4 py-3">시작</th>
+                  <th className="px-4 py-3">소요시간</th>
+                  <th className="px-4 py-3">완료</th>
+                  <th className="px-4 py-3">달성률</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {detailData.history.map((row, i) => (
+                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-bold text-slate-500">{row.date.split('-').slice(1).join('/')}</td>
+                    <td className="px-4 py-3 font-black text-slate-700">{row.startTime}</td>
+                    <td className="px-4 py-3 font-bold text-indigo-600">{row.duration}</td>
+                    <td className="px-4 py-3 font-black text-slate-700">{row.endTime}</td>
+                    <td className="px-4 py-3 font-black text-emerald-600">{row.rate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Individual Task Stats */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest ml-1">개별 루틴 통계</h3>
+          {detailData.tasks.map((task, i) => (
+            <div key={i} className="bg-white p-5 rounded-[15px] shadow-sm border border-slate-100 space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                <h4 className="font-black text-slate-800">{task.name}</h4>
+                <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-[10px] font-black text-[8px] uppercase tracking-widest ml-1">
+                  {task.type === TaskType.TIME_INDEPENDENT ? (
+                    <Clock className="w-2.5 h-2.5 text-sky-400" />
+                  ) : task.type === TaskType.TIME_ACCUMULATED ? (
+                    <BrickWall className="w-2.5 h-2.5 text-pink-400" />
+                  ) : (
+                    <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
+                  )}
+                  <span>{task.targetDuration}분</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="grid grid-cols-4 gap-2 text-[10px] bg-slate-50 p-2 rounded-[10px]">
+                  <div className="font-black text-slate-400">30일</div>
+                  <div className="text-emerald-600 font-black">달성: {task.last30.rate}</div>
+                  <div className="text-slate-600 font-bold col-span-2">
+                    평균: {task.last30.avg} (최단: {task.last30.min} / 최장: {task.last30.max})
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2 text-[10px] bg-indigo-50/50 p-2 rounded-[10px]">
+                  <div className="font-black text-indigo-400">7일</div>
+                  <div className="text-emerald-600 font-black">달성: {task.last7.rate}</div>
+                  <div className="text-slate-600 font-bold col-span-2">
+                    평균: {task.last7.avg} (최단: {task.last7.min} / 최장: {task.last7.max})
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Review Box (후기박스) */}
+        <section className="bg-white p-6 rounded-[20px] shadow-sm border border-slate-100 space-y-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-amber-50 p-2.5 rounded-[12px]">
+                <Calendar className="w-5 h-5 text-amber-600" />
+              </div>
+              <div><h2 className="text-lg font-black text-slate-800">루틴 후기</h2></div>
+            </div>
+            <div className="flex items-center gap-2 ml-1">
+              {(() => {
+                const hasDataInYear = (year: number) => 
+                  (userData.routineGroupHistory || []).some(h => h.groupId === selectedGroupId && new Date(h.date).getFullYear() === year);
+                const hasDataInMonth = (year: number, month: number) => 
+                  (userData.routineGroupHistory || []).some(h => {
+                    const d = new Date(h.date);
+                    return h.groupId === selectedGroupId && d.getFullYear() === year && d.getMonth() === month;
+                  });
+
+                const canPrevYear = hasDataInYear(calendarYear - 1);
+                const canNextYear = hasDataInYear(calendarYear + 1);
+                
+                let prevM = calendarMonth - 1;
+                let prevY = calendarYear;
+                if (prevM < 0) { prevM = 11; prevY--; }
+                const canPrevMonth = hasDataInMonth(prevY, prevM);
+
+                let nextM = calendarMonth + 1;
+                let nextY = calendarYear;
+                if (nextM > 11) { nextM = 0; nextY++; }
+                const canNextMonth = hasDataInMonth(nextY, nextM);
+
+                return (
+                  <>
+                    <button 
+                      disabled={!canPrevYear}
+                      onClick={prevYear} 
+                      className={`p-1 rounded-full border transition-all ${canPrevYear ? 'hover:bg-slate-100 text-slate-600 border-slate-200' : 'text-slate-200 border-slate-100 cursor-not-allowed'}`}
+                    >
+                      <ChevronsLeft className="w-4 h-4" />
+                    </button>
+                    <button 
+                      disabled={!canPrevMonth}
+                      onClick={prevMonth} 
+                      className={`p-1 rounded-full border transition-all ${canPrevMonth ? 'hover:bg-slate-100 text-slate-600 border-slate-200' : 'text-slate-200 border-slate-100 cursor-not-allowed'}`}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-sm font-black text-slate-700 min-w-[80px] text-center">
+                      {calendarYear}.{String(calendarMonth + 1).padStart(2, '0')}
+                    </span>
+                    <button 
+                      disabled={!canNextMonth}
+                      onClick={nextMonth} 
+                      className={`p-1 rounded-full border transition-all ${canNextMonth ? 'hover:bg-slate-100 text-slate-600 border-slate-200' : 'text-slate-200 border-slate-100 cursor-not-allowed'}`}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                    <button 
+                      disabled={!canNextYear}
+                      onClick={nextYear} 
+                      className={`p-1 rounded-full border transition-all ${canNextYear ? 'hover:bg-slate-100 text-slate-600 border-slate-200' : 'text-slate-200 border-slate-100 cursor-not-allowed'}`}
+                    >
+                      <ChevronsRight className="w-4 h-4" />
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {['일', '월', '화', '수', '목', '금', '토'].map(d => (
+              <div key={d} className="text-center text-[10px] font-black text-slate-400 py-2">{d}</div>
+            ))}
+            {calendarDays.map((day, i) => {
+              if (day === null) return <div key={`empty-${i}`} />;
+              
+              const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const historyEntry = (userData.routineGroupHistory || []).find(h => h.groupId === selectedGroupId && h.date === dateStr);
+              const hasReview = historyEntry?.satisfaction !== undefined || historyEntry?.closingNote;
+
+              return (
+                <button
+                  key={day}
+                  disabled={!hasReview}
+                  onClick={() => {
+                    if (hasReview) {
+                      setSelectedReview({
+                        date: dateStr,
+                        note: historyEntry?.closingNote || '',
+                        satisfaction: historyEntry?.satisfaction || 3
+                      });
+                    }
+                  }}
+                  className={`aspect-square flex flex-col items-center justify-center rounded-[12px] transition-all ${
+                    hasReview 
+                      ? 'bg-indigo-50 hover:bg-indigo-100 ring-1 ring-indigo-100' 
+                      : 'bg-slate-50 text-slate-400'
+                  }`}
+                >
+                  {hasReview ? (
+                    <span className="text-xl">{satisfactionIcons[(historyEntry?.satisfaction || 3) - 1]}</span>
+                  ) : (
+                    <span className="text-xs font-bold">{day}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Review Detail Popup */}
+        <AnimatePresence>
+          {selectedReview && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-white rounded-[25px] w-full max-w-sm shadow-2xl overflow-hidden"
+              >
+                <div className="p-6 space-y-6">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{selectedReview.date}</p>
+                      <h3 className="text-xl font-black text-slate-900">오늘의 후기</h3>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedReview(null)}
+                      className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
+                    >
+                      <ChevronRight className="w-6 h-6 rotate-90" />
+                    </button>
+                  </div>
+
+                  <div className="flex justify-center py-4">
+                    <div className="text-6xl animate-bounce">
+                      {satisfactionIcons[selectedReview.satisfaction - 1]}
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 p-5 rounded-[20px] border border-slate-100 min-h-[100px]">
+                    <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      {selectedReview.note || '작성된 메모가 없습니다.'}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        deleteReview(selectedGroupId!, selectedReview.date);
+                        setSelectedReview(null);
+                      }}
+                      className="flex-1 py-4 bg-rose-50 text-rose-600 rounded-[15px] font-black text-sm hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
+                    >
+                      <AlertCircle className="w-4 h-4" /> 삭제하기
+                    </button>
+                    <button
+                      onClick={() => setSelectedReview(null)}
+                      className="flex-[2] py-4 bg-slate-900 text-white rounded-[15px] font-black text-sm hover:bg-slate-800 transition-all"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col">
-      {/* Binder Index Style Tabs */}
-      <div className="flex items-end px-2">
-        <button 
-          onClick={() => setActiveStatsTab('wake-up')}
-          className={`flex-1 py-3 px-1 text-[10px] font-black tracking-tighter rounded-t-2xl transition-all border-x border-t ${
-            activeStatsTab === 'wake-up' 
-              ? 'bg-white text-indigo-600 border-slate-100 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] z-10 scale-105 origin-bottom' 
-              : 'bg-slate-100 text-slate-400 border-transparent hover:bg-slate-200'
-          }`}
-        >
-          기상시각
-        </button>
-        <button 
-          onClick={() => setActiveStatsTab('relative')}
-          className={`flex-1 py-3 px-1 text-[10px] font-black tracking-tighter rounded-t-2xl transition-all border-x border-t ${
-            activeStatsTab === 'relative' 
-              ? 'bg-white text-violet-600 border-slate-100 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] z-10 scale-105 origin-bottom' 
-              : 'bg-slate-100 text-slate-400 border-transparent hover:bg-slate-200'
-          }`}
-        >
-          달성률
-        </button>
-        <button 
-          onClick={() => setActiveStatsTab('absolute')}
-          className={`flex-1 py-3 px-1 text-[10px] font-black tracking-tighter rounded-t-2xl transition-all border-x border-t ${
-            activeStatsTab === 'absolute' 
-              ? 'bg-white text-emerald-600 border-slate-100 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] z-10 scale-105 origin-bottom' 
-              : 'bg-slate-100 text-slate-400 border-transparent hover:bg-slate-200'
-          }`}
-        >
-          포인트
-        </button>
-      </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* 기상시각통계박스 */}
+      <section className="bg-white p-6 rounded-[20px] shadow-sm border border-slate-100 space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-50 p-2.5 rounded-[12px]">
+            <Clock className="w-5 h-5 text-indigo-600" />
+          </div>
+          <h2 className="text-lg font-black text-slate-800">기상 시각 통계</h2>
+        </div>
 
-      <div className="bg-white rounded-b-3xl p-6 shadow-sm border-x border-b border-slate-100 min-h-[600px] -mt-[1px] z-0">
-        {renderTabContent()}
-      </div>
+        <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="text-center space-y-1">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균</p>
+            <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
+            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{wakeUpStats.avgTime7}</h3>
+          </div>
+          <div className="text-center space-y-1 border-l border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균</p>
+            <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
+            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{wakeUpStats.avgTime30}</h3>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[15px] border border-slate-100 overflow-hidden">
+          <div className="p-4 bg-slate-50 border-b border-slate-100">
+            <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
+              <History className="w-4 h-4 text-indigo-500" />
+              최근 7일 기록
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
+                  <th className="px-4 py-3">날짜</th>
+                  <th className="px-4 py-3">기상 시각</th>
+                  <th className="px-4 py-3 text-right">상태</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {wakeUpStats.history.map((h, i) => (
+                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
+                    <td className="px-4 py-3 font-black text-slate-700">{h.time || '--:--'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black ${
+                        h.status === '달성' ? 'bg-emerald-100 text-emerald-600' : 
+                        h.status === '지각' ? 'bg-rose-100 text-rose-600' : 
+                        'bg-slate-200 text-slate-400'
+                      }`}>
+                        {h.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* 달성율통계박스 */}
+      <section className="bg-white p-6 rounded-[20px] shadow-sm border border-slate-100 space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-violet-50 p-2.5 rounded-[12px]">
+            <Target className="w-5 h-5 text-violet-600" />
+          </div>
+          <h2 className="text-lg font-black text-slate-800">달성률 통계</h2>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="text-center space-y-1">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균 달성률</p>
+            <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
+            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate7}%</h3>
+          </div>
+          <div className="text-center space-y-1 border-l border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균 달성률</p>
+            <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
+            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate30}%</h3>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">루틴 그룹별 통계</p>
+          <div className="grid gap-3">
+            {achievementStats.groups.map((group, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedGroupId(group.id)}
+                className="group bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-md transition-all text-left space-y-3"
+              >
+                <div className="flex justify-between items-start">
+                  <h4 className="text-base font-black text-slate-800 group-hover:text-indigo-600 transition-colors">{group.name}</h4>
+                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-400 transition-all" />
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 시작 시각</p>
+                    <p className="text-xs font-black text-slate-700">{group.avgStartTime}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 완료 시각</p>
+                    <p className="text-xs font-black text-slate-700">{group.avgEndTime}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 소요 시간</p>
+                    <p className="text-xs font-black text-slate-700">{group.avgDuration}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">달성률</p>
+                    <p className="text-xs font-black text-emerald-600">{group.rate}%</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

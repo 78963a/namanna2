@@ -4,11 +4,11 @@ import {
   ChevronLeft, 
   Clock, 
   Hourglass, 
+  BrickWall,
   Plus, 
   Trash2, 
   Edit2
 } from 'lucide-react';
-import { BrickIcon } from '../common/Icons';
 import { 
   DndContext, 
   closestCenter, 
@@ -26,7 +26,6 @@ import {
 import { UserData, TaskType, TaskStatus } from '../../types';
 import { SortableChunkItem } from '../routine/SortableChunkItem';
 import { SortableTaskItem } from '../routine/SortableTaskItem';
-import { PointSelector } from '../common/PointSelector';
 
 interface SettingsViewProps {
   userData: UserData;
@@ -55,22 +54,18 @@ interface SettingsViewProps {
   setEditingTaskId: (id: string | null) => void;
   editingTaskText: string;
   setEditingTaskText: (text: string) => void;
-  editingTaskPoints: number;
-  setEditingTaskPoints: (points: number) => void;
   editingTaskDuration: number;
   setEditingTaskDuration: (duration: number) => void;
   editingTaskType: TaskType;
   setEditingTaskType: (type: TaskType) => void;
   editingTaskScheduledDays: number[];
   setEditingTaskScheduledDays: (days: number[]) => void;
-  updateTask: (taskId: string, newText: string, newPoints: number, newDuration: number, newTaskType?: TaskType, newScheduledDays?: number[]) => void;
+  updateTask: (taskId: string, newText: string, newDuration: number, newTaskType?: TaskType, newScheduledDays?: number[]) => void;
   deleteTask: (id: string) => void;
   handleTaskDragEnd: (event: DragEndEvent, chunkId: string) => void;
   addTask: (chunkId: string, scheduledDays?: number[]) => void;
   newTaskText: string;
   setNewTaskText: (text: string) => void;
-  newTaskPoints: number;
-  setNewTaskPoints: (points: number) => void;
   newTaskDuration: number;
   setNewTaskDuration: (duration: number) => void;
   newTaskType: TaskType;
@@ -107,8 +102,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   setEditingTaskId,
   editingTaskText,
   setEditingTaskText,
-  editingTaskPoints,
-  setEditingTaskPoints,
   editingTaskDuration,
   setEditingTaskDuration,
   editingTaskType,
@@ -121,8 +114,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   addTask,
   newTaskText,
   setNewTaskText,
-  newTaskPoints,
-  setNewTaskPoints,
   newTaskDuration,
   setNewTaskDuration,
   newTaskType,
@@ -142,37 +133,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const renderMainSettings = () => (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex items-center gap-3 mb-6 flex-shrink-0">
-        <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+        <div className="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center">
           <Settings className="w-6 h-6 text-indigo-600" />
         </div>
         <h2 className="text-xl font-black text-slate-900">전체설정화면</h2>
       </div>
-      <div className="space-y-5 overflow-y-auto pr-2 custom-scrollbar flex-grow">
-        <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-sm">
+      <div className="space-y-[15px] overflow-y-auto pr-2 custom-scrollbar flex-grow">
+        <div className="p-[15px] bg-slate-50 rounded-[10px] border border-slate-100 space-y-[15px] shadow-sm">
           <div className="flex flex-col gap-1 mb-1">
             <h3 className="text-base font-black text-slate-800 whitespace-nowrap ml-1">기상 목표 시간</h3>
-            <p className="text-[10px] font-bold text-slate-400 leading-tight ml-1">매일 이 시간에 맞춰 체크인하면 보너스 포인트를 얻습니다.</p>
           </div>
           <div className="flex gap-2">
             <input 
               type="time" 
               defaultValue={userData.targetWakeUpTime}
               id="wakeUpTimeInput"
-              className="flex-grow text-lg font-black p-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+              className="flex-grow text-lg font-black p-3 bg-white border border-slate-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
             />
             <button 
               onClick={() => {
                 const input = document.getElementById('wakeUpTimeInput') as HTMLInputElement;
                 if (input) updateWakeUpTime(input.value);
               }}
-              className="bg-indigo-600 text-white px-5 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+              className="bg-indigo-600 text-white px-5 rounded-[10px] font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
             >
               변경
             </button>
           </div>
         </div>
 
-        <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-sm">
+        <div className="p-[15px] bg-slate-50 rounded-[10px] border border-slate-100 space-y-[15px] shadow-sm">
           <div className="flex flex-col gap-1 mb-1">
             <h3 className="text-base font-black text-slate-800 whitespace-nowrap ml-1">하루 리셋 시간</h3>
             <p className="text-[10px] font-bold text-slate-400 leading-tight ml-1">이 시간이 되면 모든 루틴의 완료 상태가 초기화됩니다.</p>
@@ -182,26 +172,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               type="time" 
               defaultValue={userData.resetTime}
               id="resetTimeInput"
-              className="flex-grow text-lg font-black p-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+              className="flex-grow text-lg font-black p-3 bg-white border border-slate-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
             />
             <button 
               onClick={() => {
                 const input = document.getElementById('resetTimeInput') as HTMLInputElement;
                 if (input) updateResetTime(input.value);
               }}
-              className="bg-indigo-600 text-white px-5 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+              className="bg-indigo-600 text-white px-5 rounded-[10px] font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
             >
               변경
             </button>
           </div>
         </div>
 
-        <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-5 shadow-sm">
+        <div className="p-[15px] bg-slate-50 rounded-[10px] border border-slate-100 space-y-[15px] shadow-sm">
           <div className="flex items-center justify-between ml-1">
             <h3 className="text-base font-black text-slate-900">루틴 그룹 관리</h3>
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-1">
             <DndContext 
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -235,7 +225,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {mode === 'modal' && (
         <button 
           onClick={() => setIsSettingsOpen(false)}
-          className="w-full mt-6 bg-slate-900 text-white font-bold py-4 rounded-2xl hover:bg-slate-800 transition-colors flex-shrink-0"
+          className="w-full mt-6 bg-slate-900 text-white font-bold py-4 rounded-[10px] hover:bg-slate-800 transition-colors flex-shrink-0"
         >
           저장하고 닫기
         </button>
@@ -284,7 +274,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               setSettingsSubView({ type: 'main' });
             }
           }}
-          className="flex-1 py-3 bg-sky-500 text-white rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors"
+          className="flex-1 py-3 bg-sky-500 text-white rounded-[10px] font-bold text-sm hover:bg-sky-600 transition-colors"
         >
           저장하고 돌아가기
         </button>
@@ -296,7 +286,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               setSettingsSubView({ type: 'main' });
             }
           }}
-          className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors"
+          className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-[10px] font-bold text-sm hover:bg-slate-200 transition-colors"
         >
           취소하고 돌아가기
         </button>
@@ -309,12 +299,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {mode === 'main' && (
               <button 
                 onClick={() => setSettingsSubView({ type: 'main' })}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-100 rounded-[10px] transition-colors"
               >
                 <ChevronLeft className="w-5 h-5 text-slate-400" />
               </button>
             )}
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center">
               <Settings className="w-5 h-5 text-indigo-600" />
             </div>
             {editingChunkId === chunk.id ? (
@@ -325,7 +315,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     value={editingChunkName}
                     onChange={(e) => setEditingChunkName(e.target.value)}
                     placeholder="그룹 이름"
-                    className="flex-grow bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-lg font-black focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    className="flex-grow bg-white border border-slate-200 rounded-[10px] px-3 py-1.5 text-lg font-black focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     autoFocus
                   />
                   <button 
@@ -333,7 +323,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       updateChunkInfo(chunk.id, editingChunkName, editingChunkPurpose);
                       setEditingChunkId(null);
                     }}
-                    className="px-3 py-1.5 bg-sky-500 text-white rounded-xl font-bold text-xs hover:bg-sky-600 transition-colors"
+                    className="px-3 py-1.5 bg-sky-500 text-white rounded-[10px] font-bold text-xs hover:bg-sky-600 transition-colors"
                   >
                     저장
                   </button>
@@ -343,7 +333,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   value={editingChunkPurpose}
                   onChange={(e) => setEditingChunkPurpose(e.target.value)}
                   placeholder="그룹 목적 (예: 아침시간을 낭비하지 않는 사람)"
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full bg-white border border-slate-200 rounded-[10px] px-3 py-1.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       updateChunkInfo(chunk.id, editingChunkName, editingChunkPurpose);
@@ -410,12 +400,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="space-y-4">
   
               {/* Start Situation Settings */}
-              <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-sm">
+              <div className="p-5 bg-slate-50 rounded-[10px] border border-slate-100 space-y-4 shadow-sm">
                 <div className="flex items-center justify-between mb-1 ml-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">시작상황 설정</label>
                 </div>
                 
-                <div className="flex gap-2 p-1 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                <div className="flex gap-2 p-1 bg-white rounded-[10px] border border-slate-200 shadow-sm">
                   {[
                     { id: 'anytime', label: '아무때나' },
                     { id: 'situation', label: '상황' },
@@ -424,7 +414,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <button
                       key={opt.id}
                       onClick={() => setChunkTimeInputs((prev: any) => ({ ...prev, [chunk.id]: { ...prev[chunk.id], startType: opt.id } }))}
-                      className={`flex-1 py-1.5 rounded-xl text-[10px] font-black transition-all ${times.startType === opt.id ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}
+                      className={`flex-1 py-1.5 rounded-[10px] text-[10px] font-black transition-all ${times.startType === opt.id ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}
                     >
                       {opt.label}
                     </button>
@@ -439,7 +429,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       value={times.startSituation}
                       onChange={(e) => setChunkTimeInputs((prev: any) => ({ ...prev, [chunk.id]: { ...prev[chunk.id], startSituation: e.target.value } }))}
                       placeholder="예: 외출했다 돌아왔을 때"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                      className="w-full bg-white border border-slate-200 rounded-[10px] px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
                     />
                   </div>
                 )}
@@ -462,11 +452,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               }
                               setChunkTimeInputs((prev: any) => ({ ...prev, [chunk.id]: { ...prev[chunk.id], s: newS, e: newE } }));
                             }}
-                            className="w-full bg-white border border-slate-200 rounded-xl pl-12 pr-5 py-2 text-sm font-black focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                            className="w-full bg-white border border-slate-200 rounded-[10px] pl-12 pr-5 py-2 text-sm font-black focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
                           />
                         </div>
                       </div>
-                      <div className="flex flex-col items-center gap-1.5 bg-white px-3 py-2 rounded-2xl border border-slate-200 shadow-sm">
+                      <div className="flex flex-col items-center gap-1.5 bg-white px-3 py-2 rounded-[10px] border border-slate-200 shadow-sm">
                         <span className="text-[10px] font-black text-slate-400 uppercase">알람</span>
                         <button 
                           onClick={() => setChunkTimeInputs((prev: any) => ({ ...prev, [chunk.id]: { ...prev[chunk.id], alarm: !times.alarm } }))}
@@ -494,7 +484,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         }
                         setChunkTimeInputs((prev: any) => ({ ...prev, [chunk.id]: { ...prev[chunk.id], d: newD, e: newE } }));
                       }}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                      className="w-full bg-white border border-slate-200 rounded-[10px] px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
                     />
                   </div>
                   <div className="space-y-1">
@@ -506,23 +496,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         const newE = e.target.value;
                         setChunkTimeInputs((prev: any) => ({ ...prev, [chunk.id]: { ...prev[chunk.id], e: newE } }));
                       }}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                      className="w-full bg-white border border-slate-200 rounded-[10px] px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
                     />
                   </div>
                 </div>
               </div>
   
               {/* Schedule Settings */}
-              <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-sm">
+              <div className="p-5 bg-slate-50 rounded-[10px] border border-slate-100 space-y-4 shadow-sm">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between ml-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase">실행 주기</label>
-                    <div className="flex bg-white rounded-xl p-1 border border-slate-200 shadow-sm">
+                    <div className="flex bg-white rounded-[10px] p-1 border border-slate-200 shadow-sm">
                       {(['days', 'weekly', 'monthly', 'yearly'] as const).map((t) => (
                         <button
                           key={t}
                           onClick={() => setChunkScheduleInputs((prev: any) => ({ ...prev, [chunk.id]: { ...schedule, type: t } }))}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                          className={`px-2.5 py-1 rounded-[10px] text-[10px] font-bold transition-all ${
                             schedule.type === t 
                               ? 'bg-indigo-500 text-white shadow-sm' 
                               : 'text-slate-400 hover:bg-slate-50'
@@ -537,29 +527,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {schedule.type === 'days' ? (
                     <div className="space-y-2">
                       <div className="flex justify-between gap-1">
-                        {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              const newDays = schedule.days.includes(i)
-                                ? schedule.days.filter((d: number) => d !== i)
-                                : [...schedule.days, i].sort();
-                              setChunkScheduleInputs((prev: any) => ({ ...prev, [chunk.id]: { ...schedule, days: newDays } }));
-                            }}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                              schedule.days.includes(i)
-                                ? 'bg-indigo-500 text-white shadow-md shadow-indigo-200'
-                                : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        ))}
+                        {[
+                          { label: '월', value: 1 },
+                          { label: '화', value: 2 },
+                          { label: '수', value: 3 },
+                          { label: '목', value: 4 },
+                          { label: '금', value: 5 },
+                          { label: '토', value: 6, color: 'bg-emerald-600' },
+                          { label: '일', value: 0, color: 'bg-rose-600' }
+                        ].map((dayObj) => {
+                          const i = dayObj.value;
+                          const isSelected = schedule.days.includes(i);
+                          const selectedColor = dayObj.color || 'bg-indigo-500';
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                const newDays = schedule.days.includes(i)
+                                  ? schedule.days.filter((d: number) => d !== i)
+                                  : [...schedule.days, i].sort();
+                                setChunkScheduleInputs((prev: any) => ({ ...prev, [chunk.id]: { ...schedule, days: newDays } }));
+                              }}
+                              className={`flex-1 py-2 rounded-[10px] text-xs font-bold transition-all ${
+                                isSelected
+                                  ? `${selectedColor} text-white shadow-md shadow-indigo-200`
+                                  : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              {dayObj.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="flex justify-between items-center bg-white p-3 rounded-[10px] border border-slate-200 shadow-sm">
                         <span className="text-xs font-bold text-slate-600">
                           {schedule.type === 'weekly' ? '주' : schedule.type === 'monthly' ? '월' : '연'} {schedule.freq}회 실행
                         </span>
@@ -602,8 +605,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         setEditingTaskId={setEditingTaskId}
                         editingTaskText={editingTaskText}
                         setEditingTaskText={setEditingTaskText}
-                        editingTaskPoints={editingTaskPoints}
-                        setEditingTaskPoints={setEditingTaskPoints}
                         editingTaskDuration={editingTaskDuration}
                         setEditingTaskDuration={setEditingTaskDuration}
                         editingTaskType={editingTaskType}
@@ -612,7 +613,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         setEditingTaskScheduledDays={setEditingTaskScheduledDays}
                         updateTask={updateTask}
                         deleteTask={deleteTask}
-                        PointSelector={PointSelector}
                         chunkScheduledDays={schedule.days}
                       />
                     ))}
@@ -620,7 +620,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </DndContext>
               </div>
   
-              <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-sm">
+              <div className="p-5 bg-slate-50 rounded-[10px] border border-slate-100 space-y-4 shadow-sm">
                 <div className="space-y-1.5">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">새 루틴 추가</p>
                   <input 
@@ -628,7 +628,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     value={newTaskText}
                     onChange={(e) => setNewTaskText(e.target.value)}
                     placeholder="루틴 이름 입력..."
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                    className="w-full bg-white border border-slate-200 rounded-[10px] px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
                   />
                 </div>
                 <div className="space-y-4">
@@ -637,12 +637,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className="flex items-center gap-1">
                       {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                         const colorClass = type === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : type === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600';
-                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickIcon : Hourglass;
+                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
                         return (
                           <button 
                             key={type}
                             onClick={() => setNewTaskType(type)}
-                            className={`flex-1 py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1 ${newTaskType === type ? `${colorClass} text-white shadow-md` : 'bg-white text-slate-400 border border-slate-100'}`}
+                            className={`flex-1 py-1.5 rounded-[10px] text-[10px] font-black transition-all flex items-center justify-center gap-1 ${newTaskType === type ? `${colorClass} text-white shadow-md` : 'bg-white text-slate-400 border border-slate-100'}`}
                           >
                             <Icon className="w-3 h-3" />
                             {type}
@@ -652,18 +652,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                   </div>
  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">포인트</span>
-                      <PointSelector value={newTaskPoints} onChange={setNewTaskPoints} />
-                    </div>
+                  <div className="grid grid-cols-1 gap-3">
                     <div className="space-y-2">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">소요 시간(분)</span>
                       <input 
                         type="number"
                         value={newTaskDuration || ''}
                         onChange={(e) => setNewTaskDuration(e.target.value === '' ? 0 : parseInt(e.target.value))}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-black focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                        className="w-full bg-white border border-slate-200 rounded-[10px] px-3 py-2 text-xs font-black focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
                       />
                     </div>
                   </div>
@@ -673,7 +669,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     setActiveChunkId(chunk.id);
                     addTask(chunk.id);
                   }}
-                  className="w-full py-2.5 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-indigo-600 text-white rounded-[10px] font-black text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   루틴 추가하기

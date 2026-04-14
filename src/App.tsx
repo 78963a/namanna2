@@ -5,17 +5,15 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Sun, 
+  Sun,
   CheckCircle2, 
   Circle, 
   CircleDot,
   PauseCircle,
   ArrowRightCircle,
-  Trophy, 
   Settings, 
   Plus, 
   Trash2, 
-  Flame,
   Clock,
   ChevronRight,
   ChevronLeft,
@@ -24,12 +22,6 @@ import {
   BarChart3,
   Home as HomeIcon,
   Calendar,
-  Cloud,
-  CloudRain,
-  CloudSnow,
-  CloudLightning,
-  Wind,
-  CloudSun,
   Edit2,
   AlertCircle,
   XCircle,
@@ -44,9 +36,10 @@ import {
   Zap,
   PlusCircle,
   Hourglass,
-  Camera,
+  BrickWall,
   Check,
-  Layers
+  CheckCheck,
+  CircleMinus
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -92,16 +85,15 @@ import {
   SettingsSubView,
   TaskStatus,
   StatsTab,
+  WakeUpTimeHistoryEntry,
+  RoutineGroupHistoryEntry,
+  TaskHistoryEntry,
   HeaderBoxProps,
-  PointSelectorProps,
   HomeViewProps,
   StatsViewProps,
   ExecutionViewProps
 } from './types';
 import { 
-  POINTS_WAKE_UP, 
-  STREAK_BONUS_MULTIPLIER, 
-  MAX_DAILY_ABSOLUTE_POINTS, 
   STORAGE_KEY 
 } from './constants';
 import { 
@@ -112,8 +104,9 @@ import {
   formatDate, 
   getAverageWakeUpTime,
   getDaysBetween,
-  getConsecutiveCompletionDays,
-  formatDurationPrecise
+  formatDurationPrecise,
+  getJosa,
+  calculateTaskDuration
 } from './utils';
 
 // Components
@@ -128,13 +121,18 @@ import { CelebrationModal } from './components/common/CelebrationModal';
 // import { ChecklistModal } from './components/routine/ChecklistModal';
 // import { RoutineTitle } from './components/routine/RoutineTitle';
 import { RoutineTitleLine } from './components/routine/RoutineTitleLine';
-import { PointSelector } from './components/common/PointSelector';
 // import { TaskInputSection } from './components/routine/TaskInputSection';
 // import { SortableTaskItem } from './components/routine/SortableTaskItem';
 // import { SortableChunkItem } from './components/routine/SortableChunkItem';
 // import { SortableChecklistItem } from './components/routine/SortableChecklistItem';
-import { BrickIcon } from './components/common/Icons';
 // --- Components ---
+
+const DoubleCheckCircle = ({ className }: { className?: string }) => (
+  <div className={`relative flex items-center justify-center ${className}`}>
+    <Circle className="w-full h-full" />
+    <CheckCheck className="absolute w-[60%] h-[60%]" strokeWidth={3} />
+  </div>
+);
 
 
 
@@ -206,23 +204,49 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   const tasks = chunk.tasks;
   const scheduledTasks = tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
-  const activeTask = tasks.find(t => t.startTime && !t.endTime);
+  
+  // 9-2-1. '현재 실행중인 루틴' 우선순위 로직
+  // 1. 현재 실행 중인 루틴 (startTime 있고, 일시정지 아님, 완료/포기 아님)
+  let activeTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+  
+  // 2. 일시정지 루틴 중 가장 순서가 빠른 루틴
+  if (!activeTask) {
+    activeTask = scheduledTasks.find(t => t.isPaused && !t.completed && !t.givenUp);
+  }
+  
+  // 3. 미실행 루틴 중 가장 순서가 빠른 루틴
+  if (!activeTask) {
+    const allOtherTasksDone = scheduledTasks.filter(t => !t.isClosingRoutine).every(t => t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
+    activeTask = scheduledTasks.find(t => !t.startTime && !t.completed && !t.givenUp && (!t.isClosingRoutine || allOtherTasksDone));
+  }
+  
+  // 4. 나중에 루틴 중 가장 순서가 빠른 루틴
+  if (!activeTask) {
+    activeTask = scheduledTasks.find(t => t.laterTimestamp && !t.completed && !t.givenUp);
+  }
+
   const isNotStarted = tasks.every(t => !t.startTime && !t.completed && !t.givenUp);
 
   const [closingNote, setClosingNote] = useState('');
-  const [closingPhoto, setClosingPhoto] = useState<string | undefined>();
-  const [satisfaction, setSatisfaction] = useState(5);
+  const [satisfaction, setSatisfaction] = useState(3);
+
+  useEffect(() => {
+    if (activeTask?.isClosingRoutine) {
+      setClosingNote(activeTask.closingNote || '');
+      setSatisfaction(activeTask.satisfaction || 3);
+    }
+  }, [activeTask?.id]);
+
+  const emojis = [
+    { value: 1, icon: '🥵' },
+    { value: 2, icon: '🥲' },
+    { value: 3, icon: '😊' },
+    { value: 4, icon: '😁' },
+    { value: 5, icon: '🥳' }
+  ];
 
   const getElapsed = (task: Task) => {
-    if (!task.startTime) return 0;
-    const [h, m, s] = task.startTime.split(':').map(Number);
-    const start = new Date(currentTime);
-    start.setHours(h, m, s, 0);
-    if (start.getTime() > currentTime.getTime()) {
-      start.setDate(start.getDate() - 1);
-    }
-    const currentSession = task.isPaused ? 0 : Math.floor((currentTime.getTime() - start.getTime()) / 1000);
-    return (task.accumulatedDuration || 0) + currentSession;
+    return calculateTaskDuration(task, currentTime);
   };
 
   const getStageInfo = (task: Task) => {
@@ -230,22 +254,25 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     const target = (task.targetDuration || 0) * 60;
     const progress = Math.min((elapsed / target) * 100, 100);
     
-    let color = "bg-indigo-500";
-    let points = task.points || 0;
-    
-    if (progress >= 100) {
-      color = "bg-emerald-500";
-    } else if (progress >= 80) {
-      color = "bg-amber-500";
+    let color = "bg-sky-400";
+    let isFinished = elapsed >= target;
+
+    if (task.taskType === TaskType.TIME_ACCUMULATED) {
+      color = isFinished ? "bg-indigo-500" : "bg-rose-400";
+    } else if (task.taskType === TaskType.TIME_LIMITED) {
+      color = isFinished ? "bg-rose-500" : "bg-sky-400";
+    } else {
+      // TIME_INDEPENDENT
+      color = isFinished ? "bg-indigo-500" : "bg-sky-400";
     }
     
-    return { progress, color, points };
+    return { progress, color, isFinished };
   };
 
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
+    const s = Math.floor(seconds % 60);
     if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
@@ -261,34 +288,30 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   return (
     <div className="space-y-4 relative">
       {/* 루틴그룹박스 (Routine Group Box) */}
-      <section className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl shadow-xl overflow-hidden relative">
+      <section className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[10px] shadow-xl overflow-hidden relative">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -ml-12 -mb-12" />
         
         <div className="p-4 relative z-10">
           {/* Top Row: Title (Left) and Reset Button (Right) */}
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-start gap-2 max-w-[70%]">
-              <h2 className="text-base font-black text-white tracking-tight leading-relaxed">
-                <RoutineTitle 
-                  chunk={chunk} 
-                  isCompleted={chunk.tasks.every(t => t.completed || t.givenUp)}
-                  nameClassName="text-white"
-                />
+            <div className="flex items-center gap-2 w-full overflow-hidden">
+              <h2 className="text-base font-black text-white tracking-tight leading-relaxed whitespace-nowrap overflow-hidden text-ellipsis">
+                {/* 루틴그룹 제목 스타일 설정 (글자 색, 크기, 글꼴 등) */}
+                <span style={{ color: '#ffffff', fontSize: '1rem', fontFamily: "'Font1', sans-serif" }}>
+                  {chunk.purpose}{getJosa(chunk.purpose || '', '이/가')} 되기 위한 {chunk.name}
+                </span>
+                <button 
+                  onClick={() => {
+                    setSettingsSubView({ type: 'detail', chunkId: chunk.id });
+                    setIsSettingsOpen(true);
+                  }}
+                  className="inline-flex items-center justify-center p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-[10px] transition-all ml-1 align-middle"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
               </h2>
-              <button 
-                onClick={() => {
-                  setSettingsSubView({ type: 'detail', chunkId: chunk.id });
-                  setIsSettingsOpen(true);
-                }}
-                className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all flex-shrink-0"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
             </div>
-            {chunk.tasks.some(t => t.startTime || t.completed || t.givenUp || t.laterTimestamp) && (
-              <SlideToResetButton onReset={() => resetChunk(chunk.id)} />
-            )}
           </div>
 
           {/* Bottom Row: Progress Graph (Left) and Percentage (Right) */}
@@ -309,7 +332,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
       <div className="space-y-6">
         <AnimatePresence mode="popLayout">
           {/* 현재루틴박스 (Current Routine Box) */}
-          {activeTask && !isNotStarted && (
+          {activeTask && (
             <motion.div
               layout
               initial={{ opacity: 0, y: 20 }}
@@ -319,67 +342,78 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                 layout: { type: "spring", stiffness: 300, damping: 30 }
               }}
               key={activeTask.id}
-              className="bg-white rounded-[2rem] p-6 shadow-2xl shadow-indigo-100 border-2 border-indigo-500 relative overflow-hidden mb-6"
+              className="bg-white rounded-[10px] p-6 shadow-2xl shadow-indigo-100 border-2 border-indigo-500 relative overflow-hidden mb-6"
             >
               {activeTask.isClosingRoutine ? (
                 <div className="space-y-6">
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">오늘의 회고</p>
-                        <textarea
-                          value={closingNote}
-                          onChange={(e) => setClosingNote(e.target.value)}
-                          placeholder="오늘의 소감을 남겨주세요..."
-                          className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[100px]"
-                        />
-                      </div>
-                    
-                    <div className="space-y-2">
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">사진 인증 (선택)</p>
-                      <div className="flex items-center gap-4">
-                        <button 
-                          onClick={() => {
-                            // Mock photo upload
-                            setClosingPhoto('https://picsum.photos/seed/routine/400/300');
-                          }}
-                          className="w-20 h-20 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-indigo-500 hover:border-indigo-200 transition-all"
-                        >
-                          <Camera className="w-6 h-6" />
-                          <span className="text-[8px] font-black">UPLOAD</span>
-                        </button>
-                        {closingPhoto && (
-                          <div className="relative w-20 h-20 rounded-2xl overflow-hidden border-2 border-white shadow-md">
-                            <img src={closingPhoto} alt="Closing" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                            <button 
-                              onClick={() => setClosingPhoto(undefined)}
-                              className="absolute top-1 right-1 bg-rose-500 text-white p-1 rounded-full shadow-sm"
-                            >
-                              <X className="w-2 h-2" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                  {/* Active Indicator */}
+                  <div className="absolute top-0 right-0 bg-indigo-500 text-white px-4 py-1.5 rounded-bl-[10px] text-[10px] font-black uppercase tracking-widest">
+                    마무리루틴
                   </div>
 
-                  <button 
-                    onClick={() => {
-                      toggleTask(activeTask.id, {
-                        note: closingNote,
-                        photo: closingPhoto,
-                        satisfaction: satisfaction
-                      });
-                    }}
-                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-                  >
-                    <CheckCircle2 className="w-6 h-6" />
-                    마무리 완료!
-                  </button>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <h3 className="text-[32px] font-black text-slate-900 tracking-tight leading-tight">
+                        {chunk.tasks.findIndex(t => t.id === activeTask.id) + 1}. {activeTask.text}🥇
+                      </h3>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <div className="flex justify-around items-center py-4">
+                          {emojis.map((emoji) => (
+                            <button
+                              key={emoji.value}
+                              onClick={() => setSatisfaction(emoji.value)}
+                              className={`flex flex-col items-center gap-1 transition-all ${satisfaction === emoji.value ? 'scale-150' : 'opacity-40 grayscale hover:opacity-100 hover:grayscale-0'}`}
+                            >
+                              <span className="text-4xl">{emoji.icon}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-end ml-1">
+                          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">오늘의 회고</p>
+                          <span className={`text-[10px] font-bold ${closingNote.length > 140 ? 'text-rose-500' : 'text-slate-400'}`}>
+                            {closingNote.length} / 140자
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold ml-1 mb-1">오늘의 회고는 한글 기준 140자까지 남길 수 있습니다.</p>
+                        <textarea
+                          value={closingNote}
+                          onChange={(e) => {
+                            if (e.target.value.length <= 140) {
+                              setClosingNote(e.target.value);
+                            }
+                          }}
+                          placeholder="오늘의 소감을 남겨주세요..."
+                          className="w-full bg-slate-50 border border-slate-100 rounded-[10px] p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[100px] resize-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => {
+                          toggleTask(activeTask.id, {
+                            note: closingNote,
+                            satisfaction: satisfaction || 3
+                          });
+                        }}
+                        className="w-full py-4 bg-indigo-600 text-white rounded-[10px] font-black text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                      >
+                        <CheckCircle2 className="w-6 h-6" />
+                        마무리 완료!
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <>
                   {/* Active Indicator */}
-                  <div className="absolute top-0 right-0 bg-indigo-500 text-white px-4 py-1.5 rounded-bl-2xl text-[10px] font-black uppercase tracking-widest">
+                  <div className="absolute top-0 right-0 bg-indigo-500 text-white px-4 py-1.5 rounded-bl-[10px] text-[10px] font-black uppercase tracking-widest">
                     현재루틴
                   </div>
 
@@ -390,19 +424,15 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                           {chunk.tasks.findIndex(t => t.id === activeTask.id) + 1}. {activeTask.id === scheduledTasks[0]?.id && "⚡"}{activeTask.text}{activeTask.isClosingRoutine && "🥇"}
                         </h3>
                         <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold text-xs">
+                          <div className="flex items-center gap-1 bg-slate-100 text-slate-500 px-2 py-1 rounded-[10px] font-bold text-xs">
                             {activeTask.taskType === TaskType.TIME_INDEPENDENT ? (
                               <Clock className="w-4 h-4 text-sky-500" />
                             ) : activeTask.taskType === TaskType.TIME_ACCUMULATED ? (
-                              <BrickIcon className="w-4 h-4 text-pink-500" />
+                              <BrickWall className="w-4 h-4 text-pink-500" />
                             ) : (
                               <Hourglass className="w-4 h-4 text-indigo-600" />
                             )}
                             <span>{activeTask.targetDuration}분</span>
-                          </div>
-                          <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md font-bold text-xs">
-                            <Trophy className="w-4 h-4" />
-                            <span>{activeTask.points}P</span>
                           </div>
                         </div>
                       </div>
@@ -415,14 +445,17 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                           togglePauseTask(activeTask.id);
                         }
                       }}
-                      className={`relative flex flex-col items-center justify-center py-6 rounded-3xl overflow-hidden cursor-pointer ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200`}
+                      className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden cursor-pointer ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200`}
                     >
                       {/* Filling Background */}
                       {getElapsed(activeTask) > 0 && (
                         <motion.div 
                           initial={false}
-                          animate={{ width: `${getStageInfo(activeTask).progress}%` }}
-                          className={`absolute inset-y-0 left-0 ${activeTask.isPaused ? 'opacity-10' : 'opacity-20'} ${getStageInfo(activeTask).color}`}
+                          animate={{ 
+                            width: `${getStageInfo(activeTask).progress}%`,
+                            opacity: getStageInfo(activeTask).isFinished ? 0.4 : 0.2
+                          }}
+                          className={`absolute inset-y-0 left-0 ${getStageInfo(activeTask).color}`}
                           transition={{ duration: 0.5 }}
                         />
                       )}
@@ -437,7 +470,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                           <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${activeTask.isPaused ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {activeTask.isPaused ? 'Paused' : `${activeTask.taskType === TaskType.TIME_ACCUMULATED ? '현재 획득 포인트' : '획득 예정 포인트'}: ${getStageInfo(activeTask).points}P`}
+                            {activeTask.isPaused ? 'Paused' : 'In Progress'}
                           </p>
                         </div>
                       </div>
@@ -445,10 +478,10 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
                     {/* Checklist Section (Moved here) */}
                     {activeTask.checklist && activeTask.checklist.length > 0 && (
-                      <div className="bg-slate-50 rounded-3xl p-5 space-y-4 border-2 border-slate-100 shadow-inner mb-6">
+                      <div className="bg-slate-50 rounded-[10px] p-5 space-y-4 border-2 border-slate-100 shadow-inner mb-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <div className="w-6 h-6 bg-indigo-100 rounded-[10px] flex items-center justify-center">
                               <CheckCircle2 className="w-4 h-4 text-indigo-600" />
                             </div>
                             <span className="text-sm font-black text-slate-700 uppercase tracking-tight">체크리스트</span>
@@ -466,7 +499,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                                 }))
                               }));
                             }}
-                            className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
+                            className="px-3 py-1.5 bg-white border border-slate-200 rounded-[10px] text-[10px] font-black text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
                           >
                             체크 전부 지우기
                           </button>
@@ -487,9 +520,9 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                                   }))
                                 }));
                               }}
-                              className="w-full flex items-center gap-3 p-3.5 bg-white rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all group shadow-sm"
+                              className="w-full flex items-center gap-3 p-3.5 bg-white rounded-[10px] border border-slate-100 hover:border-indigo-200 transition-all group shadow-sm"
                             >
-                              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${item.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-200 group-hover:border-indigo-300'}`}>
+                              <div className={`w-6 h-6 rounded-[10px] border-2 flex items-center justify-center transition-all ${item.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-200 group-hover:border-indigo-300'}`}>
                                 {item.completed && <Check className="w-3.5 h-3.5 text-white" />}
                               </div>
                               <span className={`text-sm font-bold transition-all ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
@@ -505,7 +538,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     <div className="grid grid-cols-3 gap-3">
                       <button 
                         onClick={() => togglePauseTask(activeTask.id)}
-                        className={`flex flex-col items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black transition-all ${
+                        className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
                           activeTask.isPaused || !activeTask.startTime
                             ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
                             : 'bg-sky-500 text-white hover:bg-sky-600'
@@ -517,7 +550,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                       <button 
                         onClick={() => laterTask(activeTask.id)}
                         disabled={activeTask.id === scheduledTasks[0]?.id}
-                        className={`flex flex-col items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black transition-all ${
+                        className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
                           activeTask.id === scheduledTasks[0]?.id
                             ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
                             : 'bg-sky-500 text-white hover:bg-sky-600'
@@ -529,24 +562,57 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                       <button 
                         onClick={() => giveUpTask(activeTask.id)}
                         disabled={activeTask.id === scheduledTasks[0]?.id}
-                        className={`flex flex-col items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black transition-all ${
+                        className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
                           activeTask.id === scheduledTasks[0]?.id
                             ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
-                            : 'bg-sky-500 text-white hover:bg-sky-600'
+                            : 'bg-[#CC9900] text-white hover:opacity-90'
                         }`}
                       >
-                        <XCircle className="w-5 h-5" />
-                        GIVE UP
+                        <CircleMinus className="w-5 h-5" />
+                        SKIP
                       </button>
                     </div>
 
-                    <button 
-                      onClick={() => toggleTask(activeTask.id)}
-                      className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-                    >
-                      <CheckCircle2 className="w-6 h-6" />
-                      실행 완료
-                    </button>
+                    {(() => {
+                      const elapsed = getElapsed(activeTask);
+                      const target = (activeTask.targetDuration || 0) * 60;
+                      const isFinished = elapsed >= target;
+                      
+                      let btnText = "실행 완료";
+                      let btnColor = "bg-indigo-600";
+                      
+                      if (activeTask.taskType === TaskType.TIME_LIMITED) {
+                        if (isFinished) {
+                          btnText = "완료";
+                          btnColor = "bg-rose-500";
+                        } else {
+                          btnText = "완벽";
+                          btnColor = "bg-indigo-600";
+                        }
+                      } else if (activeTask.taskType === TaskType.TIME_ACCUMULATED) {
+                        if (isFinished) {
+                          btnText = "완벽";
+                          btnColor = "bg-indigo-600";
+                        } else {
+                          btnText = "완료";
+                          btnColor = "bg-rose-500";
+                        }
+                      } else {
+                        // TIME_INDEPENDENT
+                        btnText = "완벽";
+                        btnColor = "bg-indigo-600";
+                      }
+
+                      return (
+                        <button 
+                          onClick={() => toggleTask(activeTask.id)}
+                          className={`w-full py-4 ${btnColor} text-white rounded-[10px] font-black text-lg shadow-xl shadow-indigo-200 hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-3`}
+                        >
+                          {btnText === "완벽" ? <DoubleCheckCircle className="w-6 h-6" /> : <CheckCircle2 className="w-6 h-6" />}
+                          {btnText}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </>
               )}
@@ -554,9 +620,9 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           )}
 
           {/* 나머지루틴목록 (Remaining Routines List) */}
-          {(isNotStarted ? sortedTasks : sortedTasks.filter(t => t.id !== activeTask?.id)).length > 0 && (
+          {sortedTasks.filter(t => t.id !== activeTask?.id).length > 0 && (
             <div className="space-y-3">
-              {(isNotStarted ? sortedTasks : sortedTasks.filter(t => t.id !== activeTask?.id)).map((task) => (
+              {sortedTasks.filter(t => t.id !== activeTask?.id).map((task) => (
                 <motion.div
                   layout
                   initial={{ opacity: 0 }}
@@ -566,10 +632,10 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     layout: { type: "spring", stiffness: 300, damping: 30 }
                   }}
                   key={task.id}
-                  className={`flex items-center gap-4 p-4 rounded-3xl border transition-all ${
-                    task.completed 
+                  className={`flex items-center gap-4 p-4 rounded-[10px] border transition-all ${
+                    task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT
                       ? 'bg-slate-50/50 border-transparent' 
-                      : task.givenUp
+                      : task.givenUp || task.status === TaskStatus.SKIP
                         ? 'bg-rose-50/20'
                         : 'bg-white border-slate-100 hover:border-indigo-200'
                   }`}
@@ -582,6 +648,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     onRestart={onRestart}
                     onDoFirst={togglePauseTask}
                     isLocked={!isTriggerComplete && task.id !== scheduledTasks[0]?.id}
+                    activeTaskId={activeTask?.id}
                   />
                 </motion.div>
               ))}
@@ -590,12 +657,17 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
         </AnimatePresence>
       </div>
 
-      <button 
-        onClick={() => setActiveTab('home')}
-        className="w-full py-4 text-slate-400 font-bold hover:text-slate-600 transition-all text-sm"
-      >
-        Cancel and Return to List
-      </button>
+      {chunk.tasks.some(t => t.startTime || t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.laterTimestamp) && (
+        <div className="flex justify-center py-4">
+          <button 
+            onClick={() => resetChunk(chunk.id)}
+            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-full text-xs font-black shadow-sm hover:bg-slate-50 transition-all active:scale-[0.98]"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            루틴 초기화하기
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -642,7 +714,7 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 group flex items-center justify-between">
+    <div ref={setNodeRef} style={style} className="p-[15px] bg-slate-50 rounded-[10px] border border-slate-100 group flex items-center justify-between">
       <div className="flex items-center gap-3 flex-grow min-w-0">
         <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-500 flex-shrink-0">
           <GripVertical className="w-5 h-5" />
@@ -655,7 +727,7 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
               value={editingChunkName}
               onChange={(e) => setEditingChunkName(e.target.value)}
               placeholder="그룹 이름"
-              className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="w-full bg-white border border-slate-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               autoFocus
             />
             <div className="flex items-center gap-2">
@@ -664,7 +736,7 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
                 value={editingChunkPurpose}
                 onChange={(e) => setEditingChunkPurpose(e.target.value)}
                 placeholder="그룹 목적"
-                className="flex-grow bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="flex-grow bg-white border border-slate-200 rounded-[10px] px-2 py-1 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose);
                   if (e.key === 'Escape') setEditingChunkId(null);
@@ -682,31 +754,23 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
           <div className="flex items-center gap-2 flex-grow min-w-0">
             <button 
               onClick={() => onEnterDetail(chunk.id)}
-              className="flex-grow text-left truncate group/title flex flex-col gap-0.5"
+              className="flex-grow text-left group/title flex items-center gap-2 min-w-0"
             >
-              <div className="flex items-center gap-2">
-                <h4 className="font-black text-slate-900 group-hover/title:text-indigo-600 transition-colors">{chunk.name}</h4>
-                <div className="relative group/tooltip">
-                  <Settings className="w-4 h-4 text-slate-300 group-hover/title:text-indigo-400 transition-colors" />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                    설정 변경
-                  </div>
+              <h4 className="font-black text-slate-900 group-hover/title:text-indigo-600 transition-colors whitespace-nowrap truncate">
+                {chunk.name}
+              </h4>
+              <div className="relative group/tooltip flex-shrink-0">
+                <Settings className="w-4 h-4 text-slate-300 group-hover/title:text-indigo-400 transition-colors" />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                  상세설정
                 </div>
               </div>
-              <p className="text-[10px] font-bold text-slate-400 truncate">{chunk.purpose}</p>
             </button>
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-1">
-        <button 
-          onClick={() => onEnterDetail(chunk.id)}
-          className="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
-          title="상세 설정"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
         <button 
           onClick={() => onDelete(chunk.id)}
           className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
@@ -726,17 +790,14 @@ interface SortableTaskItemProps {
   setEditingTaskId: (id: string | null) => void;
   editingTaskText: string;
   setEditingTaskText: (text: string) => void;
-  editingTaskPoints: number;
-  setEditingTaskPoints: (points: number) => void;
   editingTaskDuration: number;
   setEditingTaskDuration: (duration: number) => void;
   editingTaskType: TaskType;
   setEditingTaskType: (type: TaskType) => void;
   editingTaskScheduledDays: number[];
   setEditingTaskScheduledDays: (days: number[]) => void;
-  updateTask: (taskId: string, newText: string, newPoints: number, newDuration: number, newTaskType?: TaskType, newScheduledDays?: number[]) => void;
+  updateTask: (taskId: string, newText: string, newDuration: number, newTaskType?: TaskType, newScheduledDays?: number[]) => void;
   deleteTask: (id: string) => void;
-  PointSelector: any;
   chunkScheduledDays: number[];
 }
 
@@ -747,8 +808,6 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
   setEditingTaskId, 
   editingTaskText, 
   setEditingTaskText, 
-  editingTaskPoints, 
-  setEditingTaskPoints, 
   editingTaskDuration,
   setEditingTaskDuration,
   editingTaskType,
@@ -757,7 +816,6 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
   setEditingTaskScheduledDays,
   updateTask, 
   deleteTask,
-  PointSelector,
   chunkScheduledDays
 }) => {
   const {
@@ -788,7 +846,7 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
   const days = ['일', '월', '화', '수', '목', '금', '토'];
 
   return (
-    <div ref={setNodeRef} style={style} className="p-3 bg-white rounded-2xl border border-slate-100 group shadow-sm">
+    <div ref={setNodeRef} style={style} className="p-3 bg-white rounded-[10px] border border-slate-100 group shadow-sm">
       {editingTaskId === task.id ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -797,7 +855,7 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
               type="text"
               value={editingTaskText}
               onChange={(e) => setEditingTaskText(e.target.value)}
-              className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="flex-grow bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               autoFocus
             />
           </div>
@@ -807,12 +865,12 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
               <div className="flex items-center gap-1">
                 {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                   const colorClass = type === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : type === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600';
-                  const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickIcon : Hourglass;
+                  const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
                   return (
                     <button 
                       key={type}
                       onClick={() => setEditingTaskType(type)}
-                      className={`flex-1 py-1.5 rounded-lg text-[9px] font-black transition-all flex items-center justify-center gap-1 ${editingTaskType === type ? `${colorClass} text-white shadow-md` : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
+                      className={`flex-1 py-1.5 rounded-[10px] text-[9px] font-black transition-all flex items-center justify-center gap-1 ${editingTaskType === type ? `${colorClass} text-white shadow-md` : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
                     >
                       <Icon className="w-3 h-3" />
                       {type}
@@ -833,17 +891,9 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                 type="number"
                 value={editingTaskDuration || ''}
                 onChange={(e) => setEditingTaskDuration(e.target.value === '' ? 0 : parseInt(e.target.value))}
-                className={`w-full bg-slate-50 border rounded-lg px-2 py-1 text-xs font-bold focus:outline-none focus:ring-2 transition-colors ${
+                className={`w-full bg-slate-50 border rounded-[10px] px-2 py-1 text-xs font-bold focus:outline-none focus:ring-2 transition-colors ${
                   editingTaskType === TaskType.TIME_INDEPENDENT ? 'border-sky-200 focus:ring-sky-500/20' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'border-pink-200 focus:ring-pink-500/20' : 'border-indigo-200 focus:ring-indigo-500/20'
                 }`}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">포인트</span>
-              <PointSelector 
-                value={editingTaskPoints} 
-                onChange={setEditingTaskPoints} 
               />
             </div>
           </div>
@@ -851,23 +901,33 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-slate-400 uppercase">실행 요일</span>
             <div className="flex gap-1">
-              {days.map((day, i) => {
+              {[
+                { label: '월', value: 1 },
+                { label: '화', value: 2 },
+                { label: '수', value: 3 },
+                { label: '목', value: 4 },
+                { label: '금', value: 5 },
+                { label: '토', value: 6, color: 'bg-emerald-600' },
+                { label: '일', value: 0, color: 'bg-rose-600' }
+              ].map((dayObj) => {
+                const i = dayObj.value;
                 const isGroupScheduled = chunkScheduledDays.includes(i);
                 const isSelected = editingTaskScheduledDays.includes(i);
+                const selectedColor = dayObj.color || 'bg-indigo-500';
                 return (
                   <button
                     key={i}
                     onClick={() => toggleDay(i)}
                     disabled={!isGroupScheduled}
-                    className={`w-7 h-7 rounded-lg text-[10px] font-bold transition-all ${
+                    className={`w-7 h-7 rounded-[10px] text-[10px] font-bold transition-all ${
                       isSelected 
-                        ? 'bg-indigo-500 text-white shadow-sm' 
+                        ? `${selectedColor} text-white shadow-sm` 
                         : isGroupScheduled
                           ? 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                           : 'bg-slate-50 text-slate-200 cursor-not-allowed'
                     }`}
                   >
-                    {day}
+                    {dayObj.label}
                   </button>
                 );
               })}
@@ -876,14 +936,14 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
 
           <div className="flex gap-2">
             <button 
-              onClick={() => updateTask(task.id, editingTaskText, editingTaskPoints, editingTaskDuration, editingTaskType, editingTaskScheduledDays)}
-              className="flex-1 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
+              onClick={() => updateTask(task.id, editingTaskText, editingTaskDuration, editingTaskType, editingTaskScheduledDays)}
+              className="flex-1 py-1.5 bg-indigo-600 text-white rounded-[10px] text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
             >
               저장
             </button>
             <button 
               onClick={() => setEditingTaskId(null)}
-              className="flex-1 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors"
+              className="flex-1 py-1.5 bg-slate-100 text-slate-500 rounded-[10px] text-xs font-bold hover:bg-slate-200 transition-colors"
             >
               취소
             </button>
@@ -904,14 +964,12 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                   {task.taskType === TaskType.TIME_INDEPENDENT ? (
                     <Clock className="w-3 h-3 text-sky-500" />
                   ) : task.taskType === TaskType.TIME_ACCUMULATED ? (
-                    <BrickIcon className="w-3 h-3 text-pink-500" />
+                    <BrickWall className="w-3 h-3 text-pink-500" />
                   ) : (
                     <Hourglass className="w-3 h-3 text-indigo-600" />
                   )}
                   <span className="text-[10px] text-slate-500 font-bold">{task.targetDuration || 0}분</span>
                 </div>
-                <span className="text-[10px] text-slate-300">•</span>
-                <span className="text-[10px] text-indigo-600 font-bold">{task.points}P</span>
               </div>
             </div>
           </div>
@@ -921,7 +979,6 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                 onClick={() => {
                   setEditingTaskId(task.id);
                   setEditingTaskText(task.text);
-                  setEditingTaskPoints(task.points);
                   setEditingTaskDuration(task.targetDuration || 10);
                   setEditingTaskType(task.taskType || TaskType.TIME_LIMITED);
                   setEditingTaskScheduledDays(task.scheduledDays || [0, 1, 2, 3, 4, 5, 6]);
@@ -1030,7 +1087,7 @@ const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 group transition-all ${isDragging ? 'shadow-lg ring-2 ring-indigo-500/20' : ''}`}
+      className={`flex items-center gap-3 p-3 bg-slate-50 rounded-[10px] border border-slate-100 group transition-all ${isDragging ? 'shadow-lg ring-2 ring-indigo-500/20' : ''}`}
     >
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-400 transition-colors">
         <GripVertical className="w-4 h-4" />
@@ -1044,7 +1101,7 @@ const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
           onChange={(e) => setEditText(e.target.value)}
           onBlur={handleEdit}
           onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
-          className="flex-grow bg-white border border-indigo-200 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          className="flex-grow bg-white border border-indigo-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
       ) : (
         <span className="flex-grow text-sm font-bold text-slate-700 truncate">
@@ -1136,13 +1193,13 @@ const ChecklistModal = ({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
+            className="relative w-full max-w-md bg-white rounded-[10px] shadow-2xl overflow-hidden flex flex-col"
             style={{ minHeight: '500px', maxHeight: '80vh' }}
           >
             <div className="p-6 space-y-6 flex flex-col h-full">
               <div className="flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center">
                     <CheckCircle2 className="w-6 h-6 text-indigo-600" />
                   </div>
                   <h3 className="text-xl font-black text-slate-900">체크리스트 만들기</h3>
@@ -1162,11 +1219,11 @@ const ChecklistModal = ({
                   onChange={(e) => setNewItemText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addItem()}
                   placeholder="체크리스트 항목 입력..."
-                  className="flex-grow bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="flex-grow bg-slate-50 border border-slate-100 rounded-[10px] px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
                 <button 
                   onClick={addItem}
-                  className="bg-indigo-600 text-white px-4 rounded-2xl font-black text-sm hover:bg-indigo-700 transition-all active:scale-95"
+                  className="bg-indigo-600 text-white px-4 rounded-[10px] font-black text-sm hover:bg-indigo-700 transition-all active:scale-95"
                 >
                   추가
                 </button>
@@ -1206,7 +1263,7 @@ const ChecklistModal = ({
               <div className="pt-4 flex-shrink-0">
                 <button 
                   onClick={onClose}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-base hover:bg-slate-800 transition-all active:scale-[0.98]"
+                  className="w-full py-4 bg-slate-900 text-white rounded-[10px] font-black text-base hover:bg-slate-800 transition-all active:scale-[0.98]"
                 >
                   완료
                 </button>
@@ -1219,6 +1276,7 @@ const ChecklistModal = ({
   );
 };
 
+// 루틴수정 팝업
 const TaskInputSection = ({ 
   label, 
   task, 
@@ -1231,7 +1289,7 @@ const TaskInputSection = ({
   onOpenChecklist,
   groupScheduledDays = [0, 1, 2, 3, 4, 5, 6]
 }: { 
-  label: string, 
+  label: React.ReactNode, 
   task: any, 
   setTask: (t: any) => void, 
   isTrigger?: boolean,
@@ -1244,17 +1302,17 @@ const TaskInputSection = ({
 }) => (
   <div className="space-y-3">
     <div className="flex flex-col gap-1">
-      <label className="text-[15px] font-bold text-slate-600 ml-1">{label}</label>
+      <div className="text-[15px] font-bold text-slate-600 ml-1">{label}</div>
       {description && <p className="text-[10px] font-bold text-slate-400 ml-1 leading-relaxed">{description}</p>}
     </div>
-    <div className="bg-white p-3 rounded-2xl border border-slate-200 space-y-4 shadow-none">
+    <div className="bg-white p-3 rounded-[10px] border border-slate-200 space-y-4 shadow-none">
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">루틴 내용</span>
+          <label className="text-[10px] font-bold text-slate-400 ml-1">루틴 제목</label>
           {onOpenChecklist && (
             <button 
               onClick={onOpenChecklist}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black transition-all ${task.checklist && task.checklist.length > 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-[10px] text-[10px] font-black transition-all ${task.checklist && task.checklist.length > 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
             >
               <CheckCircle2 className="w-3 h-3" />
               {task.checklist && task.checklist.length > 0 ? `체크리스트 (${task.checklist.length})` : '체크리스트 만들기'}
@@ -1266,64 +1324,76 @@ const TaskInputSection = ({
           value={task.text}
           onChange={(e) => setTask({ ...task, text: e.target.value })}
           placeholder={isTrigger ? "예: 침대에서 벗어나기" : "루틴 내용을 입력하세요"}
-          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          className="w-full bg-white border border-slate-200 rounded-[10px] px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
       </div>
 
       {/* Routine Schedule Settings (Restored) */}
-      <div className="space-y-1.5">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">실행 요일 (그룹 일정 내)</span>
-        <div className="flex flex-wrap gap-1">
-          {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => {
-            const isAvailable = groupScheduledDays.includes(i);
-            const isSelected = task.scheduledDays?.includes(i);
-            return (
-              <button
-                key={i}
-                disabled={!isAvailable}
-                onClick={() => {
-                  const currentDays = task.scheduledDays || [];
-                  let nextDays;
-                  if (currentDays.includes(i)) {
-                    if (currentDays.length > 1) {
-                      nextDays = currentDays.filter((d: number) => d !== i);
+      {!isTrigger && (
+        <div className="space-y-1.5">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">실행 요일 (그룹 일정 내)</span>
+          <div className="flex flex-wrap gap-1">
+            {[
+              { label: '월', value: 1 },
+              { label: '화', value: 2 },
+              { label: '수', value: 3 },
+              { label: '목', value: 4 },
+              { label: '금', value: 5 },
+              { label: '토', value: 6, color: 'bg-emerald-600' },
+              { label: '일', value: 0, color: 'bg-rose-600' }
+            ].map((dayObj) => {
+              const i = dayObj.value;
+              const isAvailable = groupScheduledDays.includes(i);
+              const isSelected = task.scheduledDays?.includes(i);
+              const selectedColor = dayObj.color || 'bg-indigo-600';
+              return (
+                <button
+                  key={i}
+                  disabled={!isAvailable}
+                  onClick={() => {
+                    const currentDays = task.scheduledDays || [];
+                    let nextDays;
+                    if (currentDays.includes(i)) {
+                      if (currentDays.length > 1) {
+                        nextDays = currentDays.filter((d: number) => d !== i);
+                      } else {
+                        nextDays = currentDays;
+                      }
                     } else {
-                      nextDays = currentDays;
+                      nextDays = [...currentDays, i].sort();
                     }
-                  } else {
-                    nextDays = [...currentDays, i].sort();
-                  }
-                  setTask({ ...task, scheduledDays: nextDays });
-                }}
-                className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${
-                  isSelected 
-                    ? 'bg-indigo-600 text-white shadow-none' 
-                    : isAvailable 
-                      ? 'bg-slate-50 text-slate-400 border border-slate-100' 
-                      : 'bg-slate-50 text-slate-200 border border-slate-50 cursor-not-allowed opacity-50'
-                }`}
-              >
-                {day}
-              </button>
-            );
-          })}
+                    setTask({ ...task, scheduledDays: nextDays });
+                  }}
+                  className={`w-8 h-8 rounded-[10px] text-[10px] font-black transition-all ${
+                    isSelected 
+                      ? `${selectedColor} text-white shadow-none` 
+                      : isAvailable 
+                        ? 'bg-slate-50 text-slate-400 border border-slate-100' 
+                        : 'bg-slate-50 text-slate-200 border border-slate-50 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  {dayObj.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {!isTrigger && (
         <div className="space-y-0">
           <div className="space-y-1.5">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">루틴 유형</span>
-            <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-[10px]">
               {[
                 { type: TaskType.TIME_INDEPENDENT, label: '시간무관루틴', icon: Clock },
                 { type: TaskType.TIME_LIMITED, label: '시간제한루틴', icon: Hourglass },
-                { type: TaskType.TIME_ACCUMULATED, label: '시간축적루틴', icon: Layers }
+                { type: TaskType.TIME_ACCUMULATED, label: '시간축적루틴', icon: BrickWall }
               ].map((t) => (
                 <button
                   key={t.type}
                   onClick={() => setTask({ ...task, type: t.type })}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black transition-all ${task.type === t.type ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[10px] text-[10px] font-black transition-all ${task.type === t.type ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
                 >
                   <t.icon className="w-3 h-3" />
                   {t.label}
@@ -1333,20 +1403,34 @@ const TaskInputSection = ({
           </div>
 
           <div className="space-y-1.5 mt-[-1px]">
-            <div className="bg-white border border-slate-200 rounded-xl p-3">
+            <div className="bg-white border border-slate-200 rounded-[10px] p-3">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
                 시간 (분)
               </span>
-              <input 
-                type="number"
-                min="1"
-                value={task.duration}
-                onChange={(e) => {
-                  let val = parseInt(e.target.value) || 1;
-                  setTask({ ...task, duration: val });
-                }}
-                className="w-full bg-transparent border-none p-0 text-sm font-bold focus:ring-0"
-              />
+              <div className="flex items-center gap-2">
+                {task.type === TaskType.TIME_INDEPENDENT ? (
+                  <Clock className="w-4 h-4 text-sky-500" />
+                ) : task.type === TaskType.TIME_ACCUMULATED ? (
+                  <BrickWall className="w-4 h-4 text-pink-500" />
+                ) : (
+                  <Hourglass className="w-4 h-4 text-indigo-600" />
+                )}
+                <input 
+                  type="number"
+                  min="1"
+                  value={task.duration}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    setTask({ ...task, duration: val });
+                  }}
+                  onBlur={() => {
+                    if (task.duration === '' || task.duration < 1) {
+                      setTask({ ...task, duration: 1 });
+                    }
+                  }}
+                  className="w-full bg-transparent border-none p-0 text-sm font-bold focus:ring-0"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -1357,50 +1441,59 @@ const TaskInputSection = ({
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
             시간 (최대 3분)
           </span>
-          <input 
-            type="number"
-            min="1"
-            max={3}
-            value={task.duration}
-            onChange={(e) => {
-              let val = parseInt(e.target.value) || 1;
-              val = Math.min(3, val);
-              setTask({ ...task, duration: val });
-            }}
-            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          />
+          <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-[10px] px-4 py-2">
+            {task.type === TaskType.TIME_INDEPENDENT ? (
+              <Clock className="w-4 h-4 text-sky-500" />
+            ) : task.type === TaskType.TIME_ACCUMULATED ? (
+              <BrickWall className="w-4 h-4 text-pink-500" />
+            ) : (
+              <Hourglass className="w-4 h-4 text-indigo-600" />
+            )}
+            <input 
+              type="number"
+              min="1"
+              max={3}
+              value={task.duration}
+              onChange={(e) => {
+                let val: any = e.target.value === '' ? '' : parseInt(e.target.value);
+                if (typeof val === 'number') {
+                  val = Math.min(3, val);
+                }
+                setTask({ ...task, duration: val });
+              }}
+              onBlur={() => {
+                if (task.duration === '' || task.duration < 1) {
+                  setTask({ ...task, duration: 1 });
+                }
+              }}
+              className="w-full bg-transparent border-none p-0 text-sm font-bold focus:ring-0"
+            />
+          </div>
         </div>
       )}
-
-      <div className="space-y-1.5">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">포인트 (5-10)</span>
-        <div className="flex flex-wrap gap-1">
-          {[5, 6, 7, 8, 9, 10].map(p => (
-            <button 
-              key={p}
-              onClick={() => setTask({ ...task, points: p })}
-              className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${task.points === p ? 'bg-indigo-600 text-white shadow-none' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {(onAdd || isEditing) && (
         <div className="flex gap-2">
           {isEditing && onCancel && (
             <button 
               onClick={onCancel}
-              className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-colors"
+              className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-[10px] text-xs font-black hover:bg-slate-200 transition-colors"
             >
               취소
+            </button>
+          )}
+          {isEditing && (task as any).onDelete && (
+            <button 
+              onClick={(task as any).onDelete}
+              className="flex-1 py-3 bg-rose-50 text-rose-600 rounded-[10px] text-xs font-black hover:bg-rose-100 transition-colors"
+            >
+              루틴 삭제
             </button>
           )}
           <button 
             onClick={onAdd}
             disabled={!task.text.trim()}
-            className="flex-[2] py-3 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-[2] py-3 bg-indigo-600 text-white rounded-[10px] text-xs font-black hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isEditing ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             {isEditing ? '수정 완료' : '루틴 추가하기'}
@@ -1411,7 +1504,13 @@ const TaskInputSection = ({
   </div>
 );
 
-const SortableRoutineItem = ({ rt, idx, onEdit, onDelete }: any) => {
+const SortableRoutineItem = ({ 
+  rt, 
+  idx, 
+  onEdit, 
+  onDelete,
+  groupScheduledDays
+}: any) => {
   const {
     attributes,
     listeners,
@@ -1432,7 +1531,7 @@ const SortableRoutineItem = ({ rt, idx, onEdit, onDelete }: any) => {
     <div 
       ref={setNodeRef} 
       style={style} 
-      className="bg-white p-3 rounded-2xl border border-slate-200 flex items-center justify-between shadow-none group"
+      className="bg-white p-3 rounded-[10px] border border-slate-200 flex items-center justify-between shadow-none group"
     >
       <div className="flex items-center gap-3">
         <div {...attributes} {...listeners} className="p-2 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
@@ -1440,7 +1539,18 @@ const SortableRoutineItem = ({ rt, idx, onEdit, onDelete }: any) => {
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-bold text-slate-700">{idx + 2}. {rt.text}</span>
-          <span className="text-[10px] font-bold text-slate-400">{rt.type} • {rt.duration}분 • {rt.points}P</span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-1">
+              {rt.type === TaskType.TIME_INDEPENDENT ? (
+                <Clock className="w-3 h-3 text-sky-500" />
+              ) : rt.type === TaskType.TIME_ACCUMULATED ? (
+                <BrickWall className="w-3 h-3 text-pink-500" />
+              ) : (
+                <Hourglass className="w-3 h-3 text-indigo-600" />
+              )}
+              <span className="text-[10px] font-bold text-slate-400">{rt.duration}분</span>
+            </div>
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-1">
@@ -1461,22 +1571,155 @@ const SortableRoutineItem = ({ rt, idx, onEdit, onDelete }: any) => {
   );
 };
 
-const AddRoutineGroupView: React.FC<{
+const RoutineEditModal = ({ 
+  isOpen, 
+  onClose, 
+  task, 
+  setTask, 
+  onSave, 
+  onOpenChecklist,
+  groupScheduledDays,
+  label
+}: any) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="bg-white rounded-[25px] w-full max-w-sm shadow-2xl overflow-hidden"
+      >
+        <div className="p-6">
+          <TaskInputSection 
+            label={label}
+            task={task}
+            setTask={setTask}
+            onAdd={onSave}
+            onCancel={onClose}
+            isEditing={true}
+            onOpenChecklist={onOpenChecklist}
+            groupScheduledDays={groupScheduledDays}
+          />
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+// 새로운 루틴 그룹 만들기 제목 글꼴 설정
+const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+  <label className="block text-lg font-black text-slate-700 uppercase tracking-wider ml-1 mb-4 mt-6">
+    {children}
+  </label>
+);
+
+const RoutineGroupFormView: React.FC<{
   addChunk: (name: string, purpose: string, tasks: Task[], scheduleType: 'days' | 'weekly' | 'monthly' | 'yearly', scheduledDays: number[], frequency?: number, startTime?: string, isAlarmEnabled?: boolean, startType?: 'anytime' | 'situation' | 'time', situation?: string) => void;
+  updateChunk?: (id: string, updatedData: Partial<RoutineChunk>) => void;
+  initialChunk?: RoutineChunk;
   setActiveTab: (tab: any) => void;
   setSettingsSubView: (view: any) => void;
   setIsSettingsOpen: (open: boolean) => void;
   userData: UserData;
-}> = ({ addChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData }) => {
+  mode?: 'add' | 'edit';
+}> = ({ addChunk, updateChunk, initialChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData, mode = 'add' }) => {
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState('');
   
-  const [triggerTask, setTriggerTask] = useState({ text: '', duration: 1, points: 5, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6] });
-  const [routineList, setRoutineList] = useState<Array<{ id: string, text: string, duration: number, points: number, type: TaskType, scheduledDays: number[] }>>([]);
-  const [currentRoutineInput, setCurrentRoutineInput] = useState({ text: '', duration: 10, points: 5, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6] });
+  const [triggerTask, setTriggerTask] = useState({ text: '', duration: 1, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6] });
+  const [routineList, setRoutineList] = useState<Array<{ id: string, text: string, duration: number, type: TaskType, scheduledDays: number[] }>>([]);
+  const [currentRoutineInput, setCurrentRoutineInput] = useState({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6] });
   const [isClosingRoutineEnabled, setIsClosingRoutineEnabled] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
   
   const [scheduledDays, setScheduledDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+  const prevScheduledDaysRef = React.useRef<number[]>(scheduledDays);
+
+  useEffect(() => {
+    if (initialChunk) {
+      setName(initialChunk.name);
+      setPurpose(initialChunk.purpose || '');
+      setScheduledDays(initialChunk.scheduledDays || [0, 1, 2, 3, 4, 5, 6]);
+      setStartTime(initialChunk.startTime || '07:00');
+      setStartType(initialChunk.startType || 'anytime');
+      setSituation(initialChunk.situation || '');
+      setIsAlarmEnabled(initialChunk.isAlarmEnabled || false);
+
+      const tasks = initialChunk.tasks || [];
+      if (tasks.length > 0) {
+        const first = tasks[0];
+        setTriggerTask({
+          text: first.text,
+          duration: first.targetDuration || 1,
+          type: first.taskType || TaskType.TIME_LIMITED,
+          scheduledDays: first.scheduledDays || [0, 1, 2, 3, 4, 5, 6],
+          checklist: (first as any).checklist || []
+        });
+
+        const last = tasks[tasks.length - 1];
+        const hasClosing = !!last.isClosingRoutine;
+        setIsClosingRoutineEnabled(hasClosing);
+
+        const middle = tasks.slice(1, hasClosing ? -1 : undefined);
+        setRoutineList(middle.map(t => ({
+          id: t.id,
+          text: t.text,
+          duration: t.targetDuration || 1,
+          type: t.taskType || TaskType.TIME_LIMITED,
+          scheduledDays: t.scheduledDays || [0, 1, 2, 3, 4, 5, 6],
+          checklist: (t as any).checklist || []
+        })));
+      }
+    }
+  }, [initialChunk]);
+
+  // Intelligent Day Synchronization
+  useEffect(() => {
+    const prevDays = prevScheduledDaysRef.current;
+    const added = scheduledDays.filter(d => !prevDays.includes(d));
+    const removed = prevDays.filter(d => !scheduledDays.includes(d));
+
+    if (added.length > 0 || removed.length > 0) {
+      // 1. Trigger Task: Always follows group schedule
+      setTriggerTask(prev => ({ ...prev, scheduledDays: scheduledDays }));
+
+      // 2. Routine List: 
+      // - Add newly activated group days
+      // - Remove newly deactivated group days
+      // - Respect manual deactivations (added days are added, but existing ones are kept as is unless removed from group)
+      setRoutineList(prev => prev.map(t => {
+        let nextDays = t.scheduledDays || [];
+        // Add newly activated group days
+        if (added.length > 0) nextDays = [...nextDays, ...added];
+        // Remove newly deactivated group days
+        if (removed.length > 0) nextDays = nextDays.filter(d => !removed.includes(d));
+        return [...new Set(nextDays)].sort();
+      }));
+
+      // 3. Current Input: Same logic as routine list
+      setCurrentRoutineInput(prev => {
+        let nextDays = prev.scheduledDays || [];
+        if (added.length > 0) nextDays = [...nextDays, ...added];
+        if (removed.length > 0) nextDays = nextDays.filter(d => !removed.includes(d));
+        return { ...prev, scheduledDays: [...new Set(nextDays)].sort() };
+      });
+
+      prevScheduledDaysRef.current = scheduledDays;
+    }
+  }, [scheduledDays]);
 
   const [startTime, setStartTime] = useState('07:00');
   const [startType, setStartType] = useState<'anytime' | 'situation' | 'time'>('anytime');
@@ -1497,25 +1740,48 @@ const AddRoutineGroupView: React.FC<{
 
   const addRoutineToList = () => {
     if (!currentRoutineInput.text.trim()) return;
+    
+    const taskToSave = { 
+      ...currentRoutineInput, 
+      duration: Number(currentRoutineInput.duration) || 1 
+    };
+
     if (editingRoutineIndex !== null) {
       const newList = [...routineList];
-      newList[editingRoutineIndex] = { ...newList[editingRoutineIndex], ...currentRoutineInput };
+      newList[editingRoutineIndex] = { ...newList[editingRoutineIndex], ...taskToSave };
       setRoutineList(newList);
       setEditingRoutineIndex(null);
+      setIsEditModalOpen(false);
     } else {
-      setRoutineList([...routineList, { ...currentRoutineInput, id: `new-rt-${Date.now()}` }]);
+      setRoutineList([...routineList, { ...taskToSave, id: `new-rt-${Date.now()}` }]);
     }
-    setCurrentRoutineInput({ text: '', duration: 10, points: 5, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
+    setCurrentRoutineInput({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
   };
 
   const startEditing = (idx: number) => {
     setEditingRoutineIndex(idx);
-    setCurrentRoutineInput({ ...routineList[idx] });
-    // Scroll to input section
-    const inputSection = document.getElementById('routine-input-section');
-    if (inputSection) {
-      inputSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    const routine = routineList[idx];
+    setCurrentRoutineInput({
+      text: routine.text,
+      duration: routine.duration || 10,
+      type: routine.type,
+      scheduledDays: routine.scheduledDays || scheduledDays,
+      checklist: (routine as any).checklist || [],
+      onDelete: () => {
+        setConfirmModal({
+          isOpen: true,
+          title: '루틴 삭제',
+          message: '이 루틴을 삭제하시겠습니까?',
+          onConfirm: () => {
+            setRoutineList(routineList.filter((_, i) => i !== idx));
+            setEditingRoutineIndex(null);
+            setIsEditModalOpen(false);
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          }
+        });
+      }
+    } as any);
+    setIsEditModalOpen(true);
   };
 
   const handleRoutineDragEnd = (event: DragEndEvent) => {
@@ -1527,19 +1793,26 @@ const AddRoutineGroupView: React.FC<{
     }
   };
 
-  const handleCreate = () => {
-    if (!name.trim()) return;
+  const handleSave = () => {
+    if (!name.trim()) {
+      setErrorMessage('루틴 그룹 이름을 입력해주세요.');
+      return;
+    }
+
+    if (!purpose.trim()) {
+      setErrorMessage('루틴 그룹 목적을 입력해주세요.');
+      return;
+    }
     
     const finalTasks: Task[] = [];
     const now = Date.now();
     
     // 1. Trigger Task
     finalTasks.push({
-      id: `trigger-${now}`,
+      id: mode === 'edit' && initialChunk?.tasks[0]?.id ? initialChunk.tasks[0].id : `trigger-${now}`,
       text: triggerTask.text || '트리거 루틴',
       completed: false,
-      points: triggerTask.points,
-      targetDuration: Math.min(3, triggerTask.duration),
+      targetDuration: Math.min(3, Number(triggerTask.duration) || 1),
       taskType: triggerTask.type,
       scheduledDays: triggerTask.scheduledDays.filter(d => scheduledDays.includes(d)),
       checklist: (triggerTask as any).checklist || []
@@ -1548,11 +1821,10 @@ const AddRoutineGroupView: React.FC<{
     // 2. Routine List
     routineList.forEach((rt, idx) => {
       finalTasks.push({
-        id: `routine-${idx}-${now}`,
+        id: rt.id.startsWith('new-rt-') ? `routine-${idx}-${now}` : rt.id,
         text: rt.text,
         completed: false,
-        points: rt.points,
-        targetDuration: rt.duration,
+        targetDuration: Number(rt.duration) || 1,
         taskType: rt.type,
         scheduledDays: rt.scheduledDays.filter(d => scheduledDays.includes(d)),
         checklist: (rt as any).checklist || []
@@ -1565,8 +1837,7 @@ const AddRoutineGroupView: React.FC<{
         id: `routine-last-${now}`,
         text: currentRoutineInput.text,
         completed: false,
-        points: currentRoutineInput.points,
-        targetDuration: currentRoutineInput.duration,
+        targetDuration: Number(currentRoutineInput.duration) || 1,
         taskType: currentRoutineInput.type,
         scheduledDays: currentRoutineInput.scheduledDays.filter(d => scheduledDays.includes(d)),
         checklist: (currentRoutineInput as any).checklist || []
@@ -1575,11 +1846,11 @@ const AddRoutineGroupView: React.FC<{
     
     // 4. Closing Task
     if (isClosingRoutineEnabled) {
+      const existingClosing = initialChunk?.tasks.find(t => t.isClosingRoutine);
       finalTasks.push({
-        id: `closing-${now}`,
+        id: mode === 'edit' && existingClosing ? existingClosing.id : `closing-${now}`,
         text: '마무리 루틴',
         completed: false,
-        points: 5,
         targetDuration: 1,
         taskType: TaskType.TIME_INDEPENDENT,
         scheduledDays: scheduledDays,
@@ -1593,8 +1864,23 @@ const AddRoutineGroupView: React.FC<{
     }
     setErrorMessage(null);
 
-    addChunk(name, purpose, finalTasks, 'days', scheduledDays, 1, startType === 'time' ? startTime : '', isAlarmEnabled, startType, situation);
-    setActiveTab('home');
+    if (mode === 'edit' && initialChunk && updateChunk) {
+      updateChunk(initialChunk.id, {
+        name,
+        purpose,
+        tasks: finalTasks,
+        scheduledDays,
+        startTime: startType === 'time' ? startTime : '',
+        isAlarmEnabled,
+        startType,
+        situation
+      });
+      setSettingsSubView({ type: 'main' });
+      setIsSettingsOpen(false);
+    } else {
+      addChunk(name, purpose, finalTasks, 'days', scheduledDays, 1, startType === 'time' ? startTime : '', isAlarmEnabled, startType, situation);
+      setActiveTab('home');
+    }
   };
 
   const openChecklistModal = (target: 'trigger' | 'current') => {
@@ -1604,6 +1890,69 @@ const AddRoutineGroupView: React.FC<{
 
   return (
     <div className="space-y-5 pb-20">
+      <AnimatePresence>
+        {isEditModalOpen && (
+          <RoutineEditModal 
+            isOpen={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setEditingRoutineIndex(null);
+              setCurrentRoutineInput({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
+            }}
+            task={currentRoutineInput}
+            setTask={setCurrentRoutineInput}
+            onSave={addRoutineToList}
+            onOpenChecklist={() => openChecklistModal('current')}
+            groupScheduledDays={scheduledDays}
+            label={<div className="flex items-center gap-2"><Edit2 className="w-4 h-4" /> 루틴 수정</div>}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {confirmModal.isOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200]"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-[25px] p-6 z-[210] shadow-2xl w-[90%] max-w-sm"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-rose-500" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-black text-slate-900">{confirmModal.title}</h3>
+                  <p className="text-sm text-slate-500 font-bold leading-relaxed">{confirmModal.message}</p>
+                </div>
+                <div className="flex gap-3 w-full pt-2">
+                  <button 
+                    onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                    className="flex-1 py-3 rounded-[15px] font-black text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button 
+                    onClick={confirmModal.onConfirm}
+                    className="flex-1 py-3 rounded-[15px] font-black text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-100"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <ChecklistModal 
         isOpen={isChecklistModalOpen}
         onClose={() => {
@@ -1619,19 +1968,19 @@ const AddRoutineGroupView: React.FC<{
           }
         }}
       />
-      <div className="bg-white border border-slate-200 rounded-[2.5rem] p-5 shadow-none space-y-5">
+      <div className="bg-white border border-slate-200 rounded-[10px] p-5 shadow-none space-y-5">
         <div className="space-y-1 mb-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
               <PlusCircle className="w-6 h-6 text-indigo-600" />
             </div>
-            <h2 className="text-2xl font-black text-slate-900">새로운 루틴 그룹 만들기</h2>
+            <h2 className="text-2xl font-black text-slate-900">{mode === 'edit' ? '루틴 그룹 상세 설정' : '새로운 루틴 그룹 만들기'}</h2>
           </div>
         </div>
         <div className="space-y-5">
           {/* Name Input */}
           <div className="space-y-3">
-            <label className="text-[15px] font-bold text-slate-600 ml-1">1. 루틴그룹 이름</label>
+            <SectionTitle>1. 루틴그룹 이름</SectionTitle>
             <input 
               type="text"
               value={name}
@@ -1643,10 +1992,7 @@ const AddRoutineGroupView: React.FC<{
 
           {/* Purpose Input */}
           <div className="space-y-3">
-            <label className="text-[15px] font-bold text-slate-600 ml-1">
-              2. 목적 (선택사항)
-              <span className="block text-[10px] text-slate-400 font-bold mt-0.5">이 루틴이 몸에 익으면 당신은 어떤 사람이 될까요?</span>
-            </label>
+            <SectionTitle>2. 목적</SectionTitle>
             <input 
               type="text"
               value={purpose}
@@ -1658,40 +2004,53 @@ const AddRoutineGroupView: React.FC<{
 
           {/* Schedule Settings */}
           <div className="space-y-3">
-            <label className="text-[15px] font-bold text-slate-600 ml-1">3. 요일 설정</label>
+            <SectionTitle>3. 요일 설정</SectionTitle>
             <div className="flex flex-wrap gap-2">
-              {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    if (scheduledDays.includes(i)) {
-                      if (scheduledDays.length > 1) {
-                        setScheduledDays(scheduledDays.filter(d => d !== i));
+              {[
+                { label: '월', value: 1 },
+                { label: '화', value: 2 },
+                { label: '수', value: 3 },
+                { label: '목', value: 4 },
+                { label: '금', value: 5 },
+                { label: '토', value: 6, color: 'bg-emerald-600' },
+                { label: '일', value: 0, color: 'bg-rose-600' }
+              ].map((dayObj) => {
+                const i = dayObj.value;
+                const isSelected = scheduledDays.includes(i);
+                const selectedColor = dayObj.color || 'bg-indigo-600';
+                return (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      if (scheduledDays.includes(i)) {
+                        if (scheduledDays.length > 1) {
+                          setScheduledDays(scheduledDays.filter(d => d !== i));
+                        }
+                      } else {
+                        setScheduledDays([...scheduledDays, i].sort());
                       }
-                    } else {
-                      setScheduledDays([...scheduledDays, i].sort());
-                    }
-                  }}
-                  className={`w-10 h-10 rounded-xl text-sm font-black transition-all ${scheduledDays.includes(i) ? 'bg-indigo-600 text-white shadow-none' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
-                >
-                  {day}
-                </button>
-              ))}
+                    }}
+                    className={`w-10 h-10 rounded-[10px] text-sm font-black transition-all ${isSelected ? `${selectedColor} text-white shadow-none` : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
+                  >
+                    {dayObj.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Start Situation or Time Setting */}
           <div className="space-y-3">
-            <label className="text-[15px] font-bold text-slate-600 ml-1">4. 시작 상황 또는 시각 설정</label>
-            <div className="bg-white border border-slate-200 rounded-2xl p-3 space-y-4 shadow-none">
+            <SectionTitle>4. 시작 상황 또는 시각 설정</SectionTitle>
+            <div className="bg-white border border-slate-200 rounded-[10px] p-3 space-y-4 shadow-none">
               <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl w-fit">
+                <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-[10px] w-fit">
                   <button
                     onClick={() => {
                       setStartType('anytime');
                       setIsAlarmEnabled(false);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all ${startType === 'anytime' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+                    className={`px-3 py-1.5 rounded-[10px] text-[10px] font-black transition-all ${startType === 'anytime' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
                   >
                     아무때나
                   </button>
@@ -1700,7 +2059,7 @@ const AddRoutineGroupView: React.FC<{
                       setStartType('situation');
                       setIsAlarmEnabled(false);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all ${startType === 'situation' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+                    className={`px-3 py-1.5 rounded-[10px] text-[10px] font-black transition-all ${startType === 'situation' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
                   >
                     상황
                   </button>
@@ -1708,44 +2067,52 @@ const AddRoutineGroupView: React.FC<{
                     onClick={() => {
                       setStartType('time');
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all ${startType === 'time' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+                    className={`px-3 py-1.5 rounded-[10px] text-[10px] font-black transition-all ${startType === 'time' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
                   >
                     시각
                   </button>
                 </div>
 
-                {startType === 'situation' && (
-                  <div className="space-y-1.5">
-                    <input 
-                      type="text"
-                      value={situation}
-                      onChange={(e) => setSituation(e.target.value)}
-                      placeholder="예: 외출했다 돌아왔을 때"
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                )}
+                <div className="min-h-[42px] flex flex-col justify-center">
+                  {startType === 'anytime' && (
+                    <p className="text-[10px] font-bold text-slate-400 ml-2 animate-in fade-in duration-300">
+                      별도의 조건 없이 언제든 시작할 수 있습니다.
+                    </p>
+                  )}
 
-                {startType === 'time' && (
-                  <div className="flex items-center gap-4 transition-all opacity-100">
-                    <input 
-                      type="time" 
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="text-lg font-black bg-transparent border-none focus:ring-0 p-0 text-slate-900"
-                    />
-                    <div className="h-6 w-[1px] bg-slate-200" />
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">알람</span>
-                      <button 
-                        onClick={() => setIsAlarmEnabled(!isAlarmEnabled)}
-                        className={`w-10 h-5 rounded-full transition-all relative ${isAlarmEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                      >
-                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${isAlarmEnabled ? 'left-5.5' : 'left-0.5'}`} />
-                      </button>
+                  {startType === 'situation' && (
+                    <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+                      <input 
+                        type="text"
+                        value={situation}
+                        onChange={(e) => setSituation(e.target.value)}
+                        placeholder="예: 외출했다 돌아왔을 때"
+                        className="w-full bg-slate-50 border border-slate-100 rounded-[10px] px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {startType === 'time' && (
+                    <div className="flex items-center gap-4 transition-all opacity-100 animate-in fade-in slide-in-from-top-1 duration-300">
+                      <input 
+                        type="time" 
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        className="text-lg font-black bg-transparent border-none focus:ring-0 p-0 text-slate-900"
+                      />
+                      <div className="h-6 w-[1px] bg-slate-200" />
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">알람</span>
+                        <button 
+                          onClick={() => setIsAlarmEnabled(!isAlarmEnabled)}
+                          className={`w-10 h-5 rounded-full transition-all relative ${isAlarmEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                        >
+                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${isAlarmEnabled ? 'left-5.5' : 'left-0.5'}`} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1753,7 +2120,7 @@ const AddRoutineGroupView: React.FC<{
           {/* Tasks Section */}
           <div className="space-y-5">
             <TaskInputSection 
-              label="5. 첫번째 루틴 (트리거 루틴)"
+              label={<SectionTitle>5. 첫번째 루틴 (트리거 루틴)</SectionTitle>}
               task={triggerTask}
               setTask={setTriggerTask}
               isTrigger={true}
@@ -1763,7 +2130,7 @@ const AddRoutineGroupView: React.FC<{
             />
 
             <div className="space-y-3">
-              <label className="text-[15px] font-bold text-slate-600 ml-1">6. 루틴 추가</label>
+              <SectionTitle>6. 루틴 추가</SectionTitle>
               
               {/* Added Routines List (Numbered 2, 3, 4...) */}
               {routineList.length > 0 && (
@@ -1784,7 +2151,18 @@ const AddRoutineGroupView: React.FC<{
                             rt={rt} 
                             idx={idx} 
                             onEdit={() => startEditing(idx)}
-                            onDelete={() => setRoutineList(routineList.filter((_, i) => i !== idx))}
+                            onDelete={() => {
+                              setConfirmModal({
+                                isOpen: true,
+                                title: '루틴 삭제',
+                                message: '이 루틴을 삭제하시겠습니까?',
+                                onConfirm: () => {
+                                  setRoutineList(routineList.filter((_, i) => i !== idx));
+                                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                                }
+                              });
+                            }}
+                            groupScheduledDays={scheduledDays}
                           />
                         ))}
                       </div>
@@ -1803,7 +2181,7 @@ const AddRoutineGroupView: React.FC<{
                   isEditing={editingRoutineIndex !== null}
                   onCancel={() => {
                     setEditingRoutineIndex(null);
-                    setCurrentRoutineInput({ text: '', duration: 10, points: 5, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
+                    setCurrentRoutineInput({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
                   }}
                   onOpenChecklist={() => openChecklistModal('current')}
                   groupScheduledDays={scheduledDays}
@@ -1813,11 +2191,10 @@ const AddRoutineGroupView: React.FC<{
 
             {/* 7. 마무리 루틴 설정 */}
             <div className="space-y-3">
-              <label className="text-[15px] font-bold text-slate-600 ml-1">7. 마무리 루틴 설정</label>
-              <div className="bg-white border border-slate-200 rounded-2xl p-3 flex items-center justify-between shadow-none">
+              <SectionTitle>7. 마무리 루틴 설정</SectionTitle>
+              <div className="flex items-center justify-between px-1">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-600">마무리 루틴 사용</span>
-                  <span className="text-[10px] text-slate-400 font-bold">만족도 표시 및 메모 남기기</span>
+                  <span className="text-[12px] font-bold text-slate-500">만족도 표시 및 메모 남기기</span>
                 </div>
                 <button 
                   onClick={() => setIsClosingRoutineEnabled(!isClosingRoutineEnabled)}
@@ -1834,23 +2211,30 @@ const AddRoutineGroupView: React.FC<{
       {/* Action Buttons */}
       <div className="space-y-3">
         {errorMessage && (
-          <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2 text-rose-600 text-xs font-bold">
+          <div className="p-3 bg-rose-50 border border-rose-100 rounded-[10px] flex items-center gap-2 text-rose-600 text-xs font-bold">
             <AlertCircle className="w-4 h-4" />
             {errorMessage}
           </div>
         )}
         <div className="flex gap-3">
           <button 
-            onClick={() => setActiveTab('home')}
-            className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-lg hover:bg-slate-200 transition-all"
+            onClick={() => {
+              if (mode === 'edit') {
+                if (setIsSettingsOpen) setIsSettingsOpen(false);
+                if (setSettingsSubView) setSettingsSubView({ type: 'main' });
+              } else {
+                setActiveTab('home');
+              }
+            }}
+            className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-[10px] font-black text-lg hover:bg-slate-200 transition-all"
           >
             취소
           </button>
           <button 
-            onClick={handleCreate}
-            className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-[0.98]"
+            onClick={handleSave}
+            className="flex-[2] py-4 bg-indigo-600 text-white rounded-[10px] font-black text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-[0.98]"
           >
-            루틴 그룹 만들기
+            {mode === 'edit' ? '저장하기' : '루틴 그룹 만들기'}
           </button>
         </div>
       </div>
@@ -1861,140 +2245,145 @@ const AddRoutineGroupView: React.FC<{
 export default function App() {
   // --- State ---
   const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
-  const [activeStatsTab, setActiveStatsTab] = useState<StatsTab>('wake-up');
   const [selectedChunkId, setSelectedChunkId] = useState<string | null>(null);
   const [showCheckInCelebration, setShowCheckInCelebration] = useState(false);
   const [userData, setUserData] = useState<UserData>(() => {
     const saved = localStorage.getItem('morning-routine-data');
     const today = formatDate(new Date());
+    
+    let parsed: any;
     if (saved) {
-      const parsed = JSON.parse(saved);
-      // Migration for old data
-      if (!parsed.history) parsed.history = [];
-      if (!parsed.startDate) parsed.startDate = today;
-      
-      // Rename absolutePoints to points
-      if (parsed.absolutePoints !== undefined) {
-        parsed.points = parsed.absolutePoints;
-        delete parsed.absolutePoints;
+      try {
+        parsed = JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse morning-routine-data', e);
+        parsed = null;
       }
-      // Rename relativePoints to completionRate
-      if (parsed.relativePoints !== undefined) {
-        parsed.completionRate = parsed.relativePoints;
-        delete parsed.relativePoints;
-      }
-      // Rename dailyAbsolutePoints to dailyPoints
-      if (parsed.dailyAbsolutePoints !== undefined) {
-        parsed.dailyPoints = parsed.dailyAbsolutePoints;
-        delete parsed.dailyAbsolutePoints;
-      }
-      // Rename dailyRelativePoints to dailyCompletionRate
-      if (parsed.dailyRelativePoints !== undefined) {
-        parsed.dailyCompletionRate = parsed.dailyRelativePoints;
-        delete parsed.dailyRelativePoints;
-      }
-
-      if (parsed.points === undefined) parsed.points = 0;
-      if (parsed.completionRate === undefined) parsed.completionRate = 0;
-      if (!parsed.dailyPoints) parsed.dailyPoints = {};
-      if (!parsed.dailyCompletionRate) parsed.dailyCompletionRate = {};
-      if (parsed.resetTime === undefined) parsed.resetTime = '04:00';
-      if (parsed.lastCheckCheckTime === undefined) parsed.lastCheckCheckTime = Date.now();
-      if (parsed.lastResetDate === undefined) parsed.lastResetDate = null;
-      if (parsed.dailyCheckCheckCounts === undefined) parsed.dailyCheckCheckCounts = {};
-      if (parsed.dailyCheckInPoints === undefined) parsed.dailyCheckInPoints = {};
-      
-      // Migration for chunks
-      if (parsed.routine && !parsed.routineChunks) {
-        parsed.routineChunks = [{
-          id: 'default',
-          name: '기본 루틴',
-          purpose: '더 나은 나',
-          completionDates: [],
-          tasks: parsed.routine.map((t: any) => ({
-            ...t,
-            points: t.points || 5
-          })),
-          startTime: '',
-          duration: 0,
-          endTime: ''
-        }];
-        delete parsed.routine;
-      }
-
-      if (parsed.routineChunks) {
-        parsed.routineChunks = parsed.routineChunks.map((chunk: any) => ({
-          ...chunk,
-          startTime: chunk.startTime || '',
-          duration: chunk.duration || 0,
-          endTime: chunk.endTime || '',
-          purpose: chunk.purpose || '더 나은 나',
-          completionDates: chunk.completionDates || [],
-          inactiveDates: chunk.inactiveDates || [],
-          scheduleType: chunk.scheduleType || 'days',
-          scheduledDays: chunk.scheduledDays || [0, 1, 2, 3, 4, 5, 6],
-          frequency: chunk.frequency || 1,
-          isAlarmEnabled: chunk.isAlarmEnabled || false,
-          lastAlarmTriggeredDate: chunk.lastAlarmTriggeredDate || null,
-          tasks: chunk.tasks.map((t: any) => ({
-            ...t,
-            points: t.points || 5,
-            scheduledDays: t.scheduledDays || [0, 1, 2, 3, 4, 5, 6]
-          }))
-        }));
-      }
-
-      return parsed;
     }
-    return {
-      points: 0,
-      completionRate: 0,
-      streak: 0,
-      lastCheckInDate: null,
-      targetWakeUpTime: '07:00',
-      routineChunks: [
-        {
-          id: 'morning',
-          name: '아침 루틴',
-          purpose: '아침시간을 낭비하지 않는 사람',
-          completionDates: [],
-          startTime: '07:00',
-          duration: 30,
-          endTime: '07:30',
-          scheduleType: 'days',
-          scheduledDays: [0, 1, 2, 3, 4, 5, 6],
-          tasks: [
-            { id: '1', text: '물 한 잔 마시기', completed: false, points: 5, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
-            { id: '2', text: '이불 정리하기', completed: false, points: 5, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
-            { id: '3', text: '명상 5분', completed: false, points: 7, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
-          ]
-        },
-        {
-          id: 'evening',
-          name: '저녁 루틴',
-          purpose: '하루를 차분하게 마무리하는 사람',
-          completionDates: [],
-          startTime: '22:00',
-          duration: 20,
-          endTime: '22:20',
-          scheduleType: 'days',
-          scheduledDays: [0, 1, 2, 3, 4, 5, 6],
-          tasks: [
-            { id: '4', text: '일기 쓰기', completed: false, points: 5, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
-            { id: '5', text: '스트레칭', completed: false, points: 5, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
-          ]
-        }
-      ],
-      history: [],
-      startDate: today,
-      dailyPoints: {},
-      dailyCompletionRate: {},
-      resetTime: '04:00',
-      lastCheckCheckTime: Date.now(),
-      lastResetDate: null,
-      dailyCheckCheckCounts: {},
-      dailyCheckInPoints: {}
-    };
+
+    if (!parsed) {
+      parsed = {
+        completionRate: 0,
+        streak: 0,
+        lastCheckInDate: null,
+        targetWakeUpTime: '07:00',
+        routineChunks: [
+          {
+            id: 'morning',
+            name: '아침 루틴',
+            purpose: '아침시간을 낭비하지 않는 사람',
+            completionDates: [],
+            startTime: '07:00',
+            duration: 30,
+            endTime: '07:30',
+            scheduleType: 'days',
+            scheduledDays: [0, 1, 2, 3, 4, 5, 6],
+            tasks: [
+              { id: '1', text: '물 한 잔 마시기', completed: false, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
+              { id: '2', text: '이불 정리하기', completed: false, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
+              { id: '3', text: '명상 5분', completed: false, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
+            ]
+          },
+          {
+            id: 'evening',
+            name: '저녁 루틴',
+            purpose: '하루를 차분하게 마무리하는 사람',
+            completionDates: [],
+            startTime: '22:00',
+            duration: 20,
+            endTime: '22:20',
+            scheduleType: 'days',
+            scheduledDays: [0, 1, 2, 3, 4, 5, 6],
+            tasks: [
+              { id: '4', text: '일기 쓰기', completed: false, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
+              { id: '5', text: '스트레칭', completed: false, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
+            ]
+          }
+        ],
+        history: [],
+        startDate: today,
+        dailyCompletionRate: {},
+        resetTime: '04:00',
+        lastCheckCheckTime: Date.now(),
+        lastResetDate: null,
+        dailyCheckCheckCounts: {},
+        autoReorderGroups: false
+      };
+    }
+
+    // Load separate history keys
+    try {
+      const wakeUpHistory = localStorage.getItem('WakeUpTimeHistory');
+      if (wakeUpHistory) parsed.wakeUpTimeHistory = JSON.parse(wakeUpHistory);
+      
+      const groupHistory = localStorage.getItem('RoutineGroupHistory');
+      if (groupHistory) parsed.routineGroupHistory = JSON.parse(groupHistory);
+      
+      const taskHistory = localStorage.getItem('TaskHistory');
+      if (taskHistory) parsed.taskHistory = JSON.parse(taskHistory);
+    } catch (e) {
+      console.error('Failed to parse history data', e);
+    }
+
+    // Migration for old data
+    if (!parsed.history) parsed.history = [];
+    if (!parsed.startDate) parsed.startDate = today;
+    
+    if (!parsed.dailyCompletionRate) parsed.dailyCompletionRate = {};
+    if (parsed.resetTime === undefined) parsed.resetTime = '04:00';
+    if (parsed.lastCheckCheckTime === undefined) parsed.lastCheckCheckTime = Date.now();
+    if (parsed.lastResetDate === undefined) parsed.lastResetDate = null;
+    if (parsed.dailyCheckCheckCounts === undefined) parsed.dailyCheckCheckCounts = {};
+    
+    if (parsed.autoReorderGroups === undefined) parsed.autoReorderGroups = false;
+    
+    if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
+    if (parsed.routineGroupHistory === undefined) parsed.routineGroupHistory = [];
+    if (parsed.taskHistory === undefined) parsed.taskHistory = [];
+
+    // Migration for chunks
+    if (parsed.routine && !parsed.routineChunks) {
+      parsed.routineChunks = [{
+        id: 'default',
+        name: '기본 루틴',
+        purpose: '더 나은 나',
+        completionDates: [],
+        tasks: parsed.routine.map((t: any) => ({
+          ...t,
+          points: t.points || 5
+        })),
+        startTime: '',
+        duration: 0,
+        endTime: ''
+      }];
+      delete parsed.routine;
+    }
+
+    if (parsed.routineChunks) {
+      parsed.routineChunks = parsed.routineChunks.map((chunk: any) => ({
+        ...chunk,
+        startTime: chunk.startTime || '',
+        duration: chunk.duration || 0,
+        endTime: chunk.endTime || '',
+        purpose: chunk.purpose || '더 나은 나',
+        completionDates: chunk.completionDates || [],
+        inactiveDates: chunk.inactiveDates || [],
+        scheduleType: chunk.scheduleType || 'days',
+        scheduledDays: chunk.scheduledDays || [0, 1, 2, 3, 4, 5, 6],
+        frequency: chunk.frequency || 1,
+        isAlarmEnabled: chunk.isAlarmEnabled || false,
+        lastAlarmTriggeredDate: chunk.lastAlarmTriggeredDate || null,
+        tasks: (chunk.tasks || []).map((t: any) => ({
+          ...t,
+          points: t.points || 5,
+          scheduledDays: t.scheduledDays || [0, 1, 2, 3, 4, 5, 6]
+        }))
+      }));
+    } else {
+      parsed.routineChunks = [];
+    }
+
+    return parsed as UserData;
   });
 
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -2004,7 +2393,6 @@ export default function App() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupPurpose, setNewGroupPurpose] = useState('');
   const [newTaskText, setNewTaskText] = useState('');
-  const [newTaskPoints, setNewTaskPoints] = useState(5);
   const [newTaskDuration, setNewTaskDuration] = useState(10);
   const [newTaskType, setNewTaskType] = useState<TaskType>(TaskType.TIME_LIMITED);
   const [newChunkName, setNewChunkName] = useState('');
@@ -2015,13 +2403,11 @@ export default function App() {
   const [settingsSubView, setSettingsSubView] = useState<SettingsSubView>({ type: 'main' });
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTaskText, setEditingTaskText] = useState('');
-  const [editingTaskPoints, setEditingTaskPoints] = useState(5);
   const [editingTaskDuration, setEditingTaskDuration] = useState(10);
   const [editingTaskType, setEditingTaskType] = useState<TaskType>(TaskType.TIME_LIMITED);
   const [editingTaskScheduledDays, setEditingTaskScheduledDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const [chunkTimeInputs, setChunkTimeInputs] = useState<Record<string, { s: string, d: number, e: string, alarm?: boolean }>>({});
   const [chunkScheduleInputs, setChunkScheduleInputs] = useState<Record<string, { type: 'days' | 'weekly' | 'monthly' | 'yearly', days: number[], freq: number }>>({});
-  const [weather, setWeather] = useState<{ icon: React.ReactNode; temp: number } | null>(null);
   const [lastCompletedTaskName, setLastCompletedTaskName] = useState<string | null>(null);
   const [activeAlarmChunk, setActiveAlarmChunk] = useState<RoutineChunk | null>(null);
 
@@ -2091,7 +2477,9 @@ export default function App() {
             isPaused: false,
             accumulatedDuration: 0,
             duration: 0,
-            earnedPoints: undefined
+            earnedPoints: undefined,
+            closingNote: undefined,
+            satisfaction: undefined
           }))
         }))
       }));
@@ -2127,52 +2515,21 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    const fetchWeather = async (lat: number, lon: number) => {
-      try {
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-        const data = await res.json();
-        const code = data.current_weather.weathercode;
-        const temp = Math.round(data.current_weather.temperature);
-        
-        // Map WMO Weather interpretation codes (WW)
-        let icon = <Sun className="w-6 h-6 text-amber-500" />;
-        if (code >= 1 && code <= 3) icon = <CloudSun className="w-6 h-6 text-slate-400" />;
-        else if (code >= 45 && code <= 48) icon = <Wind className="w-6 h-6 text-slate-300" />;
-        else if (code >= 51 && code <= 67) icon = <CloudRain className="w-6 h-6 text-blue-400" />;
-        else if (code >= 71 && code <= 77) icon = <CloudSnow className="w-6 h-6 text-blue-200" />;
-        else if (code >= 80 && code <= 82) icon = <CloudRain className="w-6 h-6 text-blue-500" />;
-        else if (code >= 95) icon = <CloudLightning className="w-6 h-6 text-indigo-500" />;
-        else if (code >= 3) icon = <Cloud className="w-6 h-6 text-slate-400" />;
-
-        setWeather({ icon, temp });
-      } catch (err) {
-        console.error("Weather fetch failed", err);
-      }
-    };
-
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition((pos) => {
-        fetchWeather(pos.coords.latitude, pos.coords.longitude);
-      });
-    }
-  }, []);
-
   // Removed auto-pause when navigating away from execution screen as per user request
   // Current routine should continue counting in the background
 
   useEffect(() => {
     const totalCompleted = userData.routineChunks.reduce((acc, chunk) => 
-      acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && t.completed).length, 0
+      acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && (t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT)).length, 0
     );
     const totalScheduledTasksCount = userData.routineChunks.reduce((acc, chunk) => 
       acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData)).length, 0
     );
     const completionPercentage = totalScheduledTasksCount > 0 
-      ? Number(((totalCompleted / totalScheduledTasksCount) * 100).toFixed(1)) 
+      ? Math.floor((totalCompleted / totalScheduledTasksCount) * 100) 
       : 0;
 
-    if (userData.dailyCompletionRate[todayStr] !== completionPercentage) {
+    if ((userData.dailyCompletionRate?.[todayStr]) !== completionPercentage) {
       setUserData(prev => ({
         ...prev,
         dailyCompletionRate: {
@@ -2183,12 +2540,143 @@ export default function App() {
     }
   }, [userData.routineChunks, todayStr, currentTime]);
 
+  const saveData = (data: UserData) => {
+    try {
+      localStorage.setItem('morning-routine-data', JSON.stringify(data));
+      if (data.wakeUpTimeHistory) {
+        localStorage.setItem('WakeUpTimeHistory', JSON.stringify(data.wakeUpTimeHistory));
+      }
+      if (data.routineGroupHistory) {
+        localStorage.setItem('RoutineGroupHistory', JSON.stringify(data.routineGroupHistory));
+      }
+      if (data.taskHistory) {
+        localStorage.setItem('TaskHistory', JSON.stringify(data.taskHistory));
+      }
+    } catch (e) {
+      console.error('Error saving data to localStorage', e);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('morning-routine-data', JSON.stringify(userData));
+    saveData(userData);
   }, [userData]);
 
   // --- Helpers ---
-  
+  const syncHistory = (data: UserData): UserData => {
+    const today = formatDate(new Date());
+    const now = new Date();
+
+    let newTaskHistory = [...(data.taskHistory || [])];
+    let newGroupHistory = [...(data.routineGroupHistory || [])];
+    let newWakeUpHistory = [...(data.wakeUpTimeHistory || [])];
+
+    // Update WakeUp History if checked in today
+    if (data.lastCheckInDate === today) {
+      const checkInTime = data.dailyCheckIn?.[today];
+      if (checkInTime) {
+        const existingIdx = newWakeUpHistory.findIndex(h => h.date === today);
+        if (existingIdx >= 0) {
+          newWakeUpHistory[existingIdx] = { date: today, wakeUpTime: checkInTime };
+        } else {
+          newWakeUpHistory.push({ date: today, wakeUpTime: checkInTime });
+        }
+      }
+    }
+
+    // Update Task and Group History
+    data.routineChunks.forEach(chunk => {
+      const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, now, data));
+      const isActive = scheduledTasks.length > 0;
+      
+      let firstStartTime: string | null = null;
+      let totalDuration = 0;
+      let allFinished = scheduledTasks.length > 0;
+      let anyStarted = false;
+      let lastEndTime: string | null = null;
+
+      scheduledTasks.forEach(task => {
+        // Task History
+        let statusStr = '미실행';
+        if (task.status === TaskStatus.PERFECT) statusStr = '완벽';
+        else if (task.status === TaskStatus.COMPLETED || task.completed) statusStr = '완료';
+        else if (task.status === TaskStatus.SKIP || task.givenUp) statusStr = '스킵';
+        else if (task.isPaused) statusStr = '일시정지';
+        else if (task.startTime) statusStr = '실행중';
+
+        const taskDuration = task.duration || task.accumulatedDuration || 0;
+        
+        const taskEntryIdx = newTaskHistory.findIndex(h => h.date === today && h.taskId === task.id);
+        const taskEntry: TaskHistoryEntry = {
+          date: today,
+          taskId: task.id,
+          groupId: chunk.id,
+          isActive: true,
+          duration: taskDuration,
+          status: statusStr
+        };
+
+        if (taskEntryIdx >= 0) {
+          newTaskHistory[taskEntryIdx] = taskEntry;
+        } else {
+          newTaskHistory.push(taskEntry);
+        }
+
+        // Group Stats
+        if (task.startTime && (!firstStartTime || task.startTime < firstStartTime)) {
+          firstStartTime = task.startTime;
+        }
+        if (task.endTime && (!lastEndTime || task.endTime > lastEndTime)) {
+          lastEndTime = task.endTime;
+        }
+        if (!task.isClosingRoutine) {
+          totalDuration += taskDuration;
+        }
+        if (!task.completed && !task.givenUp && task.status !== TaskStatus.SKIP && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.PERFECT) {
+          allFinished = false;
+        }
+        if (task.startTime || task.completed || task.givenUp || task.status !== TaskStatus.NOT_STARTED) {
+          anyStarted = true;
+        }
+      });
+
+      // Group History
+      let completionStatus: '비활성' | '미실행' | '미완료' | '전체완료' = '미실행';
+      if (!isActive) completionStatus = '비활성';
+      else if (allFinished) completionStatus = '전체완료';
+      else if (anyStarted) completionStatus = '미완료';
+
+      const closingRoutine = scheduledTasks.find(t => t.isClosingRoutine);
+      const satisfaction = closingRoutine?.satisfaction;
+      const closingNote = closingRoutine?.closingNote;
+
+      const groupEntryIdx = newGroupHistory.findIndex(h => h.date === today && h.groupId === chunk.id);
+      const groupEntry: RoutineGroupHistoryEntry = {
+        date: today,
+        groupId: chunk.id,
+        isActive,
+        firstTaskStartTime: firstStartTime,
+        completionStatus,
+        completedAt: allFinished ? lastEndTime : null,
+        totalDuration,
+        satisfaction,
+        closingNote
+      };
+
+      if (groupEntryIdx >= 0) {
+        newGroupHistory[groupEntryIdx] = groupEntry;
+      } else {
+        newGroupHistory.push(groupEntry);
+      }
+    });
+
+    return {
+      ...data,
+      wakeUpTimeHistory: newWakeUpHistory,
+      routineGroupHistory: newGroupHistory,
+      taskHistory: newTaskHistory
+    };
+  };
+
   const canCheckIn = useMemo(() => {
     if (userData.lastCheckInDate === todayStr) return false;
     
@@ -2252,6 +2740,42 @@ export default function App() {
   };
 
   // --- Handlers ---
+  const handleEnterExecution = (chunkId: string) => {
+    const chunk = userData.routineChunks.find(c => c.id === chunkId);
+    if (!chunk) return;
+
+    // Find best task to start
+    const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+    
+    // 1. Active task (already running)
+    let targetTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+    
+    // If no active task, find the next one to start
+    if (!targetTask) {
+      // 2. First unstarted task
+      targetTask = scheduledTasks.find(t => !t.startTime && !t.completed && !t.givenUp);
+      
+      // 3. First paused task
+      if (!targetTask) {
+        targetTask = scheduledTasks.find(t => t.startTime && t.isPaused && !t.completed && !t.givenUp);
+      }
+      
+      // 4. First later task
+      if (!targetTask) {
+        targetTask = scheduledTasks.find(t => t.laterTimestamp && !t.completed && !t.givenUp);
+      }
+    }
+
+    setSelectedChunkId(chunkId);
+    setActiveTab('execution');
+
+    // Only start if it's not already active (to avoid resetting startTime)
+    if (targetTask && (!targetTask.startTime || targetTask.isPaused || targetTask.laterTimestamp)) {
+      const shouldReset = !!targetTask.laterTimestamp || !targetTask.isPaused;
+      startTask(targetTask.id, shouldReset);
+    }
+  };
+
   const handleCheckIn = () => {
     if (!canCheckIn) return;
 
@@ -2266,26 +2790,11 @@ export default function App() {
       newStreak = 1;
     }
 
-    const bonus = (newStreak - 1) * STREAK_BONUS_MULTIPLIER;
-    const totalEarned = POINTS_WAKE_UP + bonus;
     const checkInTimeStr = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
 
     setUserData(prev => {
-      const currentDaily = prev.dailyPoints[todayStr] || 0;
-      const currentCheckInPoints = prev.dailyCheckInPoints[todayStr] || 0;
-      const canAdd = totalEarned; // No max limit for points accumulation
-      
-      return {
+      const next = {
         ...prev,
-        points: prev.points + canAdd,
-        dailyPoints: {
-          ...prev.dailyPoints,
-          [todayStr]: currentDaily + canAdd
-        },
-        dailyCheckInPoints: {
-          ...prev.dailyCheckInPoints,
-          [todayStr]: currentCheckInPoints + canAdd
-        },
         streak: newStreak,
         lastCheckInDate: todayStr,
         history: [...prev.history, { date: todayStr, time: checkInTimeStr }],
@@ -2294,6 +2803,7 @@ export default function App() {
           tasks: chunk.tasks.map(t => ({ ...t, completed: false }))
         }))
       };
+      return syncHistory(next);
     });
 
     // Show celebration
@@ -2329,156 +2839,114 @@ export default function App() {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
-    setUserData(prev => ({
-      ...prev,
-      routineChunks: prev.routineChunks.map(chunk => {
-        const foundTask = chunk.tasks.find(t => t.id === id);
-        if (!foundTask) return chunk;
+    setUserData(prev => {
+      const next = {
+        ...prev,
+        routineChunks: prev.routineChunks.map(chunk => {
+          const foundTask = chunk.tasks.find(t => t.id === id);
+          if (!foundTask) return chunk;
 
-        const updatedTasks = chunk.tasks.map(t => t.id === id ? { ...t, givenUp: true, completed: false } : t);
-        const sortedTasks = [...updatedTasks].sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
-        const nextTask = sortedTasks.find(t => !t.completed && !t.givenUp && !t.startTime);
+          const updatedTasks = chunk.tasks.map(t => {
+            if (t.id === id) {
+              return { 
+                ...t, 
+                givenUp: true, 
+                status: TaskStatus.SKIP,
+                endTime: nowStr, 
+                duration: 0 
+              };
+            }
+            return t;
+          });
+          const sortedTasks = [...updatedTasks].sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
+          const nextTask = sortedTasks.find(t => !t.completed && !t.givenUp && !t.startTime);
 
-        if (nextTask) {
+          if (nextTask) {
+            return {
+              ...chunk,
+              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nextTask.isClosingRoutine ? undefined : nowStr } : t)
+            };
+          }
+
           return {
             ...chunk,
-            tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nextTask.isClosingRoutine ? undefined : nowStr } : t)
+            tasks: updatedTasks
           };
-        }
-
-        return {
-          ...chunk,
-          tasks: updatedTasks
-        };
-      })
-    }));
+        })
+      };
+      return syncHistory(next);
+    });
   };
 
   const laterTask = (id: string) => {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
-    setUserData(prev => ({
-      ...prev,
-      routineChunks: prev.routineChunks.map(chunk => {
-        const foundTask = chunk.tasks.find(t => t.id === id);
-        if (!foundTask) return chunk;
+    setUserData(prev => {
+      const next = {
+        ...prev,
+        routineChunks: prev.routineChunks.map(chunk => {
+          const foundTask = chunk.tasks.find(t => t.id === id);
+          if (!foundTask) return chunk;
 
-        const updatedTasks = chunk.tasks.map(t => t.id === id ? { ...t, laterTimestamp: Date.now(), startTime: undefined, isPaused: false } : t);
-        
-        // Find next task to start
-        const sortedTasks = [...updatedTasks].sort((a, b) => {
-          const getPriority = (t: Task) => {
-            if (t.givenUp) return 4;
-            if (t.completed) return 3;
-            if (t.laterTimestamp) return 2;
-            return 1;
-          };
-          const pA = getPriority(a);
-          const pB = getPriority(b);
-          if (pA !== pB) return pA - pB;
-          if (pA === 2) return (b.laterTimestamp || 0) - (a.laterTimestamp || 0);
-          return 0;
-        });
+          const updatedTasks = chunk.tasks.map(t => {
+            if (t.id === id) {
+              return { 
+                ...t, 
+                laterTimestamp: Date.now(), 
+                completed: false, 
+                givenUp: false,
+                isPaused: true,
+                accumulatedDuration: calculateTaskDuration(t, now),
+                startTime: undefined
+              };
+            }
+            return t;
+          });
+          
+          // Find next task to start
+          const sortedTasks = [...updatedTasks].sort((a, b) => {
+            const getPriority = (t: Task) => {
+              if (t.givenUp) return 4;
+              if (t.completed) return 3;
+              if (t.laterTimestamp) return 2;
+              return 1;
+            };
+            const pA = getPriority(a);
+            const pB = getPriority(b);
+            if (pA !== pB) return pA - pB;
+            if (pA === 2) return (b.laterTimestamp || 0) - (a.laterTimestamp || 0);
+            return 0;
+          });
 
-        const nextTask = sortedTasks.find(t => !t.completed && !t.givenUp && !t.startTime);
-        if (nextTask) {
+          const nextTask = sortedTasks.find(t => !t.completed && !t.givenUp && !t.startTime);
+          if (nextTask) {
+            return {
+              ...chunk,
+              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nextTask.isClosingRoutine ? undefined : nowStr, isPaused: false } : t)
+            };
+          }
+
           return {
             ...chunk,
-            tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nextTask.isClosingRoutine ? undefined : nowStr, isPaused: false } : t)
+            tasks: updatedTasks
           };
-        }
-
-        return {
-          ...chunk,
-          tasks: updatedTasks
-        };
-      })
-    }));
+        })
+      };
+      return syncHistory(next);
+    });
   };
 
-  const startTask = (taskId: string) => {
+  const startTask = (taskId: string, resetTimer: boolean = true) => {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-    setUserData(prev => ({
-      ...prev,
-      routineChunks: prev.routineChunks.map(chunk => {
-        const newTasks = chunk.tasks.map(task => {
-          // If this is the target task, start it
-          if (task.id === taskId) {
-            const wasPaused = task.isPaused;
-            return {
-              ...task,
-              completed: false,
-              givenUp: false,
-              laterTimestamp: undefined,
-              isPaused: false,
-              startTime: nowStr,
-              endTime: undefined,
-              duration: undefined,
-              accumulatedDuration: wasPaused ? (task.accumulatedDuration || 0) : 0
-            };
-          }
-          
-          // If this is an active task (not the target one), pause it
-          const isActive = task.startTime && !task.isPaused && !task.completed && !task.givenUp;
-          if (isActive) {
-            let currentSessionDuration = 0;
-            if (task.startTime) {
-              const [h, m, s] = task.startTime.split(':').map(Number);
-              const start = new Date(now);
-              start.setHours(h, m, s, 0);
-              if (start.getTime() > now.getTime()) {
-                start.setDate(start.getDate() - 1);
-              }
-              currentSessionDuration = Math.floor((now.getTime() - start.getTime()) / 1000);
-            }
-            return {
-              ...task,
-              isPaused: true,
-              accumulatedDuration: (task.accumulatedDuration || 0) + currentSessionDuration,
-              startTime: undefined
-            };
-          }
-          
-          return task;
-        });
-        
-        return { ...chunk, tasks: newTasks };
-      })
-    }));
-  };
-
-  const globalActiveTask = useMemo(() => {
-    for (const chunk of userData.routineChunks) {
-      const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
-      if (active) return { task: active, chunkId: chunk.id };
-    }
-    return null;
-  }, [userData.routineChunks]);
-
-  const onRestart = (taskId: string) => {
-    const now = new Date();
-    const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-    
     setUserData(prev => {
-      // If there's a different active task, move it to 'Later'
-      let activeTaskId: string | null = null;
-      for (const chunk of prev.routineChunks) {
-        const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
-        if (active && active.id !== taskId) {
-          activeTaskId = active.id;
-          break;
-        }
-      }
-
-      return {
+      const next = {
         ...prev,
         routineChunks: prev.routineChunks.map(chunk => {
           const newTasks = chunk.tasks.map(task => {
-            // If this is the target task, start/resume it
+            // If this is the target task, start it
             if (task.id === taskId) {
-              const wasPaused = task.isPaused;
               return {
                 ...task,
                 completed: false,
@@ -2488,27 +2956,17 @@ export default function App() {
                 startTime: nowStr,
                 endTime: undefined,
                 duration: undefined,
-                accumulatedDuration: wasPaused ? (task.accumulatedDuration || 0) : 0
+                accumulatedDuration: resetTimer ? 0 : (task.accumulatedDuration || 0)
               };
             }
             
-            // If this was the active task, move it to 'Later'
-            if (task.id === activeTaskId) {
-              let currentSessionDuration = 0;
-              if (task.startTime) {
-                const [h, m, s] = task.startTime.split(':').map(Number);
-                const start = new Date(now);
-                start.setHours(h, m, s, 0);
-                if (start.getTime() > now.getTime()) {
-                  start.setDate(start.getDate() - 1);
-                }
-                currentSessionDuration = Math.floor((now.getTime() - start.getTime()) / 1000);
-              }
+            // If this is an active task (not the target one), pause it
+            const isActive = task.startTime && !task.isPaused && !task.completed && !task.givenUp;
+            if (isActive) {
               return {
                 ...task,
-                isPaused: false,
-                laterTimestamp: Date.now(),
-                accumulatedDuration: (task.accumulatedDuration || 0) + currentSessionDuration,
+                isPaused: true,
+                accumulatedDuration: calculateTaskDuration(task, now),
                 startTime: undefined
               };
             }
@@ -2519,93 +2977,149 @@ export default function App() {
           return { ...chunk, tasks: newTasks };
         })
       };
+      return syncHistory(next);
+    });
+  };
+
+  const globalActiveTask = useMemo(() => {
+    for (const chunk of userData.routineChunks) {
+      const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+      if (active) return { task: active, chunkId: chunk.id };
+    }
+    return null;
+  }, [userData.routineChunks]);
+
+  const onRestart = (taskId: string, resetTimer: boolean = true) => {
+    const now = new Date();
+    const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+    
+    setUserData(prev => {
+      // If there's a different active task, pause it
+      let activeTaskId: string | null = null;
+      for (const chunk of prev.routineChunks) {
+        const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+        if (active && active.id !== taskId) {
+          activeTaskId = active.id;
+          break;
+        }
+      }
+
+      const next = {
+        ...prev,
+        routineChunks: prev.routineChunks.map(chunk => {
+          const newTasks = chunk.tasks.map(task => {
+            // If this is the target task, start/resume it
+            if (task.id === taskId) {
+              return {
+                ...task,
+                completed: false,
+                givenUp: false,
+                laterTimestamp: undefined,
+                isPaused: false,
+                startTime: nowStr,
+                endTime: undefined,
+                duration: undefined,
+                accumulatedDuration: resetTimer ? 0 : (task.accumulatedDuration || 0)
+              };
+            }
+            
+            // If this was the active task, pause it
+            if (task.id === activeTaskId) {
+              return {
+                ...task,
+                isPaused: true,
+                accumulatedDuration: calculateTaskDuration(task, now),
+                startTime: undefined
+              };
+            }
+            
+            return task;
+          });
+          
+          return { ...chunk, tasks: newTasks };
+        })
+      };
+      return syncHistory(next);
     });
   };
 
   const togglePauseTask = (id: string) => {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-    setUserData(prev => ({
-      ...prev,
-      routineChunks: prev.routineChunks.map(chunk => {
-        // Determine if we are about to resume a task
-        const isTargetResuming = chunk.tasks.some(t => t.id === id && (t.isPaused || !t.startTime));
+    setUserData(prev => {
+      const next = {
+        ...prev,
+        routineChunks: prev.routineChunks.map(chunk => {
+          // Determine if we are about to resume a task
+          const isTargetResuming = chunk.tasks.some(t => t.id === id && (t.isPaused || !t.startTime));
 
-        return {
-          ...chunk,
-          tasks: chunk.tasks.map(t => {
-            if (t.id === id) {
-              if (t.isPaused || !t.startTime) {
-                // Resuming or Starting: set new startTime
-                return { ...t, isPaused: false, startTime: nowStr };
-              } else {
-                // Pausing: calculate accumulated duration
-                let currentSessionDuration = 0;
-                if (t.startTime) {
-                  const [h, m, s] = t.startTime.split(':').map(Number);
-                  const start = new Date(now);
-                  start.setHours(h, m, s, 0);
-                  if (start.getTime() > now.getTime()) {
-                    start.setDate(start.getDate() - 1);
-                  }
-                  currentSessionDuration = Math.floor((now.getTime() - start.getTime()) / 1000);
+          return {
+            ...chunk,
+            tasks: chunk.tasks.map(t => {
+              if (t.id === id) {
+                if (t.isPaused || !t.startTime || t.completed || t.givenUp) {
+                  // Resuming or Starting: set new startTime and clear completion status
+                  return { 
+                    ...t, 
+                    isPaused: false, 
+                    startTime: nowStr,
+                    completed: false,
+                    givenUp: false,
+                    laterTimestamp: undefined,
+                    status: TaskStatus.NOT_STARTED,
+                    endTime: undefined,
+                    duration: undefined,
+                    closingNote: undefined,
+                    satisfaction: undefined
+                  };
+                } else {
+                  // Pausing: calculate accumulated duration
+                  return { 
+                    ...t, 
+                    isPaused: true, 
+                    accumulatedDuration: calculateTaskDuration(t, now),
+                    startTime: undefined 
+                  };
                 }
-                return { 
-                  ...t, 
-                  isPaused: true, 
-                  accumulatedDuration: (t.accumulatedDuration || 0) + currentSessionDuration,
-                  startTime: undefined 
-                };
               }
-            }
-            
-            // If we are resuming the target task, pause all other active tasks
-            if (isTargetResuming) {
-              const isActive = t.startTime && !t.isPaused && !t.completed && !t.givenUp;
-              if (isActive) {
-                let currentSessionDuration = 0;
-                if (t.startTime) {
-                  const [h, m, s] = t.startTime.split(':').map(Number);
-                  const start = new Date(now);
-                  start.setHours(h, m, s, 0);
-                  if (start.getTime() > now.getTime()) {
-                    start.setDate(start.getDate() - 1);
-                  }
-                  currentSessionDuration = Math.floor((now.getTime() - start.getTime()) / 1000);
+              
+              // If we are resuming the target task, pause all other active tasks
+              if (isTargetResuming) {
+                const isActive = t.startTime && !t.isPaused && !t.completed && !t.givenUp;
+                if (isActive) {
+                  return {
+                    ...t,
+                    isPaused: true,
+                    accumulatedDuration: calculateTaskDuration(t, now),
+                    startTime: undefined
+                  };
                 }
-                return {
-                  ...t,
-                  isPaused: true,
-                  accumulatedDuration: (t.accumulatedDuration || 0) + currentSessionDuration,
-                  startTime: undefined
-                };
               }
-            }
-            
-            return t;
-          }),
-        };
-      }),
-    }));
+              
+              return t;
+            }),
+          };
+        }),
+      };
+      return syncHistory(next);
+    });
   };
 
   const resetChunk = (chunkId: string) => {
     setConfirmModal({
       isOpen: true,
-      title: '루틴 리셋',
-      message: '모든 루틴이 미실행상태로 돌아갑니다. 리셋하시겠습니까?',
+      title: '루틴 초기화',
+      message: '모든 루틴의 실행여부와 타이머가 초기화됩니다.',
       onConfirm: () => {
         setUserData(prev => {
           const chunk = prev.routineChunks.find(c => c.id === chunkId);
           if (!chunk) return prev;
 
-          // Calculate points to subtract (only for tasks completed TODAY)
-          let pointsToSubtract = 0;
-          let completedCountToSubtract = 0;
+          // Calculate tasks completed TODAY
+          let completedCount = 0;
           chunk.tasks.forEach(t => {
             if (t.completed) {
-              pointsToSubtract += (t.earnedPoints || t.points);
-              completedCountToSubtract += 1;
+              completedCount += 1;
             }
           });
 
@@ -2623,50 +3137,41 @@ export default function App() {
                   isPaused: false,
                   accumulatedDuration: 0,
                   duration: undefined,
-                  earnedPoints: undefined
+                  status: TaskStatus.NOT_STARTED,
+                  checklist: t.checklist?.map(item => ({ ...item, completed: false }))
                 }))
               };
             }
             return c;
           });
 
-          // Update total points
-          const newAbsoluteTotal = Math.max(0, prev.points - pointsToSubtract);
-          
-          const currentDaily = prev.dailyPoints[todayStr] || 0;
-          const newDaily = Math.max(0, currentDaily - pointsToSubtract);
-
           // Recalculate completion percentage for today
           const totalCompleted = newChunks.reduce((acc, chunk) => 
-            acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && t.completed).length, 0
+            acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && (t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP)).length, 0
           );
           const totalScheduledTasksCount = newChunks.reduce((acc, chunk) => 
             acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData)).length, 0
           );
           const completionPercentage = totalScheduledTasksCount > 0 
-            ? Number(((totalCompleted / totalScheduledTasksCount) * 100).toFixed(1)) 
+            ? Math.floor((totalCompleted / totalScheduledTasksCount) * 100) 
             : 0;
 
-          return {
+          const next = {
             ...prev,
             routineChunks: newChunks,
-            points: newAbsoluteTotal,
-            dailyPoints: {
-              ...prev.dailyPoints,
-              [todayStr]: newDaily
-            },
             dailyCompletionRate: {
               ...prev.dailyCompletionRate,
               [todayStr]: completionPercentage
             }
           };
+          return syncHistory(next);
         });
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
     });
   };
 
-  const toggleTask = (id: string, closingData?: { note?: string, photo?: string, satisfaction?: number }) => {
+  const toggleTask = (id: string, closingData?: { note?: string, satisfaction?: number }) => {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
@@ -2687,36 +3192,6 @@ export default function App() {
 
       const isBecomingCompleted = !foundTask.completed;
       
-      // Calculate points based on elapsed time if completing
-      let earnedPoints = foundTask.points;
-      if (isBecomingCompleted && foundTask.startTime) {
-        const [h, m, s] = foundTask.startTime.split(':').map(Number);
-        const start = new Date(now);
-        start.setHours(h, m, s, 0);
-        if (start.getTime() > now.getTime()) {
-          start.setDate(start.getDate() - 1);
-        }
-        const elapsed = (foundTask.accumulatedDuration || 0) + Math.floor((now.getTime() - start.getTime()) / 1000);
-        const targetSec = (foundTask.targetDuration || 5) * 60;
-        
-        if (foundTask.taskType === TaskType.TIME_ACCUMULATED) {
-          const progress = elapsed / targetSec;
-          if (progress >= 1.0) earnedPoints = foundTask.points;
-          else if (progress >= 0.9) earnedPoints = Math.floor(foundTask.points * 0.9);
-          else if (progress >= 0.8) earnedPoints = Math.floor(foundTask.points * 0.8);
-          else if (progress >= 0.5) earnedPoints = Math.floor(foundTask.points * 0.5);
-          else earnedPoints = 0;
-        } else if (foundTask.taskType === TaskType.TIME_INDEPENDENT) {
-          earnedPoints = foundTask.points;
-        } else {
-          if (elapsed > targetSec) earnedPoints -= 1;
-          if (elapsed > 2 * targetSec) earnedPoints -= 1;
-          if (elapsed > 3 * targetSec) earnedPoints -= 1;
-          if (elapsed > 4 * targetSec) earnedPoints -= 1;
-          earnedPoints = Math.max(0, earnedPoints);
-        }
-      }
-      
       const newChunks = prev.routineChunks.map(chunk => {
         if (chunk.id === targetChunkId) {
           const updatedTasks = chunk.tasks.map(t => {
@@ -2724,31 +3199,29 @@ export default function App() {
               const updated = { ...t, completed: isBecomingCompleted, givenUp: false };
               if (isBecomingCompleted) {
                 updated.endTime = nowStr;
-                let currentSession = 0;
-                if (t.startTime && !t.isPaused) {
-                  const start = new Date(now);
-                  const [h, m, s] = t.startTime.split(':').map(Number);
-                  start.setHours(h, m, s, 0);
-                  if (start.getTime() > now.getTime()) {
-                    start.setDate(start.getDate() - 1);
-                  }
-                  currentSession = Math.floor((now.getTime() - start.getTime()) / 1000);
-                }
-                updated.duration = (t.accumulatedDuration || 0) + currentSession;
-                updated.earnedPoints = earnedPoints;
+                const totalSeconds = t.isClosingRoutine ? 0 : calculateTaskDuration(t, now);
+                updated.duration = totalSeconds;
+                if (t.isClosingRoutine) updated.accumulatedDuration = 0;
                 
+                // Determine status (PERFECT or COMPLETED)
+                const targetSeconds = (t.targetDuration || 0) * 60;
+                if (t.taskType === TaskType.TIME_LIMITED) {
+                  updated.status = totalSeconds <= targetSeconds ? TaskStatus.PERFECT : TaskStatus.COMPLETED;
+                } else if (t.taskType === TaskType.TIME_ACCUMULATED) {
+                  updated.status = totalSeconds >= targetSeconds ? TaskStatus.PERFECT : TaskStatus.COMPLETED;
+                } else {
+                  // TIME_INDEPENDENT
+                  updated.status = TaskStatus.PERFECT;
+                }
+
                 if (closingData) {
                   updated.closingNote = closingData.note;
-                  updated.closingPhoto = closingData.photo;
                   updated.satisfaction = closingData.satisfaction;
                 }
               } else {
                 updated.endTime = undefined;
                 updated.duration = undefined;
-                updated.earnedPoints = undefined;
-                updated.closingNote = undefined;
-                updated.closingPhoto = undefined;
-                updated.satisfaction = undefined;
+                updated.status = TaskStatus.NOT_STARTED;
               }
               return updated;
             }
@@ -2791,15 +3264,7 @@ export default function App() {
         return chunk;
       });
 
-      let newAbsoluteTotal = prev.points;
-      const currentDaily = prev.dailyPoints[todayStr] || 0;
-      let newDaily = currentDaily;
-
       if (isBecomingCompleted) {
-        const canAdd = earnedPoints;
-        newAbsoluteTotal += canAdd;
-        newDaily += canAdd;
-
         // Celebration animation
         setLastCompletedTaskName(foundTask.text);
         setTimeout(() => setLastCompletedTaskName(null), 2000);
@@ -2811,10 +3276,6 @@ export default function App() {
           origin: { y: 0.6 },
           colors: ['#6366f1', '#a855f7', '#ec4899', '#3b82f6', '#10b981']
         });
-      } else {
-        const toSubtract = foundTask.earnedPoints || foundTask.points;
-        newAbsoluteTotal -= toSubtract;
-        newDaily -= toSubtract;
       }
 
       const totalCompleted = newChunks.reduce((acc, chunk) => 
@@ -2824,22 +3285,18 @@ export default function App() {
         acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData)).length, 0
       );
       const completionPercentage = totalScheduledTasksCount > 0 
-        ? Number(((totalCompleted / totalScheduledTasksCount) * 100).toFixed(1)) 
+        ? Math.floor((totalCompleted / totalScheduledTasksCount) * 100) 
         : 0;
 
-      return {
+      const next = {
         ...prev,
         routineChunks: newChunks,
-        points: Math.max(0, newAbsoluteTotal),
-        dailyPoints: {
-          ...prev.dailyPoints,
-          [todayStr]: Math.max(0, newDaily)
-        },
         dailyCompletionRate: {
           ...prev.dailyCompletionRate,
           [todayStr]: completionPercentage
         }
       };
+      return syncHistory(next);
     });
   };
 
@@ -2849,8 +3306,7 @@ export default function App() {
       id: Date.now().toString(),
       text: newTaskText,
       completed: false,
-      points: newTaskPoints,
-      targetDuration: newTaskDuration,
+      targetDuration: newTaskDuration || 1,
       taskType: newTaskType,
       scheduledDays
     };
@@ -2863,7 +3319,6 @@ export default function App() {
       )
     }));
     setNewTaskText('');
-    setNewTaskPoints(5);
     setNewTaskDuration(10);
     setNewTaskType(TaskType.TIME_LIMITED);
   };
@@ -2886,7 +3341,7 @@ export default function App() {
     });
   };
 
-  const updateTask = (taskId: string, newText: string, newPoints: number, newDuration: number, newTaskType?: TaskType, scheduledDays?: number[]) => {
+  const updateTask = (taskId: string, newText: string, newDuration: number, newTaskType?: TaskType, scheduledDays?: number[]) => {
     if (!newText.trim()) return;
     setUserData(prev => ({
       ...prev,
@@ -2894,12 +3349,31 @@ export default function App() {
         ...chunk,
         tasks: chunk.tasks.map(t => 
           t.id === taskId 
-            ? { ...t, text: newText, points: newPoints, targetDuration: newDuration, taskType: newTaskType || t.taskType, scheduledDays: scheduledDays || t.scheduledDays } 
+            ? { ...t, text: newText, targetDuration: newDuration || 1, taskType: newTaskType || t.taskType, scheduledDays: scheduledDays || t.scheduledDays } 
             : t
         )
       }))
     }));
     setEditingTaskId(null);
+  };
+
+  const deleteReview = (groupId: string, date: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: '후기 삭제',
+      message: '이 날의 후기를 삭제하시겠습니까?',
+      onConfirm: () => {
+        setUserData(prev => ({
+          ...prev,
+          routineGroupHistory: prev.routineGroupHistory?.map(h => 
+            (h.groupId === groupId && h.date === date) 
+              ? { ...h, closingNote: undefined, satisfaction: undefined } 
+              : h
+          )
+        }));
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const addChunk = (
@@ -2973,21 +3447,30 @@ export default function App() {
   const getChunkStatus = (chunk: RoutineChunk) => {
     if (chunk.inactiveDates?.includes(todayStr)) return '불활성';
     if (!isChunkScheduledToday(chunk, currentTime, userData)) return '불활성';
-    const allFinished = chunk.tasks.every(t => t.completed || t.givenUp);
+    const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+    if (scheduledTasks.length === 0) return '불활성';
+    const allFinished = scheduledTasks.every(t => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
     if (allFinished) return '전체완료';
-    const anyStarted = chunk.tasks.some(t => t.startTime || t.completed || t.givenUp || t.laterTimestamp);
+    const anyStarted = scheduledTasks.some(t => t.startTime || t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP || t.laterTimestamp);
     if (!anyStarted) return '미실행';
     return '일부완료';
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case '불활성': return <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">불활성</span>;
-      case '미실행': return <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md">미실행</span>;
-      case '일부완료': return <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md">일부완료</span>;
-      case '전체완료': return <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md">전체완료</span>;
+      case '불활성': return <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-[10px]">불활성</span>;
+      case '미실행': return <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-[10px]">미실행</span>;
+      case '일부완료': return <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-[10px]">일부완료</span>;
+      case '전체완료': return <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-[10px]">전체완료</span>;
       default: return null;
     }
+  };
+
+  const updateFullChunk = (id: string, updatedData: Partial<RoutineChunk>) => {
+    setUserData(prev => ({
+      ...prev,
+      routineChunks: prev.routineChunks.map(c => c.id === id ? { ...c, ...updatedData } : c)
+    }));
   };
 
   const updateChunkInfo = (id: string, newName: string, newPurpose: string) => {
@@ -3070,34 +3553,22 @@ export default function App() {
     setConfirmModal({
       isOpen: true,
       title: '기상 시간 변경',
-      message: `기상 목표 시간을 ${time}으로 변경하시겠습니까? 오늘 이미 체크인했다면 획득한 포인트와 기록이 초기화됩니다.`,
+      message: `기상 목표 시간을 ${time}으로 변경하시겠습니까?`,
       onConfirm: () => {
           setUserData(prev => {
             const hasCheckedInToday = prev.lastCheckInDate === todayStr;
-            let newPoints = prev.points;
-            let newDailyPoints = { ...prev.dailyPoints };
-            let newDailyCheckInPoints = { ...prev.dailyCheckInPoints };
             let newHistory = [...prev.history];
             let newLastCheckInDate = prev.lastCheckInDate;
 
             if (hasCheckedInToday) {
-              const pointsToSubtract = prev.dailyCheckInPoints[todayStr] || 0;
-              newPoints = Math.max(0, newPoints - pointsToSubtract);
-              newDailyPoints[todayStr] = Math.max(0, (newDailyPoints[todayStr] || 0) - pointsToSubtract);
-              newDailyCheckInPoints[todayStr] = 0;
-              
               // Remove today's history entry
               newHistory = newHistory.filter(h => h.date !== todayStr);
-              
               newLastCheckInDate = null; // Allow re-check-in
             }
 
             return {
               ...prev,
               targetWakeUpTime: time,
-              points: newPoints,
-              dailyPoints: newDailyPoints,
-              dailyCheckInPoints: newDailyCheckInPoints,
               history: newHistory,
               lastCheckInDate: newLastCheckInDate,
             };
@@ -3119,64 +3590,15 @@ export default function App() {
     });
   };
 
-  // --- Stats Calculations ---
-  const chartData = useMemo(() => {
-    return userData.history.slice(-7).map(record => ({
-      date: record.date.split('.').slice(1, 3).join('/'),
-      minutes: timeToMinutes(record.time),
-      displayTime: record.time.slice(0, 5)
-    }));
-  }, [userData.history]);
-
-  const relativeChartData = useMemo(() => {
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(currentTime);
-      d.setDate(d.getDate() - i);
-      const dateStr = formatDate(d);
-      last7Days.push({
-        date: dateStr.split('-').slice(1, 3).join('/'),
-        percentage: userData.dailyCompletionRate[dateStr] || 0
-      });
-    }
-    return last7Days;
-  }, [userData.dailyCompletionRate, currentTime]);
-
-  const absoluteChartData = useMemo(() => {
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(currentTime);
-      d.setDate(d.getDate() - i);
-      const dateStr = formatDate(d);
-      last7Days.push({
-        date: dateStr.split('-').slice(1, 3).join('/'),
-        points: userData.dailyPoints[dateStr] || 0
-      });
-    }
-    return last7Days;
-  }, [userData.dailyPoints, currentTime]);
-
-  const averageWakeUpTime = useMemo(() => {
-    if (userData.history.length === 0) return 'N/A';
-    const totalMinutes = userData.history.reduce((acc, curr) => acc + timeToMinutes(curr.time), 0);
-    return minutesToTime(totalMinutes / userData.history.length);
-  }, [userData.history]);
-
   const checkCheckDiff = currentTime.getTime() - userData.lastCheckCheckTime;
   const isSad = checkCheckDiff >= 30 * 60 * 1000;
 
   const handleCheckCheckClick = () => {
     if (isSad) {
       setUserData(prev => {
-        const currentDaily = prev.dailyPoints[todayStr] || 0;
-        const currentCheckCount = prev.dailyCheckCheckCounts[todayStr] || 0;
+        const currentCheckCount = (prev.dailyCheckCheckCounts?.[todayStr]) || 0;
         return {
           ...prev,
-          points: prev.points + 1,
-          dailyPoints: {
-            ...prev.dailyPoints,
-            [todayStr]: currentDaily + 1
-          },
           dailyCheckCheckCounts: {
             ...prev.dailyCheckCheckCounts,
             [todayStr]: currentCheckCount + 1
@@ -3198,24 +3620,20 @@ export default function App() {
     if (settingsSubView.type === 'main') {
       return (
         <div className="flex flex-col h-full overflow-hidden">
-          <div className="flex items-center gap-3 mb-6 flex-shrink-0">
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-              <Settings className="w-6 h-6 text-indigo-600" />
-            </div>
-            <h2 className="text-xl font-black text-slate-900">전체설정화면</h2>
-          </div>
-          <div className="space-y-5 overflow-y-auto pr-2 custom-scrollbar flex-grow">
-            <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-sm">
-              <div className="flex flex-col gap-1 mb-1">
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap ml-1">기상 목표 시간</h3>
-                <p className="text-[10px] font-bold text-slate-400 leading-tight ml-1">매일 이 시간에 맞춰 체크인하면 보너스 포인트를 얻습니다.</p>
+          <div className="space-y-[15px] overflow-y-auto pr-2 custom-scrollbar flex-grow">
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Settings className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">기상 목표 시간</h3>
               </div>
               <div className="flex gap-2">
                 <input 
                   type="time" 
                   defaultValue={userData.targetWakeUpTime}
                   id="wakeUpTimeInput"
-                  className="flex-grow text-lg font-black p-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                  className="flex-grow text-lg font-black p-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
                 />
                 <button 
                   onClick={() => {
@@ -3229,36 +3647,64 @@ export default function App() {
               </div>
             </div>
 
-            <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-sm">
-              <div className="flex flex-col gap-1 mb-1">
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap ml-1">하루 리셋 시간</h3>
-                <p className="text-[10px] font-bold text-slate-400 leading-tight ml-1">이 시간이 되면 모든 루틴의 완료 상태가 초기화됩니다.</p>
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex flex-col gap-2 mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Settings className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <h3 className="text-base font-black text-slate-800 whitespace-nowrap">하루 리셋 시간</h3>
+                </div>
+                <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">이 시간이 되면 모든 루틴의 완료 상태가 초기화됩니다.</p>
               </div>
               <div className="flex gap-2">
                 <input 
                   type="time" 
                   defaultValue={userData.resetTime}
                   id="resetTimeInput"
-                  className="flex-grow text-lg font-black p-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                  className="flex-grow text-lg font-black p-3 bg-slate-50 border border-slate-100 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
                 />
                 <button 
                   onClick={() => {
                     const input = document.getElementById('resetTimeInput') as HTMLInputElement;
                     if (input) updateResetTime(input.value);
                   }}
-                  className="bg-indigo-600 text-white px-5 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+                  className="bg-indigo-600 text-white px-5 rounded-[10px] font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
                 >
                   변경
                 </button>
               </div>
             </div>
 
-            <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-5 shadow-sm">
-              <div className="flex items-center justify-between ml-1">
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Settings className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-base font-black text-slate-800 whitespace-nowrap">루틴그룹 순서 자동전환</h3>
+                    <p className="text-[12px] font-bold text-slate-400 leading-tight">완료된 그룹은 자동으로 목록 하단으로 이동합니다.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setUserData(prev => ({ ...prev, autoReorderGroups: !prev.autoReorderGroups }))}
+                  className={`w-12 h-6 rounded-full transition-all relative ${userData.autoReorderGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderGroups ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Settings className="w-5 h-5 text-indigo-600" />
+                </div>
                 <h3 className="text-base font-black text-slate-900">루틴 그룹 관리</h3>
               </div>
               
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <DndContext 
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -3292,7 +3738,7 @@ export default function App() {
           {mode === 'modal' && (
             <button 
               onClick={() => setIsSettingsOpen(false)}
-              className="w-full mt-6 bg-slate-900 text-white font-bold py-4 rounded-2xl hover:bg-slate-800 transition-colors flex-shrink-0"
+              className="w-full mt-6 bg-slate-900 text-white font-bold py-4 rounded-[10px] hover:bg-slate-800 transition-colors flex-shrink-0"
             >
               저장하고 닫기
             </button>
@@ -3303,398 +3749,22 @@ export default function App() {
 
     const chunk = userData.routineChunks.find(c => c.id === settingsSubView.chunkId);
     if (!chunk) return null;
-    const times = chunkTimeInputs[chunk.id] || { s: chunk.startTime || '', d: chunk.duration || 0, e: chunk.endTime || '' };
-    const schedule = chunkScheduleInputs[chunk.id] || { 
-      type: chunk.scheduleType || 'days', 
-      days: chunk.scheduledDays || [0, 1, 2, 3, 4, 5, 6], 
-      freq: chunk.frequency || 1 
-    };
-
-    const isDirty = times.s !== (chunk.startTime || '') || 
-                    times.d !== (chunk.duration || 0) || 
-                    times.e !== (chunk.endTime || '') ||
-                    times.alarm !== chunk.isAlarmEnabled ||
-                    schedule.type !== (chunk.scheduleType || 'days') ||
-                    JSON.stringify(schedule.days) !== JSON.stringify(chunk.scheduledDays || [0, 1, 2, 3, 4, 5, 6]) ||
-                    schedule.freq !== (chunk.frequency || 1);
-
-    const renderActionButtons = () => (
-      <div className="flex gap-3">
-        <button 
-          onClick={() => {
-            if (isDirty) {
-              applyChunkTimes(chunk.id, times.s, times.d, times.e, times.alarm);
-              updateChunkSchedule(chunk.id, schedule.type, schedule.days, schedule.freq);
-            }
-            if (mode === 'modal') {
-              setIsSettingsOpen(false);
-            } else {
-              setSettingsSubView({ type: 'main' });
-            }
-          }}
-          className="flex-1 py-3 bg-sky-500 text-white rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors"
-        >
-          저장하고 돌아가기
-        </button>
-        <button 
-          onClick={() => {
-            if (mode === 'modal') {
-              setIsSettingsOpen(false);
-            } else {
-              setSettingsSubView({ type: 'main' });
-            }
-          }}
-          className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors"
-        >
-          취소하고 돌아가기
-        </button>
-      </div>
-    );
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
-          <div className="flex items-center gap-3 mb-6 flex-shrink-0">
-            {mode === 'main' && (
-              <button 
-                onClick={() => setSettingsSubView({ type: 'main' })}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5 text-slate-400" />
-              </button>
-            )}
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-              <Settings className="w-5 h-5 text-indigo-600" />
-            </div>
-            {editingChunkId === chunk.id ? (
-              <div className="flex flex-col gap-3 flex-grow">
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="text"
-                    value={editingChunkName}
-                    onChange={(e) => setEditingChunkName(e.target.value)}
-                    placeholder="그룹 이름"
-                    className="flex-grow bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-lg font-black focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    autoFocus
-                  />
-                  <button 
-                    onClick={() => {
-                      updateChunkInfo(chunk.id, editingChunkName, editingChunkPurpose);
-                      setEditingChunkId(null);
-                    }}
-                    className="px-3 py-1.5 bg-sky-500 text-white rounded-xl font-bold text-xs hover:bg-sky-600 transition-colors"
-                  >
-                    저장
-                  </button>
-                </div>
-                <input 
-                  type="text"
-                  value={editingChunkPurpose}
-                  onChange={(e) => setEditingChunkPurpose(e.target.value)}
-                  placeholder="그룹 목적 (예: 아침시간을 낭비하지 않는 사람)"
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      updateChunkInfo(chunk.id, editingChunkName, editingChunkPurpose);
-                      setEditingChunkId(null);
-                    }
-                    if (e.key === 'Escape') setEditingChunkId(null);
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => {
-                    setEditingChunkId(chunk.id);
-                    setEditingChunkName(chunk.name);
-                    setEditingChunkPurpose(chunk.purpose || '');
-                  }}
-                  className="flex flex-col text-left group/header"
-                >
-                  <h2 className="text-xl font-black text-slate-900 group-hover/header:text-indigo-600 transition-colors">{chunk.name}</h2>
-                  <p className="text-xs font-bold text-slate-400 group-hover/header:text-indigo-400 transition-colors">{chunk.purpose}</p>
-                </button>
-                <div className="flex items-center gap-1">
-                  <div className="relative group/tooltip">
-                    <button 
-                      onClick={() => {
-                        setEditingChunkId(chunk.id);
-                        setEditingChunkName(chunk.name);
-                        setEditingChunkPurpose(chunk.purpose || '');
-                      }}
-                      className="p-2 text-slate-300 hover:text-sky-500 transition-colors"
-                    >
-                      <Edit2 className="w-5 h-5" />
-                    </button>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                      정보 수정
-                    </div>
-                  </div>
-                  <div className="relative group/tooltip">
-                    <button 
-                      onClick={() => {
-                        deleteChunk(chunk.id, () => {
-                          if (mode === 'modal') {
-                            setIsSettingsOpen(false);
-                            setActiveTab('home');
-                            setSelectedChunkId(null);
-                          } else {
-                            setSettingsSubView({ type: 'main' });
-                          }
-                        });
-                      }}
-                      className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                      삭제
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="space-y-5 overflow-y-auto pr-2 custom-scrollbar flex-grow pb-4">
-            <div className="space-y-4">
-  
-              {/* Time Settings */}
-              <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-sm">
-                <div className="flex items-center justify-between mb-1 ml-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">시간 및 알람 설정</label>
-                  <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-xl border border-slate-200 shadow-sm">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">알람</span>
-                    <button 
-                      onClick={() => setChunkTimeInputs(prev => ({ ...prev, [chunk.id]: { ...prev[chunk.id], alarm: !times.alarm } }))}
-                      className={`w-9 h-4.5 rounded-full transition-all relative ${times.alarm ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                    >
-                      <div className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all ${times.alarm ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2.5">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">시작 시각</label>
-                    <input 
-                      type="time"
-                      value={times.s}
-                      onChange={(e) => {
-                        const newS = e.target.value;
-                        let newE = times.e;
-                        if (newS && times.d > 0) {
-                          newE = minutesToTime(timeToMinutes(newS) + times.d);
-                        }
-                        setChunkTimeInputs(prev => ({ ...prev, [chunk.id]: { ...prev[chunk.id], s: newS, e: newE } }));
-                      }}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">소요 시간(분)</label>
-                    <input 
-                      type="number"
-                      value={times.d || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const newD = val === '' ? 0 : parseInt(val);
-                        let newE = times.e;
-                        if (times.s && newD > 0) {
-                          newE = minutesToTime(timeToMinutes(times.s) + newD);
-                        }
-                        setChunkTimeInputs(prev => ({ ...prev, [chunk.id]: { ...prev[chunk.id], d: newD, e: newE } }));
-                      }}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">완료 시각</label>
-                    <input 
-                      type="time"
-                      value={times.e}
-                      onChange={(e) => {
-                        const newE = e.target.value;
-                        setChunkTimeInputs(prev => ({ ...prev, [chunk.id]: { ...prev[chunk.id], e: newE } }));
-                      }}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-  
-              {/* Schedule Settings */}
-              <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-sm">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between ml-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">실행 주기</label>
-                    <div className="flex bg-white rounded-xl p-1 border border-slate-200 shadow-sm">
-                      {(['days', 'weekly', 'monthly', 'yearly'] as const).map((t) => (
-                        <button
-                          key={t}
-                          onClick={() => setChunkScheduleInputs(prev => ({ ...prev, [chunk.id]: { ...schedule, type: t } }))}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                            schedule.type === t 
-                              ? 'bg-indigo-500 text-white shadow-sm' 
-                              : 'text-slate-400 hover:bg-slate-50'
-                          }`}
-                        >
-                          {t === 'days' ? '요일' : t === 'weekly' ? '주간' : t === 'monthly' ? '월간' : '연간'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-  
-                  {schedule.type === 'days' ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between gap-1">
-                        {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              const newDays = schedule.days.includes(i)
-                                ? schedule.days.filter(d => d !== i)
-                                : [...schedule.days, i].sort();
-                              setChunkScheduleInputs(prev => ({ ...prev, [chunk.id]: { ...schedule, days: newDays } }));
-                            }}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                              schedule.days.includes(i)
-                                ? 'bg-indigo-500 text-white shadow-md shadow-indigo-200'
-                                : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                        <span className="text-xs font-bold text-slate-600">
-                          {schedule.type === 'weekly' ? '주' : schedule.type === 'monthly' ? '월' : '연'} {schedule.freq}회 실행
-                        </span>
-                        <input 
-                          type="range"
-                          min="1"
-                          max={schedule.type === 'weekly' ? 7 : schedule.type === 'monthly' ? 31 : 12}
-                          value={schedule.freq}
-                          onChange={(e) => setChunkScheduleInputs(prev => ({ ...prev, [chunk.id]: { ...schedule, freq: parseInt(e.target.value) } }))}
-                          className="w-32 accent-indigo-500"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-  
-            <div className="space-y-3">
-              <div className="flex items-center justify-between ml-1">
-                <h3 className="text-base font-black text-slate-900">루틴 목록</h3>
-              </div>
-              
-              <div className="space-y-2">
-                <DndContext 
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={(e) => handleDragEnd(e, chunk.id)}
-                >
-                  <SortableContext 
-                    items={chunk.tasks.map(t => t.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {chunk.tasks.map((task, index) => (
-                      <SortableTaskItem 
-                        key={task.id}
-                        task={task}
-                        index={index}
-                        editingTaskId={editingTaskId}
-                        setEditingTaskId={setEditingTaskId}
-                        editingTaskText={editingTaskText}
-                        setEditingTaskText={setEditingTaskText}
-                        editingTaskPoints={editingTaskPoints}
-                        setEditingTaskPoints={setEditingTaskPoints}
-                        editingTaskDuration={editingTaskDuration}
-                        setEditingTaskDuration={setEditingTaskDuration}
-                        editingTaskType={editingTaskType}
-                        setEditingTaskType={setEditingTaskType}
-                        editingTaskScheduledDays={editingTaskScheduledDays}
-                        setEditingTaskScheduledDays={setEditingTaskScheduledDays}
-                        updateTask={updateTask}
-                        deleteTask={deleteTask}
-                        PointSelector={PointSelector}
-                        chunkScheduledDays={schedule.days}
-                      />
-                    ))}
-                  </SortableContext>
-                </DndContext>
-              </div>
-  
-              <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-sm">
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">새 루틴 추가</p>
-                  <input 
-                    type="text"
-                    value={newTaskText}
-                    onChange={(e) => setNewTaskText(e.target.value)}
-                    placeholder="루틴 이름 입력..."
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
-                  />
-                </div>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">루틴 유형</span>
-                    <div className="flex items-center gap-1">
-                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
-                        const colorClass = type === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : type === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600';
-                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickIcon : Hourglass;
-                        return (
-                          <button 
-                            key={type}
-                            onClick={() => setNewTaskType(type)}
-                            className={`flex-1 py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1 ${newTaskType === type ? `${colorClass} text-white shadow-md` : 'bg-white text-slate-400 border border-slate-100'}`}
-                          >
-                            <Icon className="w-3 h-3" />
-                            {type}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">포인트</span>
-                      <PointSelector value={newTaskPoints} onChange={setNewTaskPoints} />
-                    </div>
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">소요 시간(분)</span>
-                      <input 
-                        type="number"
-                        value={newTaskDuration || ''}
-                        onChange={(e) => setNewTaskDuration(e.target.value === '' ? 0 : parseInt(e.target.value))}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-black focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => {
-                    setActiveChunkId(chunk.id);
-                    addTask(chunk.id);
-                  }}
-                  className="w-full py-2.5 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  루틴 추가하기
-                </button>
-              </div>
-            </div>
-          </div>
-  
-          <div className="mt-4 flex-shrink-0">
-            {renderActionButtons()}
-          </div>
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar">
+          <RoutineGroupFormView 
+            addChunk={addChunk}
+            updateChunk={updateFullChunk}
+            initialChunk={chunk}
+            setActiveTab={setActiveTab}
+            setSettingsSubView={setSettingsSubView}
+            setIsSettingsOpen={setIsSettingsOpen}
+            userData={userData}
+            mode="edit"
+          />
         </div>
+      </div>
     );
   };
 
@@ -3794,7 +3864,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* 홈아이콘줄 (Sticky Header Box) */}
-      <div className="sticky top-0 z-40 bg-[#F7FEE7]/80 backdrop-blur-md pt-3 pb-1.5 px-4">
+      <div className="sticky top-0 z-40 bg-[#F7FEE7]/80 backdrop-blur-md pt-2.5 pb-0 px-4">
         <div className="max-w-2xl mx-auto">
           <nav className="flex items-center gap-3">
             <button 
@@ -3802,18 +3872,9 @@ export default function App() {
                 setActiveTab('home');
                 setSelectedChunkId(null);
               }}
-              className={`transition-all w-10 h-10 flex items-center justify-center rounded-xl ${activeTab === 'home' && !selectedChunkId ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'}`}
+              className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${activeTab === 'home' && !selectedChunkId ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'}`}
             >
               <HomeIcon className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={() => {
-                setActiveTab('stats');
-                setSelectedChunkId(null);
-              }}
-              className={`transition-all w-10 h-10 flex items-center justify-center rounded-xl ${activeTab === 'stats' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'}`}
-            >
-              <BarChart3 className="w-5 h-5" />
             </button>
             <button 
               onClick={() => {
@@ -3822,7 +3883,7 @@ export default function App() {
                 setSelectedChunkId(null);
                 setIsSettingsOpen(false);
               }}
-              className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
+              className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all ${
                 activeTab === 'settings'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
                   : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'
@@ -3830,14 +3891,13 @@ export default function App() {
             >
               <Settings className="w-5 h-5" />
             </button>
-
             <button 
               onClick={() => {
                 setActiveTab('add');
                 setSelectedChunkId(null);
                 setIsSettingsOpen(false);
               }}
-              className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
+              className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all ${
                 activeTab === 'add'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
                   : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'
@@ -3845,11 +3905,20 @@ export default function App() {
             >
               <PlusCircle className="w-5 h-5" />
             </button>
+            <button 
+              onClick={() => {
+                setActiveTab('stats');
+                setSelectedChunkId(null);
+              }}
+              className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${activeTab === 'stats' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'}`}
+            >
+              <BarChart3 className="w-5 h-5" />
+            </button>
 
             {/* Check-Check Box in Nav */}
             <button 
               onClick={handleCheckCheckClick}
-              className={`transition-all w-10 h-10 flex flex-col items-center justify-center rounded-xl border shadow-sm relative overflow-hidden ${
+              className={`transition-all w-10 h-10 flex flex-col items-center justify-center rounded-[10px] border shadow-sm relative overflow-hidden ${
                 isSad 
                   ? 'bg-white border-indigo-200 cursor-pointer hover:border-indigo-400' 
                   : 'bg-white border-slate-100 cursor-default'
@@ -3859,7 +3928,7 @@ export default function App() {
                 {isSad ? '😞' : '😊'}
               </span>
               <span className="text-[8px] font-black text-slate-500 mt-0.5">
-                {userData.dailyCheckCheckCounts[todayStr] || 0}
+                {(userData.dailyCheckCheckCounts?.[todayStr]) || 0}
               </span>
               {isSad && (
                 <div className="absolute top-1 right-1">
@@ -3874,7 +3943,7 @@ export default function App() {
         </div>
       </div>
 
-      <main className="max-w-2xl mx-auto px-4 py-3 space-y-4">
+      <main className="max-w-2xl mx-auto px-4 pt-[10px] pb-[100px] space-y-3">
         <AnimatePresence mode="wait">
           {activeTab === 'home' ? (
             <motion.div
@@ -3883,13 +3952,12 @@ export default function App() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
-              className="space-y-6"
+              className="space-y-[10px]"
             >
               <HeaderBox 
                 userData={userData}
                 todayStr={todayStr}
                 formattedDate={formattedDate}
-                weather={weather}
                 challengeDays={challengeDays}
                 successDays={successDays}
                 currentTime={currentTime}
@@ -3909,6 +3977,7 @@ export default function App() {
                 getStatusBadge={getStatusBadge}
                 globalActiveTask={globalActiveTask}
                 setConfirmModal={setConfirmModal}
+                onEnterExecution={handleEnterExecution}
               />
             </motion.div>
           ) : activeTab === 'stats' ? (
@@ -3922,12 +3991,8 @@ export default function App() {
             >
               <StatsView 
                 userData={userData} 
-                chartData={chartData} 
-                relativeChartData={relativeChartData}
-                absoluteChartData={absoluteChartData}
-                averageWakeUpTime={averageWakeUpTime} 
-                activeStatsTab={activeStatsTab}
-                setActiveStatsTab={setActiveStatsTab}
+                currentTime={currentTime}
+                deleteReview={deleteReview}
               />
             </motion.div>
           ) : activeTab === 'execution' ? (
@@ -3964,12 +4029,13 @@ export default function App() {
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
             >
-              <AddRoutineGroupView 
+            <RoutineGroupFormView 
                 addChunk={addChunk}
                 setActiveTab={setActiveTab}
                 setSettingsSubView={setSettingsSubView}
                 setIsSettingsOpen={setIsSettingsOpen}
                 userData={userData}
+                mode="add"
               />
             </motion.div>
           ) : activeTab === 'settings' ? (
@@ -3980,7 +4046,7 @@ export default function App() {
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
+              <div className="p-0">
                 {renderSettingsContent('main')}
               </div>
             </motion.div>
@@ -3998,10 +4064,10 @@ export default function App() {
             setSelectedChunkId(globalActiveTask.chunkId);
             setActiveTab('execution');
           }}
-          className="fixed bottom-8 left-4 right-4 bg-indigo-600 text-white p-4 rounded-2xl shadow-2xl z-[60] flex items-center justify-between cursor-pointer border border-white/20 backdrop-blur-lg"
+          className="fixed bottom-8 left-4 right-4 bg-indigo-600 text-white p-4 rounded-[10px] shadow-2xl z-[60] flex items-center justify-between cursor-pointer border border-white/20 backdrop-blur-lg"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-white/20 rounded-[10px] flex items-center justify-center">
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
@@ -4010,25 +4076,17 @@ export default function App() {
               </motion.div>
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">현재 진행 중</span>
+              <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                {userData.routineChunks.find(c => c.id === globalActiveTask.chunkId)?.name}
+              </span>
               <span className="text-sm font-black truncate max-w-[150px]">{globalActiveTask.task.text}</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-xl font-black tabular-nums">
               {(() => {
-                const task = globalActiveTask.task;
-                let currentSession = 0;
-                if (task.startTime && !task.isPaused) {
-                  const [h, m, s] = task.startTime.split(':').map(Number);
-                  const start = new Date(currentTime);
-                  start.setHours(h, m, s, 0);
-                  if (start.getTime() > currentTime.getTime()) {
-                    start.setDate(start.getDate() - 1);
-                  }
-                  currentSession = Math.floor((currentTime.getTime() - start.getTime()) / 1000);
-                }
-                const total = (task.accumulatedDuration || 0) + currentSession;
+                if (globalActiveTask.task.isClosingRoutine) return '마무리 중';
+                const total = calculateTaskDuration(globalActiveTask.task, currentTime);
                 const h = Math.floor(total / 3600);
                 const m = Math.floor((total % 3600) / 60);
                 const s = total % 60;
@@ -4055,7 +4113,7 @@ export default function App() {
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] p-8 z-50 shadow-2xl max-w-2xl mx-auto overflow-hidden flex flex-col"
+              className="fixed bottom-0 left-0 right-0 bg-slate-50 rounded-t-[20px] p-6 z-50 shadow-2xl max-w-2xl mx-auto overflow-hidden flex flex-col"
               style={{ maxHeight: '90vh' }}
             >
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 flex-shrink-0" />
@@ -4080,7 +4138,7 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-3xl p-6 z-[70] shadow-2xl w-[90%] max-w-sm"
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-[10px] p-6 z-[70] shadow-2xl w-[90%] max-w-sm"
             >
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center">
@@ -4093,13 +4151,13 @@ export default function App() {
                 <div className="flex gap-3 w-full pt-2">
                   <button 
                     onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-                    className="flex-1 py-3 rounded-xl font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
+                    className="flex-1 py-3 rounded-[10px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
                   >
                     취소
                   </button>
                   <button 
                     onClick={confirmModal.onConfirm}
-                    className="flex-1 py-3 rounded-xl font-bold text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-100"
+                    className="flex-1 py-3 rounded-[10px] font-bold text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-100"
                   >
                     확인
                   </button>
@@ -4125,7 +4183,7 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="fixed inset-0 flex items-center justify-center p-6 z-[101] pointer-events-none"
             >
-              <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl pointer-events-auto text-center space-y-6 border border-indigo-100">
+              <div className="bg-white w-full max-w-sm rounded-[10px] p-8 shadow-2xl pointer-events-auto text-center space-y-6 border border-indigo-100">
                 <div className="relative mx-auto w-24 h-24">
                   <motion.div 
                     animate={{ 
@@ -4162,13 +4220,13 @@ export default function App() {
                       setActiveTab('execution');
                       setActiveAlarmChunk(null);
                     }}
-                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-4 bg-indigo-600 text-white rounded-[10px] font-black text-lg shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
                   >
                     <Play className="w-5 h-5" /> 루틴 시작하기
                   </button>
                   <button 
                     onClick={() => setActiveAlarmChunk(null)}
-                    className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black hover:bg-slate-200 transition-all"
+                    className="w-full py-4 bg-slate-100 text-slate-500 rounded-[10px] font-black hover:bg-slate-200 transition-all"
                   >
                     나중에 하기
                   </button>

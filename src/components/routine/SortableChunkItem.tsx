@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Settings, ChevronRight, Trash2 } from 'lucide-react';
+import { GripVertical, Settings, Trash2 } from 'lucide-react';
 import { RoutineChunk } from '../../types';
 
 interface SortableChunkItemProps {
@@ -53,10 +53,10 @@ export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 group flex items-center justify-between">
-      <div className="flex items-center gap-3 flex-grow min-w-0">
+    <div ref={setNodeRef} style={style} className="px-3 py-2 bg-white rounded-[10px] border border-slate-100 group flex items-center justify-between shadow-sm">
+      <div className="flex items-center gap-2 flex-grow min-w-0">
         <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-500 flex-shrink-0">
-          <GripVertical className="w-5 h-5" />
+          <GripVertical className="w-4 h-4" />
         </button>
         
         {editingChunkId === chunk.id ? (
@@ -66,7 +66,7 @@ export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
               value={editingChunkName}
               onChange={(e) => setEditingChunkName(e.target.value)}
               placeholder="그룹 이름"
-              className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="w-full bg-white border border-slate-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               autoFocus
             />
             <div className="flex items-center gap-2">
@@ -75,7 +75,7 @@ export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
                 value={editingChunkPurpose}
                 onChange={(e) => setEditingChunkPurpose(e.target.value)}
                 placeholder="그룹 목적"
-                className="flex-grow bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="flex-grow bg-white border border-slate-200 rounded-[10px] px-2 py-1 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose);
                   if (e.key === 'Escape') setEditingChunkId(null);
@@ -93,31 +93,23 @@ export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
           <div className="flex items-center gap-2 flex-grow min-w-0">
             <button 
               onClick={() => onEnterDetail(chunk.id)}
-              className="flex-grow text-left truncate group/title flex flex-col gap-0.5"
+              className="flex-grow text-left group/title flex items-center gap-2 min-w-0"
             >
-              <div className="flex items-center gap-2">
-                <h4 className="font-black text-slate-900 group-hover/title:text-indigo-600 transition-colors">{chunk.name}</h4>
-                <div className="relative group/tooltip">
-                  <Settings className="w-4 h-4 text-slate-300 group-hover/title:text-indigo-400 transition-colors" />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                    설정 변경
-                  </div>
+              <h4 className="font-black text-slate-900 group-hover/title:text-indigo-600 transition-colors whitespace-nowrap truncate">
+                {chunk.name}
+              </h4>
+              <div className="relative group/tooltip flex-shrink-0">
+                <Settings className="w-4 h-4 text-slate-300 group-hover/title:text-indigo-400 transition-colors" />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                  상세설정
                 </div>
               </div>
-              <p className="text-[10px] font-bold text-slate-400 truncate">{chunk.purpose}</p>
             </button>
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-1">
-        <button 
-          onClick={() => onEnterDetail(chunk.id)}
-          className="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
-          title="상세 설정"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
         <button 
           onClick={() => onDelete(chunk.id)}
           className="p-2 text-slate-400 hover:text-rose-500 transition-colors"

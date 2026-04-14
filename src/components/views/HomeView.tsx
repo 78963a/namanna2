@@ -27,7 +27,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   getChunkStatus, 
   getStatusBadge, 
   globalActiveTask, 
-  setConfirmModal 
+  setConfirmModal,
+  onEnterExecution
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
@@ -42,8 +43,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
     let endTime = '';
     let totalDurationSeconds = 0;
     let totalTargetDurationMinutes = 0;
-    let actualPoints = 0;
-    let targetPoints = 0;
 
     tasks.forEach(task => {
       if (task.startTime && (!startTime || task.startTime < startTime)) {
@@ -58,10 +57,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
       if (task.targetDuration) {
         totalTargetDurationMinutes += task.targetDuration;
       }
-      if (task.earnedPoints) {
-        actualPoints += task.earnedPoints;
-      }
-      targetPoints += task.points;
     });
 
     const formatDuration = (totalSec: number) => {
@@ -78,9 +73,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     return {
       startTime: startTime ? startTime.slice(0, 5) : '00:00',
       endTime: endTime ? endTime.slice(0, 5) : '00:00',
-      duration: `${actualDurationStr}/${targetDurationStr}`,
-      actualPoints,
-      targetPoints
+      duration: `${actualDurationStr}/${targetDurationStr}`
     };
   };
 
@@ -95,10 +88,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const todayCheckIn = userData.history.find(h => h.date === todayStr);
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-4 items-stretch">
+    <div className="space-y-[10px]">
+      <div className="flex gap-[10px] items-stretch">
         {/* Wake up Check-in */}
-        <section className="flex-grow bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl py-3 px-4 text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
+        <section className="flex-grow bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[10px] p-[15px] text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
           <div className="relative z-10 flex items-center justify-between gap-4 h-full">
             <div className="flex flex-col justify-center">
               <p className="text-indigo-100 text-[9px] font-bold uppercase tracking-wider leading-none mb-1">목표 기상 시간</p>
@@ -107,32 +100,32 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
             <div className="flex-grow max-w-[120px] flex items-center">
               {todayCheckIn ? (
-                <div className="w-full bg-white/10 backdrop-blur-md rounded-xl py-1.5 px-2 flex items-center justify-center gap-1.5 border border-white/20">
+                <div className="w-full bg-white/10 backdrop-blur-md rounded-[10px] py-1.5 px-2 flex items-center justify-center gap-1.5 border border-white/20">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="font-bold text-[9px] whitespace-nowrap">
+                  <span className="font-bold text-[12px] whitespace-nowrap">
                     {(() => {
                       const checkInDiff = timeToMinutes(todayCheckIn.time) - timeToMinutes(userData.targetWakeUpTime);
                       return checkInDiff >= -30 && checkInDiff <= 10 
-                        ? "성공!" 
+                        ? `성공! (${todayCheckIn.time.slice(0, 5)})` 
                         : `지각(${todayCheckIn.time.slice(0, 5)})`;
                     })()}
                   </span>
                 </div>
               ) : isTooEarly ? (
-                <div className="w-full bg-white/10 backdrop-blur-md rounded-xl py-1.5 px-2 flex items-center justify-center gap-1.5 border border-white/20">
+                <div className="w-full bg-white/10 backdrop-blur-md rounded-[10px] py-1.5 px-2 flex items-center justify-center gap-1.5 border border-white/20">
                   <span className="font-bold text-[9px] text-indigo-100/70 whitespace-nowrap">대기 중</span>
                 </div>
               ) : isWithinWindow ? (
                 <button
                   onClick={handleCheckIn}
-                  className="w-full py-1.5 bg-white text-indigo-600 rounded-xl font-bold text-[9px] shadow-lg transition-all transform active:scale-95 hover:bg-indigo-50"
+                  className="w-full py-1.5 bg-white text-indigo-600 rounded-[10px] font-bold text-[9px] shadow-lg transition-all transform active:scale-95 hover:bg-indigo-50"
                 >
                   체크인
                 </button>
               ) : (
                 <button
                   onClick={handleLateCheckIn}
-                  className="w-full py-1.5 bg-rose-500 text-white rounded-xl font-bold text-[9px] shadow-lg transition-all transform active:scale-95 hover:bg-rose-600"
+                  className="w-full py-1.5 bg-rose-500 text-white rounded-[10px] font-bold text-[9px] shadow-lg transition-all transform active:scale-95 hover:bg-rose-600"
                 >
                   지각 ㅜㅜ
                 </button>
@@ -146,36 +139,53 @@ export const HomeView: React.FC<HomeViewProps> = ({
       </div>
 
       {/* Routine Section */}
-      <div className="space-y-4">
-        {userData.routineChunks.map((chunk) => {
-          const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
-          const completedTasks = scheduledTasks.filter(t => t.completed);
-          const givenUpTasks = scheduledTasks.filter(t => t.givenUp);
-          const startedTasks = scheduledTasks.filter(t => t.startTime || t.completed || t.givenUp);
-          const isFullyCompleted = scheduledTasks.length > 0 && scheduledTasks.every(t => t.completed || t.givenUp);
-          const isExpanded = expandedGroups[chunk.id];
-          const status = getChunkStatus(chunk);
-          const isInactive = status === '불활성';
-
-          let displayStatus = '미실행';
-          let statusColor = 'bg-slate-100 text-slate-500';
-          if (scheduledTasks.length > 0) {
-            if (startedTasks.length === 0) {
-              displayStatus = '미실행';
-              statusColor = 'bg-slate-100 text-slate-500';
-            } else if (completedTasks.length + givenUpTasks.length === scheduledTasks.length) {
-              if (givenUpTasks.length === 0) {
-                displayStatus = '완벽';
-                statusColor = 'bg-emerald-100 text-emerald-600';
-              } else {
-                displayStatus = '완료';
-                statusColor = 'bg-indigo-100 text-indigo-600';
-              }
-            } else {
-              displayStatus = '실행중';
-              statusColor = 'bg-amber-100 text-amber-600';
+      <div className="space-y-[10px]">
+        {userData.routineChunks
+          .map(chunk => ({
+            chunk,
+            status: getChunkStatus(chunk)
+          }))
+          .sort((a, b) => {
+            if (userData.autoReorderGroups) {
+              const aFinished = a.status === '전체완료';
+              const bFinished = b.status === '전체완료';
+              if (aFinished && !bFinished) return 1;
+              if (!aFinished && bFinished) return -1;
             }
-          }
+            return 0;
+          })
+          .map(({ chunk, status }) => {
+            const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+            const completedTasks = scheduledTasks.filter(t => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
+            const startedTasks = scheduledTasks.filter(t => t.startTime || t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
+            const isFullyCompleted = status === '전체완료';
+            const isExpanded = expandedGroups[chunk.id];
+            const isInactive = status === '불활성';
+
+            let displayStatus = '미실행';
+            let statusColor = 'bg-slate-100 text-slate-500';
+            
+            if (isInactive) {
+              displayStatus = '비활성';
+              statusColor = 'bg-slate-100 text-slate-400';
+            } else if (scheduledTasks.length > 0) {
+              if (startedTasks.length === 0) {
+                displayStatus = '미실행';
+                statusColor = 'bg-slate-100 text-slate-500';
+              } else if (isFullyCompleted) {
+                const hasPass = scheduledTasks.some(t => t.status === TaskStatus.SKIP || t.givenUp);
+                if (!hasPass) {
+                  displayStatus = '완벽';
+                  statusColor = 'bg-emerald-100 text-emerald-600';
+                } else {
+                  displayStatus = '완료';
+                  statusColor = 'bg-indigo-100 text-indigo-600';
+                }
+              } else {
+                displayStatus = '실행중';
+                statusColor = 'bg-amber-100 text-amber-600';
+              }
+            }
           
           return (
             <section 
@@ -191,15 +201,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   });
                   return;
                 }
-                setSelectedChunkId(chunk.id);
-                setActiveTab('execution');
+                onEnterExecution(chunk.id);
               }}
-              className={`bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden transition-all group ${isInactive ? 'opacity-60 grayscale cursor-default' : 'cursor-pointer active:scale-[0.99]'}`}
+              className={`bg-white rounded-[10px] border border-slate-100 shadow-sm overflow-hidden transition-all group ${isInactive ? 'opacity-60 grayscale cursor-default' : 'cursor-pointer active:scale-[0.99]'}`}
             >
-              <div className="p-4 relative">
+              <div className="p-[15px] relative">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${statusColor}`}>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-[10px] ${statusColor}`}>
                       {displayStatus} ({completedTasks.length}/{scheduledTasks.length})
                     </span>
                   </div>
@@ -208,7 +217,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       e.stopPropagation();
                       toggleInactive(chunk.id);
                     }}
-                    className={`px-3 py-1 rounded-xl text-[10px] font-black transition-all ${
+                    className={`px-3 py-1 rounded-[10px] text-[10px] font-black transition-all ${
                       isInactive 
                         ? 'bg-indigo-600 text-white' 
                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -220,20 +229,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 
                 <div className="mb-1 pr-8">
                   <h3 className="text-sm font-bold text-slate-800 leading-relaxed">
-                    <RoutineTitle chunk={chunk} isCompleted={isFullyCompleted} />
+                    <RoutineTitle chunk={chunk} status={displayStatus} />
                   </h3>
                 </div>
 
                 <button
                   onClick={(e) => toggleExpand(e, chunk.id)}
-                  className="absolute bottom-3 right-3 p-1.5 text-slate-400 hover:text-indigo-600 transition-colors z-20 bg-slate-50/50 rounded-full"
+                  className="absolute bottom-3 right-3 p-1.5 text-slate-400 hover:text-indigo-600 transition-colors z-20 bg-slate-50/50 rounded-[10px]"
                 >
                   {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
               </div>
 
               {isExpanded && (
-                <div className="divide-y divide-slate-50 border-t border-slate-50">
+                <div className="divide-y divide-slate-50 border-t border-slate-50 pb-[15px]">
                   {scheduledTasks.sort((a, b) => {
                     const getPriority = (t: Task) => {
                       if (t.givenUp) return 4;
@@ -249,7 +258,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   }).map((task) => (
                     <div
                       key={task.id}
-                      className={`group flex items-center gap-3 py-1.5 px-4 transition-all ${
+                      className={`group flex items-center gap-3 py-1 px-[15px] transition-all ${
                         task.completed 
                           ? 'bg-slate-50/50' 
                           : task.givenUp

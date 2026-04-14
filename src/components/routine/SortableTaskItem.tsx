@@ -1,9 +1,8 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Clock, Hourglass, Edit2, Trash2, Trophy } from 'lucide-react';
+import { GripVertical, Clock, Hourglass, BrickWall, Edit2, Trash2 } from 'lucide-react';
 import { Task, TaskType } from '../../types';
-import { BrickIcon } from '../common/Icons';
 
 interface SortableTaskItemProps {
   task: Task;
@@ -12,17 +11,14 @@ interface SortableTaskItemProps {
   setEditingTaskId: (id: string | null) => void;
   editingTaskText: string;
   setEditingTaskText: (text: string) => void;
-  editingTaskPoints: number;
-  setEditingTaskPoints: (points: number) => void;
   editingTaskDuration: number;
   setEditingTaskDuration: (duration: number) => void;
   editingTaskType: TaskType;
   setEditingTaskType: (type: TaskType) => void;
   editingTaskScheduledDays: number[];
   setEditingTaskScheduledDays: (days: number[]) => void;
-  updateTask: (taskId: string, newText: string, newPoints: number, newDuration: number, newTaskType?: TaskType, newScheduledDays?: number[]) => void;
+  updateTask: (taskId: string, newText: string, newDuration: number, newTaskType?: TaskType, newScheduledDays?: number[]) => void;
   deleteTask: (id: string) => void;
-  PointSelector: any;
   chunkScheduledDays: number[];
 }
 
@@ -40,8 +36,6 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
   setEditingTaskId, 
   editingTaskText, 
   setEditingTaskText, 
-  editingTaskPoints, 
-  setEditingTaskPoints, 
   editingTaskDuration,
   setEditingTaskDuration,
   editingTaskType,
@@ -50,7 +44,6 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
   setEditingTaskScheduledDays,
   updateTask, 
   deleteTask,
-  PointSelector,
   chunkScheduledDays
 }) => {
   const {
@@ -81,7 +74,7 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
   const daysLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
   return (
-    <div ref={setNodeRef} style={style} className="p-3 bg-white rounded-2xl border border-slate-100 group shadow-sm">
+    <div ref={setNodeRef} style={style} className="p-3 bg-white rounded-[10px] border border-slate-100 group shadow-sm">
       {editingTaskId === task.id ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -90,7 +83,7 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
               type="text"
               value={editingTaskText}
               onChange={(e) => setEditingTaskText(e.target.value)}
-              className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="flex-grow bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               autoFocus
             />
           </div>
@@ -100,12 +93,12 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
               <div className="flex items-center gap-1">
                 {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                   const colorClass = type === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : type === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600';
-                  const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickIcon : Hourglass;
+                  const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
                   return (
                     <button 
                       key={type}
                       onClick={() => setEditingTaskType(type)}
-                      className={`flex-1 py-1.5 rounded-lg text-[9px] font-black transition-all flex items-center justify-center gap-1 ${editingTaskType === type ? `${colorClass} text-white shadow-md` : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
+                      className={`flex-1 py-1.5 rounded-[10px] text-[9px] font-black transition-all flex items-center justify-center gap-1 ${editingTaskType === type ? `${colorClass} text-white shadow-md` : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
                     >
                       <Icon className="w-3 h-3" />
                       {type}
@@ -126,17 +119,9 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                 type="number"
                 value={editingTaskDuration || ''}
                 onChange={(e) => setEditingTaskDuration(e.target.value === '' ? 0 : parseInt(e.target.value))}
-                className={`w-full bg-slate-50 border rounded-lg px-2 py-1 text-xs font-bold focus:outline-none focus:ring-2 transition-colors ${
+                className={`w-full bg-slate-50 border rounded-[10px] px-2 py-1 text-xs font-bold focus:outline-none focus:ring-2 transition-colors ${
                   editingTaskType === TaskType.TIME_INDEPENDENT ? 'border-sky-200 focus:ring-sky-500/20' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'border-pink-200 focus:ring-pink-500/20' : 'border-indigo-200 focus:ring-indigo-500/20'
                 }`}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">포인트</span>
-              <PointSelector 
-                value={editingTaskPoints} 
-                onChange={setEditingTaskPoints} 
               />
             </div>
           </div>
@@ -152,7 +137,7 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                     key={i}
                     onClick={() => toggleDay(i)}
                     disabled={!isGroupScheduled}
-                    className={`w-7 h-7 rounded-lg text-[10px] font-bold transition-all ${
+                    className={`w-7 h-7 rounded-[10px] text-[10px] font-bold transition-all ${
                       isSelected 
                         ? 'bg-indigo-500 text-white shadow-sm' 
                         : isGroupScheduled
@@ -169,14 +154,14 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
 
           <div className="flex gap-2">
             <button 
-              onClick={() => updateTask(task.id, editingTaskText, editingTaskPoints, editingTaskDuration, editingTaskType, editingTaskScheduledDays)}
-              className="flex-1 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
+              onClick={() => updateTask(task.id, editingTaskText, editingTaskDuration, editingTaskType, editingTaskScheduledDays)}
+              className="flex-1 py-1.5 bg-indigo-600 text-white rounded-[10px] text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
             >
               저장
             </button>
             <button 
               onClick={() => setEditingTaskId(null)}
-              className="flex-1 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors"
+              className="flex-1 py-1.5 bg-slate-100 text-slate-500 rounded-[10px] text-xs font-bold hover:bg-slate-200 transition-colors"
             >
               취소
             </button>
@@ -197,16 +182,11 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                   {task.taskType === TaskType.TIME_INDEPENDENT ? (
                     <Clock className="w-3 h-3 text-sky-500" />
                   ) : task.taskType === TaskType.TIME_ACCUMULATED ? (
-                    <BrickIcon className="w-3 h-3 text-pink-500" />
+                    <BrickWall className="w-3 h-3 text-pink-500" />
                   ) : (
                     <Hourglass className="w-3 h-3 text-indigo-600" />
                   )}
                   <span className="text-[10px] text-slate-500 font-bold">{task.targetDuration || 0}분</span>
-                </div>
-                <span className="text-[10px] text-slate-300">•</span>
-                <div className="flex items-center gap-1">
-                  <Trophy className="w-3 h-3 text-indigo-600" />
-                  <span className="text-[10px] text-indigo-600 font-bold">{task.points}P</span>
                 </div>
               </div>
             </div>
@@ -217,7 +197,6 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                 onClick={() => {
                   setEditingTaskId(task.id);
                   setEditingTaskText(task.text);
-                  setEditingTaskPoints(task.points);
                   setEditingTaskDuration(task.targetDuration || 10);
                   setEditingTaskType(task.taskType || TaskType.TIME_LIMITED);
                   setEditingTaskScheduledDays(task.scheduledDays || [0, 1, 2, 3, 4, 5, 6]);

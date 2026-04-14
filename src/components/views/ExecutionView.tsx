@@ -6,6 +6,8 @@ import {
   Pause, 
   RotateCcw, 
   CheckCircle2, 
+  CheckCheck,
+  Check,
   Clock, 
   Zap, 
   AlertCircle,
@@ -14,11 +16,23 @@ import {
   XCircle,
   Settings,
   Hourglass,
-  Trophy,
-  Target
+  BrickWall,
+  Target,
+  Circle,
+  CircleMinus
 } from 'lucide-react';
+import { getJosa, calculateTaskDuration } from '../../utils';
 import { ExecutionViewProps, TaskStatus, TaskType, Task } from '../../types';
-import { BrickIcon } from '../common/Icons';
+
+const DoubleCheckCircle = ({ className }: { className?: string }) => (
+  <div className={`relative flex items-center justify-center ${className}`}>
+    <Circle className="w-full h-full" />
+    <div className="absolute inset-0 flex items-center justify-center">
+      <Check className="w-[60%] h-[60%] -translate-x-[2px]" strokeWidth={4} />
+      <Check className="w-[60%] h-[60%] translate-x-[2px]" strokeWidth={4} />
+    </div>
+  </div>
+);
 
 export const ExecutionView: React.FC<ExecutionViewProps> = ({
   userData,
@@ -44,36 +58,55 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
   const completedCount = tasks.filter(t => t.completed).length;
   const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
 
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const calculateCurrentDuration = (task: Task) => {
+    return calculateTaskDuration(task, currentTime);
+  };
+
+  const activeTask = tasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+  const otherTasks = tasks.filter(t => t.id !== activeTask?.id);
+
   return (
     <div className="flex flex-col h-full space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <button 
           onClick={() => setActiveTab('home')}
-          className="p-3 bg-white rounded-2xl text-slate-400 hover:text-indigo-600 border border-slate-100 shadow-sm transition-all"
+          className="p-3 bg-white rounded-[10px] text-slate-400 hover:text-indigo-600 border border-slate-100 shadow-sm transition-all"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <div className="flex flex-col items-center">
-          <h2 className="text-xl font-black text-slate-900 tracking-tight">{chunk.name}</h2>
+        <div className="flex flex-col items-center overflow-hidden px-2 flex-grow">
+          <h2 className="text-xl font-black text-slate-900 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis w-full text-center">
+            {/* 루틴그룹 제목 스타일 설정 (글자 색, 크기 등) */}
+            <span style={{ color: '#0f172a', fontSize: '1.25rem' }}>
+              {chunk.purpose}{getJosa(chunk.purpose || '', '이/가')} 되기 위한 {chunk.name}
+            </span>
+            <button 
+              onClick={() => {
+                setSettingsSubView({ type: 'detail', chunkId: chunk.id });
+                setIsSettingsOpen(true);
+              }}
+              className="inline-flex items-center justify-center p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-[10px] transition-all ml-1 align-middle"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </h2>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">루틴 수행 중</p>
         </div>
-        <button 
-          onClick={() => {
-            setSettingsSubView({ type: 'detail', chunkId: chunk.id });
-            setIsSettingsOpen(true);
-          }}
-          className="p-3 bg-white rounded-2xl text-slate-400 hover:text-indigo-600 border border-slate-100 shadow-sm transition-all"
-        >
-          <Settings className="w-6 h-6" />
-        </button>
+        <div className="w-[52px]" /> {/* Spacer to balance the back button */}
       </div>
 
       {/* Progress Card */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm space-y-3">
+      <div className="bg-white p-4 rounded-[10px] border border-slate-100 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-indigo-50 rounded-[10px] flex items-center justify-center">
               <Target className="w-4 h-4 text-indigo-600" />
             </div>
             <span className="text-sm font-black text-slate-900">진행률</span>
@@ -93,169 +126,187 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
         </div>
       </div>
 
-      {/* Tasks List */}
-      <div className="space-y-3 flex-grow overflow-y-auto pr-2 custom-scrollbar">
-        {tasks.map((task, index) => {
-          const isActive = task.startTime && !task.isPaused && !task.completed && !task.givenUp;
-          const isPaused = task.isPaused;
-          const targetDuration = task.targetDuration || 0;
+      {/* Active Task Box */}
+      {activeTask && (
+        <motion.div
+          layout
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-indigo-600 rounded-[20px] p-6 text-white shadow-2xl shadow-indigo-200 space-y-6"
+        >
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">현재 진행 중</span>
+              <h3 className="text-2xl font-black tracking-tight">{activeTask.text}</h3>
+            </div>
+            <div className="p-3 bg-white/10 rounded-[15px] backdrop-blur-sm">
+              <Timer className="w-6 h-6 text-white" />
+            </div>
+          </div>
 
-          const formatTime = (seconds: number) => {
-            const m = Math.floor(seconds / 60);
-            const s = seconds % 60;
-            return `${m}:${s.toString().padStart(2, '0')}`;
-          };
+          <div className="flex flex-col items-center justify-center py-4 space-y-2">
+            <div className="text-6xl font-black tabular-nums tracking-tighter">
+              {formatTime(calculateCurrentDuration(activeTask))}
+            </div>
+            <div className="text-indigo-200 font-bold text-sm">
+              목표: {activeTask.targetDuration}분
+            </div>
+          </div>
 
-          const calculateCurrentDuration = (task: Task) => {
-            let currentSession = 0;
-            if (task.startTime && !task.isPaused) {
-              const [h, m, s] = task.startTime.split(':').map(Number);
-              const start = new Date(currentTime);
-              start.setHours(h, m, s, 0);
-              if (start.getTime() > currentTime.getTime()) {
-                start.setDate(start.getDate() - 1);
+          <div className="flex gap-3">
+            <button 
+              onClick={() => togglePauseTask(activeTask.id)}
+              className="flex-1 py-4 bg-white/10 hover:bg-white/20 rounded-[15px] backdrop-blur-sm transition-all flex items-center justify-center gap-2 font-black text-sm"
+            >
+              <Pause className="w-5 h-5 fill-current" /> 일시정지
+            </button>
+            {(() => {
+              const currentDuration = calculateCurrentDuration(activeTask);
+              const targetSeconds = (activeTask.targetDuration || 0) * 60;
+              let isPerfect = false;
+              if (activeTask.taskType === TaskType.TIME_LIMITED) {
+                isPerfect = currentDuration <= targetSeconds;
+              } else if (activeTask.taskType === TaskType.TIME_ACCUMULATED) {
+                isPerfect = currentDuration >= targetSeconds;
               }
-              currentSession = Math.floor((currentTime.getTime() - start.getTime()) / 1000);
-            }
-            return (task.accumulatedDuration || 0) + currentSession;
-          };
+
+              return (
+                <button 
+                  onClick={() => toggleTask(activeTask.id)}
+                  className="flex-[2] py-4 bg-white text-indigo-600 hover:bg-indigo-50 rounded-[15px] transition-all flex items-center justify-center gap-2 font-black text-sm shadow-lg shadow-indigo-900/20"
+                >
+                  {isPerfect ? (
+                    <>
+                      <DoubleCheckCircle className="w-5 h-5" />
+                      완벽
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5" />
+                      완료
+                    </>
+                  )}
+                </button>
+              );
+            })()}
+          </div>
+
+          <div className="flex gap-2 pt-4 border-t border-white/10">
+            <button 
+              onClick={() => laterTask(activeTask.id)}
+              className="flex-1 py-2 bg-white/5 hover:bg-white/10 rounded-[10px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+            >
+              <SkipForward className="w-3 h-3" /> 나중에 하기
+            </button>
+            <button 
+              onClick={() => giveUpTask(activeTask.id)}
+              className="flex-1 py-2 bg-white/5 hover:bg-white/10 rounded-[10px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+            >
+              <XCircle className="w-3 h-3" /> 포기하기
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Remaining Tasks List */}
+      <div className="space-y-2 flex-grow overflow-y-auto pr-2 custom-scrollbar">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">나머지 루틴 목록</h3>
+        {otherTasks.map((task, index) => {
+          const isPaused = task.isPaused;
+          const isCompleted = task.completed;
+          const isPerfect = task.status === TaskStatus.PERFECT;
+          const isLater = !!task.laterTimestamp;
+          const isSkip = task.status === TaskStatus.SKIP || task.givenUp;
+          const targetDuration = task.targetDuration || 0;
 
           return (
             <motion.div
               key={task.id}
               layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className={`group bg-white rounded-3xl p-4 border transition-all ${
-                task.completed ? 'border-emerald-100 bg-emerald-50/30' :
-                task.givenUp ? 'border-rose-100 bg-rose-50/30 opacity-60' :
-                isActive ? 'border-indigo-500 shadow-xl shadow-indigo-100 ring-2 ring-indigo-500/10' :
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className={`group bg-white rounded-[15px] p-4 border transition-all ${
+                isCompleted ? 'border-emerald-100 bg-emerald-50/20' :
+                isSkip ? 'border-rose-100 bg-rose-50/20 opacity-60' :
                 'border-slate-100'
               }`}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4 flex-grow">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
-                    task.completed ? 'bg-emerald-500 text-white' :
-                    task.givenUp ? 'bg-rose-500 text-white' :
-                    isActive ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400'
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 flex-grow">
+                  <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 transition-colors ${
+                    isPerfect ? 'bg-indigo-500 text-white' :
+                    isCompleted ? 'bg-emerald-500 text-white' :
+                    isSkip ? 'bg-[#CC9900] text-white' :
+                    isPaused ? 'bg-amber-100 text-amber-600' :
+                    'bg-slate-50 text-slate-400'
                   }`}>
-                    {task.completed ? <CheckCircle2 className="w-5 h-5" /> :
-                     task.givenUp ? <XCircle className="w-5 h-5" /> :
-                     isActive ? <Timer className="w-5 h-5" /> : <span className="text-sm font-black">{index + 1}</span>}
+                    {isPerfect ? <DoubleCheckCircle className="w-4 h-4" /> :
+                     isCompleted ? <CheckCircle2 className="w-4 h-4" /> :
+                     isSkip ? <CircleMinus className="w-4 h-4" /> :
+                     isPaused ? <Pause className="w-4 h-4 fill-current" /> :
+                     <span className="text-xs font-black">{tasks.indexOf(task) + 1}</span>}
                   </div>
-                  <div className="space-y-1 flex-grow">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className={`font-black tracking-tight ${
-                        task.completed ? 'text-emerald-700 line-through' :
-                        task.givenUp ? 'text-rose-700 line-through' :
-                        'text-slate-900'
+                  
+                  <div className="flex-grow min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className={`font-black text-sm truncate ${
+                        isCompleted || isSkip ? 'text-slate-400 line-through' : 'text-slate-900'
                       }`}>
                         {task.text}
                       </h4>
-                      
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-lg font-black text-[8px] uppercase tracking-widest">
-                          {task.taskType === TaskType.TIME_INDEPENDENT ? (
-                            <Clock className="w-2.5 h-2.5 text-sky-400" />
-                          ) : task.taskType === TaskType.TIME_ACCUMULATED ? (
-                            <BrickIcon className="w-2.5 h-2.5 text-pink-400" />
-                          ) : (
-                            <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
-                          )}
-                          {task.completed ? (
-                            <span>{formatTime(task.duration || 0)} / {targetDuration}분</span>
-                          ) : isActive ? (
-                            <span>{formatTime(calculateCurrentDuration(task))} / {targetDuration}분</span>
-                          ) : (
-                            <span>{targetDuration}분</span>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg font-black text-[8px] uppercase tracking-widest">
-                          <Trophy className="w-2.5 h-2.5" />
-                          {task.completed ? (
-                            <span>{task.earnedPoints || 0} / {task.points || 0}P</span>
-                          ) : (
-                            <span>{task.points || 0}P</span>
-                          )}
-                        </div>
-                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 flex-shrink-0">
+                        {targetDuration}분
+                      </span>
                     </div>
-                    
-                    {isActive && (
-                      <div className="flex items-center gap-3 mt-2">
-                        <div className="flex items-center gap-1.5 text-indigo-600">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span className="text-xs font-black tabular-nums">
-                            {formatTime(calculateCurrentDuration(task))}
-                          </span>
-                        </div>
-                        {isPaused && (
-                          <span className="px-2 py-0.5 bg-amber-100 text-amber-600 rounded-lg text-[8px] font-black uppercase tracking-widest animate-pulse">
-                            일시정지됨
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {!task.completed && !task.givenUp && !isActive && (
-                    <button 
-                      onClick={() => startTask(task.id)}
-                      className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
-                    >
-                      <Play className="w-5 h-5 fill-current" />
-                    </button>
-                  )}
-
-                  {isActive && (
-                    <>
-                      <button 
-                        onClick={() => togglePauseTask(task.id)}
-                        className={`p-3 rounded-2xl transition-all ${isPaused ? 'bg-emerald-500 text-white shadow-emerald-100' : 'bg-amber-500 text-white shadow-amber-100'} shadow-lg`}
-                      >
-                        {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
-                      </button>
-                      <button 
-                        onClick={() => toggleTask(task.id)}
-                        className="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-100 hover:bg-emerald-600 transition-all"
-                      >
-                        <CheckCircle2 className="w-5 h-5" />
-                      </button>
-                    </>
-                  )}
-
-                  {(task.completed || task.givenUp) && (
-                    <button 
-                      onClick={() => onRestart(task.id)}
-                      className="p-3 bg-slate-100 text-slate-400 rounded-2xl hover:bg-slate-200 transition-all"
-                    >
-                      <RotateCcw className="w-5 h-5" />
-                    </button>
-                  )}
+                <div className="flex items-center gap-1 flex-shrink-0 ml-auto justify-end">
+                  {(() => {
+                    const buttons = [];
+                    if (isCompleted || isPerfect) {
+                      buttons.push(
+                        <button 
+                          key="resume"
+                          onClick={() => startTask(task.id, false)}
+                          className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-[8px] text-[10px] font-black hover:bg-indigo-100 transition-all"
+                        >
+                          이어하기
+                        </button>,
+                        <button 
+                          key="restart"
+                          onClick={() => startTask(task.id, true)}
+                          className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-[8px] text-[10px] font-black hover:bg-slate-200 transition-all"
+                        >
+                          다시하기
+                        </button>
+                      );
+                    } else if (isPaused) {
+                      buttons.push(
+                        <button 
+                          key="resume"
+                          onClick={() => startTask(task.id, false)}
+                          className="px-3 py-1.5 bg-indigo-600 text-white rounded-[8px] text-[10px] font-black hover:bg-indigo-700 transition-all"
+                        >
+                          이어하기
+                        </button>
+                      );
+                    } else {
+                      // NOT_STARTED, LATER, SKIP
+                      buttons.push(
+                        <button 
+                          key="start"
+                          onClick={() => startTask(task.id, true)}
+                          className="px-3 py-1.5 bg-indigo-600 text-white rounded-[8px] text-[10px] font-black hover:bg-indigo-700 transition-all"
+                        >
+                          시작하기
+                        </button>
+                      );
+                    }
+                    return buttons;
+                  })()}
                 </div>
               </div>
-
-              {isActive && (
-                <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
-                  <button 
-                    onClick={() => laterTask(task.id)}
-                    className="flex-1 py-2 bg-slate-50 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
-                  >
-                    <SkipForward className="w-3 h-3" /> 나중에 하기
-                  </button>
-                  <button 
-                    onClick={() => giveUpTask(task.id)}
-                    className="flex-1 py-2 bg-rose-50 text-rose-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
-                  >
-                    <XCircle className="w-3 h-3" /> 포기하기
-                  </button>
-                </div>
-              )}
             </motion.div>
           );
         })}
@@ -265,13 +316,13 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
       <div className="flex gap-3 pt-4 border-t border-slate-100">
         <button 
           onClick={() => resetChunk(chunk.id)}
-          className="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+          className="flex-1 py-4 bg-slate-100 text-slate-400 rounded-[10px] font-black text-sm hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
         >
           <RotateCcw className="w-4 h-4" /> 전체 초기화
         </button>
         <button 
           onClick={() => setActiveTab('home')}
-          className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all"
+          className="flex-[2] py-4 bg-indigo-600 text-white rounded-[10px] font-black text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all"
         >
           수행 완료
         </button>

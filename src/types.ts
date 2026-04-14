@@ -25,7 +25,6 @@ export interface Task {
   id: string;
   text: string;
   completed: boolean;
-  points: number; // 1-10 absolute points
   targetDuration?: number; // minutes
   taskType?: TaskType;
   startTime?: string; // HH:mm:ss
@@ -35,13 +34,12 @@ export interface Task {
   laterTimestamp?: number;
   isPaused?: boolean;
   accumulatedDuration?: number; // seconds
-  earnedPoints?: number;
   scheduledDays?: number[]; // 0-6 (Sun-Sat)
   isClosingRoutine?: boolean;
   closingNote?: string;
-  closingPhoto?: string;
   satisfaction?: number;
   checklist?: ChecklistItem[];
+  status?: TaskStatus;
 }
 
 /**
@@ -78,16 +76,42 @@ export enum TaskStatus {
   NOT_STARTED = 'not_started',
   IN_PROGRESS = 'in_progress',
   COMPLETED = 'completed',
+  PERFECT = 'perfect',
   FAILED = 'failed',
   LATER = 'later',
-  GIVEN_UP = 'given_up'
+  SKIP = 'skip'
+}
+
+export interface WakeUpTimeHistoryEntry {
+  date: string;
+  wakeUpTime: string; // HH:mm:ss
+}
+
+export interface RoutineGroupHistoryEntry {
+  date: string;
+  groupId: string;
+  isActive: boolean;
+  firstTaskStartTime: string | null; // HH:mm:ss
+  completionStatus: '비활성' | '미실행' | '미완료' | '전체완료';
+  completedAt: string | null; // HH:mm:ss
+  totalDuration: number; // seconds
+  satisfaction?: number;
+  closingNote?: string;
+}
+
+export interface TaskHistoryEntry {
+  date: string;
+  taskId: string;
+  groupId: string;
+  isActive: boolean;
+  duration: number; // seconds
+  status: string; // '미실행' | '일시정지' | '실행중' | '스킵' | '완벽' | '완료'
 }
 
 /**
  * Represents the entire state of the user's data.
  */
 export interface UserData {
-  points: number;
   completionRate: number;
   streak: number;
   lastCheckInDate: string | null;
@@ -95,16 +119,18 @@ export interface UserData {
   routineChunks: RoutineChunk[];
   history: WakeUpRecord[];
   startDate: string | null;
-  dailyPoints: { [date: string]: number };
   dailyCompletionRate: { [date: string]: number };
   resetTime: string; // HH:mm format
+  autoReorderGroups: boolean;
   lastCheckCheckTime: number; // timestamp
   lastResetDate: string | null;
   dailyCheckCheckCounts: { [date: string]: number };
-  dailyCheckInPoints: { [date: string]: number };
   dailyCheckIn?: { [date: string]: string }; // date -> time
   inactiveChunks?: { [date: string]: string[] }; // date -> chunkId[]
   dailyTaskStatus?: { [date: string]: { [taskId: string]: TaskStatus } };
+  wakeUpTimeHistory?: WakeUpTimeHistoryEntry[];
+  routineGroupHistory?: RoutineGroupHistoryEntry[];
+  taskHistory?: TaskHistoryEntry[];
 }
 
 /**
@@ -115,21 +141,15 @@ export interface SettingsSubView {
   chunkId?: string;
 }
 
-export type StatsTab = 'wake-up' | 'relative' | 'absolute';
+export type StatsTab = 'wake-up' | 'relative';
 
 export interface HeaderBoxProps {
   userData: UserData;
   todayStr: string;
   formattedDate: string;
-  weather: { icon: React.ReactNode; temp: number } | null;
   challengeDays: number;
   successDays: number;
   currentTime: Date;
-}
-
-export interface PointSelectorProps {
-  value: number;
-  onChange: (value: number) => void;
 }
 
 export interface HomeViewProps {
@@ -147,13 +167,13 @@ export interface HomeViewProps {
   getStatusBadge: (status: string) => React.ReactNode;
   globalActiveTask: { chunkId: string; task: Task } | null;
   setConfirmModal: (modal: any) => void;
+  onEnterExecution: (chunkId: string) => void;
 }
 
 export interface StatsViewProps {
   userData: UserData;
   chartData: any[];
   relativeChartData: any[];
-  absoluteChartData: any[];
   averageWakeUpTime: string;
   activeStatsTab: StatsTab;
   setActiveStatsTab: (tab: StatsTab) => void;
@@ -166,12 +186,12 @@ export interface ExecutionViewProps {
   setActiveTab: (tab: string) => void;
   currentTime: Date;
   todayStr: string;
-  toggleTask: (taskId: string, closingData?: { note?: string, photo?: string, satisfaction?: number }) => void;
+  toggleTask: (taskId: string, closingData?: { note?: string, satisfaction?: number }) => void;
   togglePauseTask: (taskId: string) => void;
   laterTask: (taskId: string) => void;
   giveUpTask: (taskId: string) => void;
-  startTask: (taskId: string) => void;
-  onRestart: (taskId: string) => void;
+  startTask: (taskId: string, resetTimer?: boolean) => void;
+  onRestart: (taskId: string, resetTimer?: boolean) => void;
   resetChunk: (chunkId: string) => void;
   setSettingsSubView: (view: SettingsSubView) => void;
   setIsSettingsOpen: (isOpen: boolean) => void;

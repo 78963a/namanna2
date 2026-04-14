@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Trophy, Calendar } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { UserData } from '../../types';
 import { isTaskScheduledToday } from '../../utils';
 
@@ -8,14 +8,13 @@ interface HeaderBoxProps {
   userData: UserData;
   todayStr: string;
   formattedDate: string;
-  weather: { icon: React.ReactNode; temp: number } | null;
   challengeDays: number;
   successDays: number;
   currentTime: Date;
 }
 
 /**
- * The header section of the home view, displaying user stats, weather, and current date.
+ * The header section of the home view, displaying user stats, and current date.
  * 
  * @param {HeaderBoxProps} props - Component properties
  * @returns {JSX.Element} The rendered header box
@@ -24,12 +23,10 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
   userData,
   todayStr,
   formattedDate,
-  weather,
   challengeDays,
   successDays,
   currentTime
 }) => {
-  const todayPoints = userData.dailyPoints[todayStr] || 0;
   const totalCompleted = userData.routineChunks.reduce((acc, chunk) => 
     acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && t.completed).length, 0
   );
@@ -47,7 +44,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
       const d = new Date(currentTime);
       d.setDate(d.getDate() - i);
       const dStr = d.toISOString().split('T')[0];
-      const score = userData.dailyCompletionRate[dStr] || 0;
+      const score = (userData.dailyCompletionRate?.[dStr]) || 0;
       const dayOfWeek = weekDays[d.getDay()];
       days.push({ date: dStr, score, dayOfWeek });
     }
@@ -55,35 +52,20 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
   }, [userData.dailyCompletionRate, currentTime]);
 
   return (
-    <section className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-2">
+    <section className="bg-white p-[15px] rounded-[10px] shadow-sm border border-slate-100 space-y-2">
       <div className="flex justify-between items-start">
         <div className="text-left space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-lg font-black text-slate-900 tracking-tight">{formattedDate}</p>
-            {weather && (
-              <div className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-xl border border-slate-100">
-                {weather.icon}
-                <span className="text-xs font-bold text-slate-600">{weather.temp}°</span>
-              </div>
-            )}
+            <p className="text-lg font-black tabular-nums leading-none" style={{ color: '#993399' }}>
+              {`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}
+            </p>
           </div>
-          {/* Mobile-only time display */}
-          <p className="text-lg font-black text-slate-900 tabular-nums leading-none md:hidden">
-            {`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}
-          </p>
-          <div className="text-indigo-600 font-black text-sm leading-tight">
-            {challengeDays}일째 도전중 • {successDays}일째 성공중
+          <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
+              <span>
+                {challengeDays}일째 도전중, {successDays}일째 성공중 ({completionPercentage}%)
+               </span>
           </div>
-          <div className="text-slate-500 text-xs font-bold flex items-center gap-1.5">
-            <Trophy className="w-3 h-3 text-amber-500" />
-            오늘의 성취: <span className="text-slate-900">{completionPercentage.toFixed(1)}%</span> / <span className="text-slate-900">{todayPoints.toLocaleString()}P</span>
-          </div>
-        </div>
-        {/* Desktop-only time display */}
-        <div className="text-right space-y-1 hidden md:block">
-          <p className="text-lg font-black text-slate-900 tabular-nums leading-none">
-            {`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}
-          </p>
         </div>
       </div>
 
@@ -101,7 +83,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
             return (
               <div 
                 key={day.date} 
-                className={`w-5 h-5 rounded-[4px] ${color} transition-all flex items-center justify-center`}
+                className={`w-5 h-5 rounded-[10px] ${color} transition-all flex items-center justify-center`}
                 title={`${day.date}: ${day.score.toFixed(1)}%`}
               >
                 <span className={`text-[9px] font-black ${textColor}`}>

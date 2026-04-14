@@ -1,0 +1,572 @@
+src/components/common/ConfirmModal.tsx:import { motion, AnimatePresence } from 'motion/react';
+src/components/common/ConfirmModal.tsx:interface ConfirmModalProps {
+src/components/common/ConfirmModal.tsx: * @param {ConfirmModalProps} props - Component properties
+src/components/common/ConfirmModal.tsx:export const ConfirmModal: React.FC<ConfirmModalProps> = ({
+src/components/common/ConfirmModal.tsx:    <AnimatePresence>
+src/components/common/ConfirmModal.tsx:    </AnimatePresence>
+src/components/common/RoutineTitleLine.tsx:  PauseCircle, 
+src/components/common/RoutineTitleLine.tsx:import { formatDurationPrecise } from '../../utils';
+src/components/common/RoutineTitleLine.tsx:interface RoutineTitleLineProps {
+src/components/common/RoutineTitleLine.tsx: * RoutineTitleLine displays task details including status icons, duration, and points.
+src/components/common/RoutineTitleLine.tsx:}: RoutineTitleLineProps) => {
+src/components/common/RoutineTitleLine.tsx:  } else if (task.isPaused) {
+src/components/common/RoutineTitleLine.tsx:    StatusIcon = PauseCircle;
+src/components/common/RoutineTitleLine.tsx:  const canRestart = onRestart && (task.isPaused || task.laterTimestamp || task.givenUp);
+src/components/common/RoutineTitleLine.tsx:  const canPrioritize = onDoFirst && !task.startTime && !task.completed && !task.givenUp && !task.laterTimestamp && !isLocked;
+src/components/common/RoutineTitleLine.tsx:              e.stopPropagation();
+src/components/common/RoutineTitleLine.tsx:        {canPrioritize && (
+src/components/common/RoutineTitleLine.tsx:              e.stopPropagation();
+src/components/common/RoutineTitleLine.tsx:            {task.taskType === TaskType.TIME_INDEPENDENT ? (
+src/components/common/RoutineTitleLine.tsx:              <span>{formatDurationPrecise(task.duration || 0)} / {task.targetDuration}분</span>
+src/components/common/HeaderBox.tsx:interface HeaderBoxProps {
+src/components/common/HeaderBox.tsx:}: HeaderBoxProps) => {
+src/components/common/HeaderBox.tsx:  const todayPoints = userData.dailyPoints[todayStr] || 0;
+src/components/common/HeaderBox.tsx:  const completionPercentage = totalScheduledTasksCount > 0 
+src/components/common/HeaderBox.tsx:            오늘의 성취: <span className="text-slate-900">{completionPercentage.toFixed(1)}%</span> / <span className="text-slate-900">{todayPoints.toLocaleString()}P</span>
+src/components/common/CelebrationModal.tsx:import { motion, AnimatePresence } from 'motion/react';
+src/components/common/CelebrationModal.tsx:interface CelebrationModalProps {
+src/components/common/CelebrationModal.tsx:  points?: number;
+src/components/common/CelebrationModal.tsx: * @param {CelebrationModalProps} props - Component properties
+src/components/common/CelebrationModal.tsx:export const CelebrationModal: React.FC<CelebrationModalProps> = ({
+src/components/common/CelebrationModal.tsx:  points
+src/components/common/CelebrationModal.tsx:    <AnimatePresence>
+src/components/common/CelebrationModal.tsx:            {points !== undefined && (
+src/components/common/CelebrationModal.tsx:                +{points} P
+src/components/common/CelebrationModal.tsx:    </AnimatePresence>
+src/components/common/RoutineTitle.tsx:interface RoutineTitleProps {
+src/components/common/RoutineTitle.tsx:export const RoutineTitle: React.FC<RoutineTitleProps> = ({ 
+src/components/common/RoutineTitle.tsx:  const hasPurpose = chunk.purpose && chunk.purpose.trim() !== '';
+src/components/common/RoutineTitle.tsx:        나는 <span className="text-blue-600 font-black">{chunk.name}</span>을 완료한 {hasPurpose ? <span className="text-blue-600 font-black">{chunk.purpose}</span> : ""}이다!
+src/components/common/RoutineTitle.tsx:    if (hasPurpose) {
+src/components/common/ChecklistModal.tsx:import { motion, AnimatePresence } from 'motion/react';
+src/components/common/ChecklistModal.tsx:  PointerSensor, 
+src/components/common/ChecklistModal.tsx:import { CheckCircle2, X, PlusCircle } from 'lucide-react';
+src/components/common/ChecklistModal.tsx:interface ChecklistModalProps {
+src/components/common/ChecklistModal.tsx: * @param {ChecklistModalProps} props - Component properties
+src/components/common/ChecklistModal.tsx:export const ChecklistModal: React.FC<ChecklistModalProps> = ({ 
+src/components/common/ChecklistModal.tsx:    useSensor(PointerSensor, {
+src/components/common/ChecklistModal.tsx:    <AnimatePresence>
+src/components/common/ChecklistModal.tsx:                    <PlusCircle className="w-8 h-8 opacity-20" />
+src/components/common/ChecklistModal.tsx:    </AnimatePresence>
+src/components/common/SlideToResetButton.tsx:interface SlideToResetButtonProps {
+src/components/common/SlideToResetButton.tsx:export const SlideToResetButton = ({ onReset }: SlideToResetButtonProps) => {
+src/components/common/PointSelector.tsx:interface PointSelectorProps {
+src/components/common/PointSelector.tsx:  onChange: (points: number) => void;
+src/components/common/PointSelector.tsx: * @param {PointSelectorProps} props - Component properties
+src/components/common/PointSelector.tsx:export const PointSelector: React.FC<PointSelectorProps> = ({ value, onChange }) => {
+src/components/views/AddRoutineGroupView.tsx:import { motion, AnimatePresence } from 'motion/react';
+src/components/views/AddRoutineGroupView.tsx:  Plus, 
+src/components/views/AddRoutineGroupView.tsx:  PlusCircle, 
+src/components/views/AddRoutineGroupView.tsx:  PointerSensor, 
+src/components/views/AddRoutineGroupView.tsx:import { AddRoutineGroupViewProps, Task, TaskType } from '../../types';
+src/components/views/AddRoutineGroupView.tsx:export const AddRoutineGroupView: React.FC<AddRoutineGroupViewProps> = ({
+src/components/views/AddRoutineGroupView.tsx:  const [purpose, setPurpose] = useState('');
+src/components/views/AddRoutineGroupView.tsx:    points: 10,
+src/components/views/AddRoutineGroupView.tsx:    points: 10,
+src/components/views/AddRoutineGroupView.tsx:    useSensor(PointerSensor),
+src/components/views/AddRoutineGroupView.tsx:                onChange={(e) => setPurpose(e.target.value)}
+src/components/views/AddRoutineGroupView.tsx:          <PlusCircle className="w-6 h-6" />
+src/components/views/StatsView.tsx:interface StatsViewProps {
+src/components/views/StatsView.tsx:export const StatsView: React.FC<StatsViewProps> = ({ 
+src/components/views/StatsView.tsx:                <span className="text-sm font-medium text-slate-500 uppercase tracking-widest">누적 포인트</span>
+src/components/views/StatsView.tsx:                <h2 className="text-4xl font-black text-slate-900 tracking-tighter">{userData.points || 0}P</h2>
+src/components/views/StatsView.tsx:                기상 및 루틴 수행을 통해 획득한 총 포인트입니다.
+src/components/views/StatsView.tsx:                최근 7일 획득 포인트
+src/components/views/StatsView.tsx:                      <linearGradient id="colorPoints" x1="0" y1="0" x2="0" y2="1">
+src/components/views/StatsView.tsx:                              {payload[0].value}P
+src/components/views/StatsView.tsx:                      dataKey="points" 
+src/components/views/StatsView.tsx:                      fill="url(#colorPoints)" 
+src/components/views/StatsView.tsx:          포인트
+src/components/views/HomeView.tsx:import { HomeViewProps, RoutineChunk, Task, TaskStatus } from '../../types';
+src/components/views/HomeView.tsx:export const HomeView: React.FC<HomeViewProps> = ({ 
+src/components/views/HomeView.tsx:    e.stopPropagation();
+src/components/views/HomeView.tsx:    let actualPoints = 0;
+src/components/views/HomeView.tsx:    let targetPoints = 0;
+src/components/views/HomeView.tsx:      if (task.earnedPoints) {
+src/components/views/HomeView.tsx:        actualPoints += task.earnedPoints;
+src/components/views/HomeView.tsx:      targetPoints += task.points;
+src/components/views/HomeView.tsx:      actualPoints,
+src/components/views/HomeView.tsx:      targetPoints
+src/components/views/HomeView.tsx:                      e.stopPropagation();
+src/components/views/HomeView.tsx:                    const getPriority = (t: Task) => {
+src/components/views/HomeView.tsx:                    const pA = getPriority(a);
+src/components/views/HomeView.tsx:                    const pB = getPriority(b);
+src/components/views/ExecutionView.tsx:import { motion, AnimatePresence } from 'motion/react';
+src/components/views/ExecutionView.tsx:  Play, 
+src/components/views/ExecutionView.tsx:  Pause, 
+src/components/views/ExecutionView.tsx:import { ExecutionViewProps, TaskStatus, TaskType, Task } from '../../types';
+src/components/views/ExecutionView.tsx:export const ExecutionView: React.FC<ExecutionViewProps> = ({
+src/components/views/ExecutionView.tsx:  togglePauseTask,
+src/components/views/ExecutionView.tsx:      {/* Progress Card */}
+src/components/views/ExecutionView.tsx:          const isActive = task.startTime && !task.isPaused && !task.completed && !task.givenUp;
+src/components/views/ExecutionView.tsx:          const isPaused = task.isPaused;
+src/components/views/ExecutionView.tsx:            if (task.startTime && !task.isPaused) {
+src/components/views/ExecutionView.tsx:                          {task.taskType === TaskType.TIME_INDEPENDENT ? (
+src/components/views/ExecutionView.tsx:                            <span>{task.earnedPoints || 0} / {task.points || 0}P</span>
+src/components/views/ExecutionView.tsx:                            <span>{task.points || 0}P</span>
+src/components/views/ExecutionView.tsx:                        {isPaused && (
+src/components/views/ExecutionView.tsx:                      <Play className="w-5 h-5 fill-current" />
+src/components/views/ExecutionView.tsx:                        onClick={() => togglePauseTask(task.id)}
+src/components/views/ExecutionView.tsx:                        className={`p-3 rounded-[10px] transition-all ${isPaused ? 'bg-emerald-500 text-white shadow-emerald-100' : 'bg-amber-500 text-white shadow-amber-100'} shadow-lg`}
+src/components/views/ExecutionView.tsx:                        {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
+src/components/views/SettingsView.tsx:  Plus, 
+src/components/views/SettingsView.tsx:  PointerSensor, 
+src/components/views/SettingsView.tsx:import { PointSelector } from '../common/PointSelector';
+src/components/views/SettingsView.tsx:interface SettingsViewProps {
+src/components/views/SettingsView.tsx:  updateChunkInfo: (id: string, newName: string, newPurpose: string) => void;
+src/components/views/SettingsView.tsx:  editingChunkPurpose: string;
+src/components/views/SettingsView.tsx:  setEditingChunkPurpose: (purpose: string) => void;
+src/components/views/SettingsView.tsx:  editingTaskPoints: number;
+src/components/views/SettingsView.tsx:  setEditingTaskPoints: (points: number) => void;
+src/components/views/SettingsView.tsx:  updateTask: (taskId: string, newText: string, newPoints: number, newDuration: number, newTaskType?: TaskType, newScheduledDays?: number[]) => void;
+src/components/views/SettingsView.tsx:  newTaskPoints: number;
+src/components/views/SettingsView.tsx:  setNewTaskPoints: (points: number) => void;
+src/components/views/SettingsView.tsx:export const SettingsView: React.FC<SettingsViewProps> = ({
+src/components/views/SettingsView.tsx:  editingChunkPurpose,
+src/components/views/SettingsView.tsx:  setEditingChunkPurpose,
+src/components/views/SettingsView.tsx:  editingTaskPoints,
+src/components/views/SettingsView.tsx:  setEditingTaskPoints,
+src/components/views/SettingsView.tsx:  newTaskPoints,
+src/components/views/SettingsView.tsx:  setNewTaskPoints,
+src/components/views/SettingsView.tsx:    useSensor(PointerSensor),
+src/components/views/SettingsView.tsx:            <p className="text-[10px] font-bold text-slate-400 leading-tight ml-1">매일 이 시간에 맞춰 체크인하면 보너스 포인트를 얻습니다.</p>
+src/components/views/SettingsView.tsx:                    editingChunkPurpose={editingChunkPurpose}
+src/components/views/SettingsView.tsx:                    setEditingChunkPurpose={setEditingChunkPurpose}
+src/components/views/SettingsView.tsx:                      updateChunkInfo(chunk.id, editingChunkName, editingChunkPurpose);
+src/components/views/SettingsView.tsx:                  value={editingChunkPurpose}
+src/components/views/SettingsView.tsx:                  onChange={(e) => setEditingChunkPurpose(e.target.value)}
+src/components/views/SettingsView.tsx:                      updateChunkInfo(chunk.id, editingChunkName, editingChunkPurpose);
+src/components/views/SettingsView.tsx:                    setEditingChunkPurpose(chunk.purpose || '');
+src/components/views/SettingsView.tsx:                        setEditingChunkPurpose(chunk.purpose || '');
+src/components/views/SettingsView.tsx:                        editingTaskPoints={editingTaskPoints}
+src/components/views/SettingsView.tsx:                        setEditingTaskPoints={setEditingTaskPoints}
+src/components/views/SettingsView.tsx:                        PointSelector={PointSelector}
+src/components/views/SettingsView.tsx:                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
+src/components/views/SettingsView.tsx:                        const colorClass = type === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : type === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600';
+src/components/views/SettingsView.tsx:                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickIcon : Hourglass;
+src/components/views/SettingsView.tsx:                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">포인트</span>
+src/components/views/SettingsView.tsx:                      <PointSelector value={newTaskPoints} onChange={setNewTaskPoints} />
+src/components/views/SettingsView.tsx:                  <Plus className="w-3.5 h-3.5" />
+src/components/layout/HeaderBox.tsx:interface HeaderBoxProps {
+src/components/layout/HeaderBox.tsx: * @param {HeaderBoxProps} props - Component properties
+src/components/layout/HeaderBox.tsx:export const HeaderBox: React.FC<HeaderBoxProps> = ({
+src/components/layout/HeaderBox.tsx:  const todayPoints = userData.dailyPoints[todayStr] || 0;
+src/components/layout/HeaderBox.tsx:  const completionPercentage = totalScheduledTasksCount > 0 
+src/components/layout/HeaderBox.tsx:                {challengeDays}일째 도전중, {successDays}일째 성공중 ({completionPercentage}%)
+src/components/routine/SortableRoutineItem.tsx:interface SortableRoutineItemProps {
+src/components/routine/SortableRoutineItem.tsx: * @param {SortableRoutineItemProps} props - Component properties
+src/components/routine/SortableRoutineItem.tsx:export const SortableRoutineItem: React.FC<SortableRoutineItemProps> = ({ 
+src/components/routine/SortableRoutineItem.tsx:              {task.taskType === TaskType.TIME_INDEPENDENT ? (
+src/components/routine/SortableRoutineItem.tsx:              <span className="text-[10px] font-bold text-slate-400">{task.points}P</span>
+src/components/routine/ChecklistModal.tsx:import { motion, AnimatePresence } from 'motion/react';
+src/components/routine/ChecklistModal.tsx:  PlusCircle, 
+src/components/routine/ChecklistModal.tsx:  PointerSensor, 
+src/components/routine/ChecklistModal.tsx:interface ChecklistModalProps {
+src/components/routine/ChecklistModal.tsx: * @param {ChecklistModalProps} props - Component properties
+src/components/routine/ChecklistModal.tsx:export const ChecklistModal: React.FC<ChecklistModalProps> = ({ 
+src/components/routine/ChecklistModal.tsx:    useSensor(PointerSensor, {
+src/components/routine/ChecklistModal.tsx:    <AnimatePresence>
+src/components/routine/ChecklistModal.tsx:                    <PlusCircle className="w-8 h-8 opacity-20" />
+src/components/routine/ChecklistModal.tsx:    </AnimatePresence>
+src/components/routine/RoutineTitle.tsx:  PauseCircle, 
+src/components/routine/RoutineTitle.tsx:interface RoutineTitleProps {
+src/components/routine/RoutineTitle.tsx:export const RoutineTitle: React.FC<RoutineTitleProps> = ({ 
+src/components/routine/RoutineTitle.tsx:  const hasPurpose = chunk.purpose && chunk.purpose.trim() !== '';
+src/components/routine/RoutineTitle.tsx:        나는 <span className="text-blue-600 font-black">{chunk.name}</span>을 완료한 {hasPurpose ? <span className="text-blue-600 font-black">{chunk.purpose}</span> : ""}이다!
+src/components/routine/RoutineTitle.tsx:    if (hasPurpose) {
+src/components/routine/SortableChecklistItem.tsx:interface SortableChecklistItemProps {
+src/components/routine/SortableChecklistItem.tsx: * @param {SortableChecklistItemProps} props - Component properties
+src/components/routine/SortableChecklistItem.tsx:export const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({ 
+src/components/routine/SlideToResetButton.tsx:interface SlideToResetButtonProps {
+src/components/routine/SlideToResetButton.tsx: * @param {SlideToResetButtonProps} props - Component properties
+src/components/routine/SlideToResetButton.tsx:export const SlideToResetButton: React.FC<SlideToResetButtonProps> = ({ onReset }) => {
+src/components/routine/RoutineTitleLine.tsx:  PauseCircle, 
+src/components/routine/RoutineTitleLine.tsx:interface RoutineTitleLineProps {
+src/components/routine/RoutineTitleLine.tsx: * Displays the task's status, name, duration, and points.
+src/components/routine/RoutineTitleLine.tsx: * Provides optional actions like "Restart" or "Do First".
+src/components/routine/RoutineTitleLine.tsx: * @param {RoutineTitleLineProps} props - Component properties
+src/components/routine/RoutineTitleLine.tsx:export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({ 
+src/components/routine/RoutineTitleLine.tsx:    if (task.startTime && !task.isPaused) {
+src/components/routine/RoutineTitleLine.tsx:  } else if (task.isPaused) {
+src/components/routine/RoutineTitleLine.tsx:    Icon = PauseCircle;
+src/components/routine/RoutineTitleLine.tsx:  const showRestart = onRestart && (task.isPaused || task.laterTimestamp || task.givenUp);
+src/components/routine/RoutineTitleLine.tsx:            {task.taskType === TaskType.TIME_INDEPENDENT ? (
+src/components/routine/RoutineTitleLine.tsx:              e.stopPropagation();
+src/components/routine/RoutineTitleLine.tsx:              e.stopPropagation();
+src/components/routine/SortableTaskItem.tsx:interface SortableTaskItemProps {
+src/components/routine/SortableTaskItem.tsx:  editingTaskPoints: number;
+src/components/routine/SortableTaskItem.tsx:  setEditingTaskPoints: (points: number) => void;
+src/components/routine/SortableTaskItem.tsx:  updateTask: (taskId: string, newText: string, newPoints: number, newDuration: number, newTaskType?: TaskType, newScheduledDays?: number[]) => void;
+src/components/routine/SortableTaskItem.tsx:  PointSelector: any;
+src/components/routine/SortableTaskItem.tsx: * @param {SortableTaskItemProps} props - Component properties
+src/components/routine/SortableTaskItem.tsx:export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({ 
+src/components/routine/SortableTaskItem.tsx:  editingTaskPoints, 
+src/components/routine/SortableTaskItem.tsx:  setEditingTaskPoints, 
+src/components/routine/SortableTaskItem.tsx:  PointSelector,
+src/components/routine/SortableTaskItem.tsx:                {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
+src/components/routine/SortableTaskItem.tsx:                  const colorClass = type === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : type === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600';
+src/components/routine/SortableTaskItem.tsx:                  const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickIcon : Hourglass;
+src/components/routine/SortableTaskItem.tsx:                <div className={`w-1 h-3 rounded-full ${editingTaskType === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600'}`} />
+src/components/routine/SortableTaskItem.tsx:                  editingTaskType === TaskType.TIME_INDEPENDENT ? 'text-sky-500' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'text-pink-500' : 'text-indigo-600'
+src/components/routine/SortableTaskItem.tsx:                  editingTaskType === TaskType.TIME_INDEPENDENT ? 'border-sky-200 focus:ring-sky-500/20' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'border-pink-200 focus:ring-pink-500/20' : 'border-indigo-200 focus:ring-indigo-500/20'
+src/components/routine/SortableTaskItem.tsx:              <span className="text-[10px] font-bold text-slate-400 uppercase">포인트</span>
+src/components/routine/SortableTaskItem.tsx:              <PointSelector 
+src/components/routine/SortableTaskItem.tsx:                value={editingTaskPoints} 
+src/components/routine/SortableTaskItem.tsx:                onChange={setEditingTaskPoints} 
+src/components/routine/SortableTaskItem.tsx:              onClick={() => updateTask(task.id, editingTaskText, editingTaskPoints, editingTaskDuration, editingTaskType, editingTaskScheduledDays)}
+src/components/routine/SortableTaskItem.tsx:                  {task.taskType === TaskType.TIME_INDEPENDENT ? (
+src/components/routine/SortableTaskItem.tsx:                  <span className="text-[10px] text-indigo-600 font-bold">{task.points}P</span>
+src/components/routine/SortableTaskItem.tsx:                  setEditingTaskPoints(task.points);
+src/components/routine/SortableChunkItem.tsx:interface SortableChunkItemProps {
+src/components/routine/SortableChunkItem.tsx:  onUpdateInfo: (id: string, newName: string, newPurpose: string) => void;
+src/components/routine/SortableChunkItem.tsx:  editingChunkPurpose: string;
+src/components/routine/SortableChunkItem.tsx:  setEditingChunkPurpose: (purpose: string) => void;
+src/components/routine/SortableChunkItem.tsx: * @param {SortableChunkItemProps} props - Component properties
+src/components/routine/SortableChunkItem.tsx:export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
+src/components/routine/SortableChunkItem.tsx:  editingChunkPurpose,
+src/components/routine/SortableChunkItem.tsx:  setEditingChunkPurpose,
+src/components/routine/SortableChunkItem.tsx:                value={editingChunkPurpose}
+src/components/routine/SortableChunkItem.tsx:                onChange={(e) => setEditingChunkPurpose(e.target.value)}
+src/components/routine/SortableChunkItem.tsx:                  if (e.key === 'Enter') onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose);
+src/components/routine/SortableChunkItem.tsx:                onClick={() => onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose)}
+src/components/routine/TaskInputSection.tsx:import { Plus, Clock, Hourglass } from 'lucide-react';
+src/components/routine/TaskInputSection.tsx:import { PointSelector } from '../common/PointSelector';
+src/components/routine/TaskInputSection.tsx:interface TaskInputSectionProps {
+src/components/routine/TaskInputSection.tsx:  taskPoints: number;
+src/components/routine/TaskInputSection.tsx:  setTaskPoints: (points: number) => void;
+src/components/routine/TaskInputSection.tsx: * @param {TaskInputSectionProps} props - Component properties
+src/components/routine/TaskInputSection.tsx:export const TaskInputSection: React.FC<TaskInputSectionProps> = ({
+src/components/routine/TaskInputSection.tsx:  taskPoints,
+src/components/routine/TaskInputSection.tsx:  setTaskPoints,
+src/components/routine/TaskInputSection.tsx:              { type: TaskType.TIME_INDEPENDENT, icon: Clock },
+src/components/routine/TaskInputSection.tsx:              { type: TaskType.TIME_ACCUMULATED, icon: Plus }
+src/components/routine/TaskInputSection.tsx:        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">포인트</span>
+src/components/routine/TaskInputSection.tsx:        <PointSelector value={taskPoints} onChange={setTaskPoints} />
+src/components/routine/TaskInputSection.tsx:        <Plus className="w-5 h-5" />
+src/utils.ts:  const getStartOfPeriod = (type: string, d: Date) => {
+src/utils.ts:  const startOfPeriod = getStartOfPeriod(chunk.scheduleType, date);
+src/utils.ts:  const completionsInPeriod = (chunk.completionDates || []).filter(d => new Date(d) >= startOfPeriod).length;
+src/utils.ts:  return completionsInPeriod < (chunk.frequency || 1);
+src/utils.ts:export const formatDurationPrecise = (seconds: number): string => {
+src/constants.ts: * Points awarded for a successful wake-up check-in.
+src/constants.ts:export const POINTS_WAKE_UP = 100;
+src/constants.ts: * Multiplier for streak bonus points.
+src/constants.ts:export const STREAK_BONUS_MULTIPLIER = 10;
+src/constants.ts: * Maximum daily absolute points allowed (though currently not strictly enforced in accumulation).
+src/constants.ts:export const MAX_DAILY_ABSOLUTE_POINTS = 1440;
+src/types.ts:  TIME_INDEPENDENT = '시간무관루틴',
+src/types.ts:  points: number; // 1-10 absolute points
+src/types.ts:  isPaused?: boolean;
+src/types.ts:  earnedPoints?: number;
+src/types.ts:  closingPhoto?: string;
+src/types.ts:  IN_PROGRESS = 'in_progress',
+src/types.ts:  COMPLETED = 'completed',
+src/types.ts:  GIVEN_UP = 'given_up'
+src/types.ts:  points: number;
+src/types.ts:  dailyPoints: { [date: string]: number };
+src/types.ts:  dailyCheckInPoints: { [date: string]: number };
+src/types.ts:export interface HeaderBoxProps {
+src/types.ts:export interface PointSelectorProps {
+src/types.ts:export interface HomeViewProps {
+src/types.ts:export interface StatsViewProps {
+src/types.ts:export interface ExecutionViewProps {
+src/types.ts:  togglePauseTask: (taskId: string) => void;
+src/types.ts:export interface AddRoutineGroupViewProps {
+src/types.ts:export interface SettingsViewProps {
+src/App.tsx: * SPDX-License-Identifier: Apache-2.0
+src/App.tsx:  PauseCircle,
+src/App.tsx:  Plus, 
+src/App.tsx:  Play,
+src/App.tsx:  Pause,
+src/App.tsx:  PlusCircle,
+src/App.tsx:import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
+src/App.tsx:  PointerSensor,
+src/App.tsx:  HeaderBoxProps,
+src/App.tsx:  PointSelectorProps,
+src/App.tsx:  HomeViewProps,
+src/App.tsx:  StatsViewProps,
+src/App.tsx:  ExecutionViewProps
+src/App.tsx:  POINTS_WAKE_UP, 
+src/App.tsx:  STREAK_BONUS_MULTIPLIER, 
+src/App.tsx:  MAX_DAILY_ABSOLUTE_POINTS, 
+src/App.tsx:  formatDurationPrecise
+src/App.tsx:import { PointSelector } from './components/common/PointSelector';
+src/App.tsx:const ExecutionView: React.FC<ExecutionViewProps> = ({
+src/App.tsx:  togglePauseTask,
+src/App.tsx:  let activeTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+src/App.tsx:    activeTask = scheduledTasks.find(t => t.startTime && t.isPaused && !t.completed && !t.givenUp);
+src/App.tsx:  const [closingPhoto, setClosingPhoto] = useState<string | undefined>();
+src/App.tsx:    if (task.startTime && !task.isPaused) {
+src/App.tsx:    let points = task.points || 0;
+src/App.tsx:    return { progress, color, points };
+src/App.tsx:  const isTriggerComplete = true; // Placeholder
+src/App.tsx:          {/* Bottom Row: Progress Graph (Left) and Percentage (Right) */}
+src/App.tsx:        <AnimatePresence mode="popLayout">
+src/App.tsx:                            setClosingPhoto('https://picsum.photos/seed/routine/400/300');
+src/App.tsx:                          <span className="text-[8px] font-black">UPLOAD</span>
+src/App.tsx:                        {closingPhoto && (
+src/App.tsx:                            <img src={closingPhoto} alt="Closing" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+src/App.tsx:                              onClick={() => setClosingPhoto(undefined)}
+src/App.tsx:                        photo: closingPhoto,
+src/App.tsx:                            {activeTask.taskType === TaskType.TIME_INDEPENDENT ? (
+src/App.tsx:                            <span>{activeTask.points}P</span>
+src/App.tsx:                        if (activeTask.isPaused || !activeTask.startTime) {
+src/App.tsx:                          togglePauseTask(activeTask.id);
+src/App.tsx:                      className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden cursor-pointer ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200`}
+src/App.tsx:                          className={`absolute inset-y-0 left-0 ${activeTask.isPaused ? 'opacity-10' : 'opacity-20'} ${getStageInfo(activeTask).color}`}
+src/App.tsx:                        <div className={`text-6xl font-black tabular-nums tracking-tighter ${activeTask.isPaused ? 'text-slate-300' : 'text-slate-900'}`}>
+src/App.tsx:                          <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${activeTask.isPaused ? 'text-slate-400' : 'text-slate-500'}`}>
+src/App.tsx:                            {activeTask.isPaused ? 'Paused' : `${activeTask.taskType === TaskType.TIME_ACCUMULATED ? '현재 획득 포인트' : '획득 예정 포인트'}: ${getStageInfo(activeTask).points}P`}
+src/App.tsx:                        onClick={() => togglePauseTask(activeTask.id)}
+src/App.tsx:                          activeTask.isPaused || !activeTask.startTime
+src/App.tsx:                        {activeTask.isPaused || !activeTask.startTime ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+src/App.tsx:                        {activeTask.isPaused || !activeTask.startTime ? 'RESUME' : 'PAUSE'}
+src/App.tsx:                        GIVE UP
+src/App.tsx:                    onDoFirst={togglePauseTask}
+src/App.tsx:        </AnimatePresence>
+src/App.tsx:interface SortableChunkItemProps {
+src/App.tsx:  editingChunkPurpose: string;
+src/App.tsx:  setEditingChunkPurpose: (purpose: string) => void;
+src/App.tsx:const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
+src/App.tsx:  editingChunkPurpose,
+src/App.tsx:  setEditingChunkPurpose,
+src/App.tsx:                value={editingChunkPurpose}
+src/App.tsx:                onChange={(e) => setEditingChunkPurpose(e.target.value)}
+src/App.tsx:                  if (e.key === 'Enter') onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose);
+src/App.tsx:                onClick={() => onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose)}
+src/App.tsx:interface SortableTaskItemProps {
+src/App.tsx:  editingTaskPoints: number;
+src/App.tsx:  setEditingTaskPoints: (points: number) => void;
+src/App.tsx:  updateTask: (taskId: string, newText: string, newPoints: number, newDuration: number, newTaskType?: TaskType, newScheduledDays?: number[]) => void;
+src/App.tsx:  PointSelector: any;
+src/App.tsx:const SortableTaskItem: React.FC<SortableTaskItemProps> = ({ 
+src/App.tsx:  editingTaskPoints, 
+src/App.tsx:  setEditingTaskPoints, 
+src/App.tsx:  PointSelector,
+src/App.tsx:                {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
+src/App.tsx:                  const colorClass = type === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : type === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600';
+src/App.tsx:                  const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickIcon : Hourglass;
+src/App.tsx:                <div className={`w-1 h-3 rounded-full ${editingTaskType === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600'}`} />
+src/App.tsx:                  editingTaskType === TaskType.TIME_INDEPENDENT ? 'text-sky-500' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'text-pink-500' : 'text-indigo-600'
+src/App.tsx:                  editingTaskType === TaskType.TIME_INDEPENDENT ? 'border-sky-200 focus:ring-sky-500/20' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'border-pink-200 focus:ring-pink-500/20' : 'border-indigo-200 focus:ring-indigo-500/20'
+src/App.tsx:              <span className="text-[10px] font-bold text-slate-400 uppercase">포인트</span>
+src/App.tsx:              <PointSelector 
+src/App.tsx:                value={editingTaskPoints} 
+src/App.tsx:                onChange={setEditingTaskPoints} 
+src/App.tsx:              onClick={() => updateTask(task.id, editingTaskText, editingTaskPoints, editingTaskDuration, editingTaskType, editingTaskScheduledDays)}
+src/App.tsx:                  {task.taskType === TaskType.TIME_INDEPENDENT ? (
+src/App.tsx:                <span className="text-[10px] text-indigo-600 font-bold">{task.points}P</span>
+src/App.tsx:                  setEditingTaskPoints(task.points);
+src/App.tsx:  const hasPurpose = chunk.purpose && chunk.purpose.trim() !== '';
+src/App.tsx:        나는 <span className="text-blue-600 font-black">{chunk.name}</span>을 완료한 {hasPurpose ? <span className="text-blue-600 font-black">{chunk.purpose}</span> : ""}이다!
+src/App.tsx:    if (hasPurpose) {
+src/App.tsx:interface SortableChecklistItemProps {
+src/App.tsx:const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({ 
+src/App.tsx:    useSensor(PointerSensor, {
+src/App.tsx:    <AnimatePresence>
+src/App.tsx:                    <PlusCircle className="w-8 h-8 opacity-20" />
+src/App.tsx:    </AnimatePresence>
+src/App.tsx:                { type: TaskType.TIME_INDEPENDENT, label: '시간무관루틴', icon: Clock },
+src/App.tsx:        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">포인트 (5-10)</span>
+src/App.tsx:              onClick={() => setTask({ ...task, points: p })}
+src/App.tsx:              className={`w-8 h-8 rounded-[10px] text-[10px] font-black transition-all ${task.points === p ? 'bg-indigo-600 text-white shadow-none' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
+src/App.tsx:            {isEditing ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+src/App.tsx:          <span className="text-[10px] font-bold text-slate-400">{rt.type} • {rt.duration}분 • {rt.points}P</span>
+src/App.tsx:  const [purpose, setPurpose] = useState('');
+src/App.tsx:  const [triggerTask, setTriggerTask] = useState({ text: '', duration: 1, points: 5, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6] });
+src/App.tsx:  const [routineList, setRoutineList] = useState<Array<{ id: string, text: string, duration: number, points: number, type: TaskType, scheduledDays: number[] }>>([]);
+src/App.tsx:  const [currentRoutineInput, setCurrentRoutineInput] = useState({ text: '', duration: 10, points: 5, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6] });
+src/App.tsx:    useSensor(PointerSensor),
+src/App.tsx:    setCurrentRoutineInput({ text: '', duration: 10, points: 5, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
+src/App.tsx:      points: triggerTask.points,
+src/App.tsx:        points: rt.points,
+src/App.tsx:        points: currentRoutineInput.points,
+src/App.tsx:        points: 5,
+src/App.tsx:        taskType: TaskType.TIME_INDEPENDENT,
+src/App.tsx:              <PlusCircle className="w-6 h-6 text-indigo-600" />
+src/App.tsx:          {/* Purpose Input */}
+src/App.tsx:              onChange={(e) => setPurpose(e.target.value)}
+src/App.tsx:                    setCurrentRoutineInput({ text: '', duration: 10, points: 5, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
+src/App.tsx:      // Rename absolutePoints to points
+src/App.tsx:      if (parsed.absolutePoints !== undefined) {
+src/App.tsx:        parsed.points = parsed.absolutePoints;
+src/App.tsx:        delete parsed.absolutePoints;
+src/App.tsx:      // Rename relativePoints to completionRate
+src/App.tsx:      if (parsed.relativePoints !== undefined) {
+src/App.tsx:        parsed.completionRate = parsed.relativePoints;
+src/App.tsx:        delete parsed.relativePoints;
+src/App.tsx:      // Rename dailyAbsolutePoints to dailyPoints
+src/App.tsx:      if (parsed.dailyAbsolutePoints !== undefined) {
+src/App.tsx:        parsed.dailyPoints = parsed.dailyAbsolutePoints;
+src/App.tsx:        delete parsed.dailyAbsolutePoints;
+src/App.tsx:      // Rename dailyRelativePoints to dailyCompletionRate
+src/App.tsx:      if (parsed.dailyRelativePoints !== undefined) {
+src/App.tsx:        parsed.dailyCompletionRate = parsed.dailyRelativePoints;
+src/App.tsx:        delete parsed.dailyRelativePoints;
+src/App.tsx:      if (parsed.points === undefined) parsed.points = 0;
+src/App.tsx:      if (!parsed.dailyPoints) parsed.dailyPoints = {};
+src/App.tsx:      if (parsed.dailyCheckInPoints === undefined) parsed.dailyCheckInPoints = {};
+src/App.tsx:            points: t.points || 5
+src/App.tsx:            points: t.points || 5,
+src/App.tsx:      points: 0,
+src/App.tsx:            { id: '1', text: '물 한 잔 마시기', completed: false, points: 5, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
+src/App.tsx:            { id: '2', text: '이불 정리하기', completed: false, points: 5, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
+src/App.tsx:            { id: '3', text: '명상 5분', completed: false, points: 7, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
+src/App.tsx:            { id: '4', text: '일기 쓰기', completed: false, points: 5, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
+src/App.tsx:            { id: '5', text: '스트레칭', completed: false, points: 5, scheduledDays: [0, 1, 2, 3, 4, 5, 6] },
+src/App.tsx:      dailyPoints: {},
+src/App.tsx:      dailyCheckInPoints: {}
+src/App.tsx:  const [newGroupPurpose, setNewGroupPurpose] = useState('');
+src/App.tsx:  const [newTaskPoints, setNewTaskPoints] = useState(5);
+src/App.tsx:  const [editingChunkPurpose, setEditingChunkPurpose] = useState('');
+src/App.tsx:  const [editingTaskPoints, setEditingTaskPoints] = useState(5);
+src/App.tsx:            isPaused: false,
+src/App.tsx:            earnedPoints: undefined
+src/App.tsx:    const completionPercentage = totalScheduledTasksCount > 0 
+src/App.tsx:    if (userData.dailyCompletionRate[todayStr] !== completionPercentage) {
+src/App.tsx:          [todayStr]: completionPercentage
+src/App.tsx:    useSensor(PointerSensor),
+src/App.tsx:    let targetTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+src/App.tsx:        targetTask = scheduledTasks.find(t => t.startTime && t.isPaused && !t.completed && !t.givenUp);
+src/App.tsx:    if (targetTask && (!targetTask.startTime || targetTask.isPaused || targetTask.laterTimestamp)) {
+src/App.tsx:    const bonus = (newStreak - 1) * STREAK_BONUS_MULTIPLIER;
+src/App.tsx:    const totalEarned = POINTS_WAKE_UP + bonus;
+src/App.tsx:      const currentDaily = prev.dailyPoints[todayStr] || 0;
+src/App.tsx:      const currentCheckInPoints = prev.dailyCheckInPoints[todayStr] || 0;
+src/App.tsx:      const canAdd = totalEarned; // No max limit for points accumulation
+src/App.tsx:        points: prev.points + canAdd,
+src/App.tsx:        dailyPoints: {
+src/App.tsx:          ...prev.dailyPoints,
+src/App.tsx:        dailyCheckInPoints: {
+src/App.tsx:          ...prev.dailyCheckInPoints,
+src/App.tsx:          [todayStr]: currentCheckInPoints + canAdd
+src/App.tsx:            if (t.startTime && !t.isPaused) {
+src/App.tsx:              isPaused: true,
+src/App.tsx:            if (t.startTime && !t.isPaused) {
+src/App.tsx:              isPaused: true,
+src/App.tsx:          const getPriority = (t: Task) => {
+src/App.tsx:          const pA = getPriority(a);
+src/App.tsx:          const pB = getPriority(b);
+src/App.tsx:            tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nextTask.isClosingRoutine ? undefined : nowStr, isPaused: false } : t)
+src/App.tsx:            const wasPaused = task.isPaused;
+src/App.tsx:              isPaused: false,
+src/App.tsx:              accumulatedDuration: wasPaused ? (task.accumulatedDuration || 0) : 0
+src/App.tsx:          const isActive = task.startTime && !task.isPaused && !task.completed && !task.givenUp;
+src/App.tsx:              isPaused: true,
+src/App.tsx:      const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+src/App.tsx:        const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+src/App.tsx:              const wasPaused = task.isPaused;
+src/App.tsx:                isPaused: false,
+src/App.tsx:                accumulatedDuration: wasPaused ? (task.accumulatedDuration || 0) : 0
+src/App.tsx:                isPaused: false,
+src/App.tsx:  const togglePauseTask = (id: string) => {
+src/App.tsx:        const isTargetResuming = chunk.tasks.some(t => t.id === id && (t.isPaused || !t.startTime));
+src/App.tsx:              if (t.isPaused || !t.startTime) {
+src/App.tsx:                return { ...t, isPaused: false, startTime: nowStr };
+src/App.tsx:                // Pausing: calculate accumulated duration
+src/App.tsx:                  isPaused: true, 
+src/App.tsx:              const isActive = t.startTime && !t.isPaused && !t.completed && !t.givenUp;
+src/App.tsx:                  isPaused: true,
+src/App.tsx:          // Calculate points to subtract (only for tasks completed TODAY)
+src/App.tsx:          let pointsToSubtract = 0;
+src/App.tsx:              pointsToSubtract += (t.earnedPoints || t.points);
+src/App.tsx:                  isPaused: false,
+src/App.tsx:                  earnedPoints: undefined
+src/App.tsx:          // Update total points
+src/App.tsx:          const newAbsoluteTotal = Math.max(0, prev.points - pointsToSubtract);
+src/App.tsx:          const currentDaily = prev.dailyPoints[todayStr] || 0;
+src/App.tsx:          const newDaily = Math.max(0, currentDaily - pointsToSubtract);
+src/App.tsx:          const completionPercentage = totalScheduledTasksCount > 0 
+src/App.tsx:            points: newAbsoluteTotal,
+src/App.tsx:            dailyPoints: {
+src/App.tsx:              ...prev.dailyPoints,
+src/App.tsx:              [todayStr]: completionPercentage
+src/App.tsx:      // Calculate points based on elapsed time if completing
+src/App.tsx:      let earnedPoints = foundTask.points;
+src/App.tsx:        if (foundTask.startTime && !foundTask.isPaused) {
+src/App.tsx:          if (progress >= 1.0) earnedPoints = foundTask.points;
+src/App.tsx:          else if (progress >= 0.9) earnedPoints = Math.floor(foundTask.points * 0.9);
+src/App.tsx:          else if (progress >= 0.8) earnedPoints = Math.floor(foundTask.points * 0.8);
+src/App.tsx:          else if (progress >= 0.5) earnedPoints = Math.floor(foundTask.points * 0.5);
+src/App.tsx:          else earnedPoints = 0;
+src/App.tsx:        } else if (foundTask.taskType === TaskType.TIME_INDEPENDENT) {
+src/App.tsx:          earnedPoints = foundTask.points;
+src/App.tsx:          if (elapsed > targetSec) earnedPoints -= 1;
+src/App.tsx:          if (elapsed > 2 * targetSec) earnedPoints -= 1;
+src/App.tsx:          if (elapsed > 3 * targetSec) earnedPoints -= 1;
+src/App.tsx:          if (elapsed > 4 * targetSec) earnedPoints -= 1;
+src/App.tsx:          earnedPoints = Math.max(0, earnedPoints);
+src/App.tsx:                if (t.startTime && !t.isPaused) {
+src/App.tsx:                updated.earnedPoints = earnedPoints;
+src/App.tsx:                  updated.closingPhoto = closingData.photo;
+src/App.tsx:                updated.earnedPoints = undefined;
+src/App.tsx:                updated.closingPhoto = undefined;
+src/App.tsx:      let newAbsoluteTotal = prev.points;
+src/App.tsx:      const currentDaily = prev.dailyPoints[todayStr] || 0;
+src/App.tsx:        const canAdd = earnedPoints;
+src/App.tsx:        const toSubtract = foundTask.earnedPoints || foundTask.points;
+src/App.tsx:      const completionPercentage = totalScheduledTasksCount > 0 
+src/App.tsx:        points: Math.max(0, newAbsoluteTotal),
+src/App.tsx:        dailyPoints: {
+src/App.tsx:          ...prev.dailyPoints,
+src/App.tsx:          [todayStr]: completionPercentage
+src/App.tsx:      points: newTaskPoints,
+src/App.tsx:    setNewTaskPoints(5);
+src/App.tsx:  const updateTask = (taskId: string, newText: string, newPoints: number, newDuration: number, newTaskType?: TaskType, scheduledDays?: number[]) => {
+src/App.tsx:            ? { ...t, text: newText, points: newPoints, targetDuration: newDuration, taskType: newTaskType || t.taskType, scheduledDays: scheduledDays || t.scheduledDays } 
+src/App.tsx:    setNewGroupPurpose('');
+src/App.tsx:  const updateChunkInfo = (id: string, newName: string, newPurpose: string) => {
+src/App.tsx:            chunk.id === id ? { ...chunk, name: newName, purpose: newPurpose } : chunk
+src/App.tsx:        setEditingChunkPurpose('');
+src/App.tsx:      message: `기상 목표 시간을 ${time}으로 변경하시겠습니까? 오늘 이미 체크인했다면 획득한 포인트와 기록이 초기화됩니다.`,
+src/App.tsx:            let newPoints = prev.points;
+src/App.tsx:            let newDailyPoints = { ...prev.dailyPoints };
+src/App.tsx:            let newDailyCheckInPoints = { ...prev.dailyCheckInPoints };
+src/App.tsx:              const pointsToSubtract = prev.dailyCheckInPoints[todayStr] || 0;
+src/App.tsx:              newPoints = Math.max(0, newPoints - pointsToSubtract);
+src/App.tsx:              newDailyPoints[todayStr] = Math.max(0, (newDailyPoints[todayStr] || 0) - pointsToSubtract);
+src/App.tsx:              newDailyCheckInPoints[todayStr] = 0;
+src/App.tsx:              points: newPoints,
+src/App.tsx:              dailyPoints: newDailyPoints,
+src/App.tsx:              dailyCheckInPoints: newDailyCheckInPoints,
+src/App.tsx:        points: userData.dailyPoints[dateStr] || 0
+src/App.tsx:  }, [userData.dailyPoints, currentTime]);
+src/App.tsx:        const currentDaily = prev.dailyPoints[todayStr] || 0;
+src/App.tsx:          points: prev.points + 1,
+src/App.tsx:          dailyPoints: {
+src/App.tsx:            ...prev.dailyPoints,
+src/App.tsx:                <p className="text-[10px] font-bold text-slate-400 leading-tight ml-1">매일 이 시간에 맞춰 체크인하면 보너스 포인트를 얻습니다.</p>
+src/App.tsx:                        editingChunkPurpose={editingChunkPurpose}
+src/App.tsx:                        setEditingChunkPurpose={setEditingChunkPurpose}
+src/App.tsx:                      updateChunkInfo(chunk.id, editingChunkName, editingChunkPurpose);
+src/App.tsx:                  value={editingChunkPurpose}
+src/App.tsx:                  onChange={(e) => setEditingChunkPurpose(e.target.value)}
+src/App.tsx:                      updateChunkInfo(chunk.id, editingChunkName, editingChunkPurpose);
+src/App.tsx:                    setEditingChunkPurpose(chunk.purpose || '');
+src/App.tsx:                        setEditingChunkPurpose(chunk.purpose || '');
+src/App.tsx:                        editingTaskPoints={editingTaskPoints}
+src/App.tsx:                        setEditingTaskPoints={setEditingTaskPoints}
+src/App.tsx:                        PointSelector={PointSelector}
+src/App.tsx:                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
+src/App.tsx:                        const colorClass = type === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : type === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600';
+src/App.tsx:                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickIcon : Hourglass;
+src/App.tsx:                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">포인트</span>
+src/App.tsx:                      <PointSelector value={newTaskPoints} onChange={setNewTaskPoints} />
+src/App.tsx:                  <Plus className="w-3.5 h-3.5" />
+src/App.tsx:      <AnimatePresence>
+src/App.tsx:      </AnimatePresence>
+src/App.tsx:      <AnimatePresence>
+src/App.tsx:      </AnimatePresence>
+src/App.tsx:              <PlusCircle className="w-5 h-5" />
+src/App.tsx:        <AnimatePresence mode="wait">
+src/App.tsx:                togglePauseTask={togglePauseTask}
+src/App.tsx:        </AnimatePresence>
+src/App.tsx:      {/* Floating Active Task Popup */}
+src/App.tsx:                if (task.startTime && !task.isPaused) {
+src/App.tsx:      <AnimatePresence>
+src/App.tsx:      </AnimatePresence>
+src/App.tsx:      <AnimatePresence>
+src/App.tsx:      </AnimatePresence>
+src/App.tsx:      <AnimatePresence>
+src/App.tsx:                    <Play className="w-5 h-5" /> 루틴 시작하기
+src/App.tsx:      </AnimatePresence>

@@ -90,20 +90,20 @@ export const ChecklistModal: React.FC<ChecklistModalProps> = ({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
+            className="relative w-full max-w-md bg-white rounded-[10px] shadow-2xl overflow-hidden flex flex-col"
             style={{ minHeight: '500px', maxHeight: '80vh' }}
           >
             <div className="p-6 space-y-6 flex flex-col h-full">
               <div className="flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center">
                     <CheckCircle2 className="w-6 h-6 text-indigo-600" />
                   </div>
                   <h3 className="text-xl font-black text-slate-900">체크리스트 만들기</h3>
                 </div>
                 <button 
                   onClick={onClose}
-                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                  className="p-2 hover:bg-slate-100 rounded-[10px] transition-colors"
                 >
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
@@ -116,11 +116,11 @@ export const ChecklistModal: React.FC<ChecklistModalProps> = ({
                   onChange={(e) => setNewItemText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addItem()}
                   placeholder="체크리스트 항목 입력..."
-                  className="flex-grow bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="flex-grow bg-slate-50 border border-slate-100 rounded-[10px] px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
                 <button 
                   onClick={addItem}
-                  className="bg-indigo-600 text-white px-4 rounded-2xl font-black text-sm hover:bg-indigo-700 transition-all active:scale-95"
+                  className="bg-indigo-600 text-white px-4 rounded-[10px] font-black text-sm hover:bg-indigo-700 transition-all active:scale-95"
                 >
                   추가
                 </button>
@@ -160,7 +160,7 @@ export const ChecklistModal: React.FC<ChecklistModalProps> = ({
               <div className="pt-4 flex-shrink-0">
                 <button 
                   onClick={onClose}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-base hover:bg-slate-800 transition-all active:scale-[0.98]"
+                  className="w-full py-4 bg-slate-900 text-white rounded-[10px] font-black text-base hover:bg-slate-800 transition-all active:scale-[0.98]"
                 >
                   완료
                 </button>

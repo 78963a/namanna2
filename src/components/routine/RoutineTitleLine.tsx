@@ -7,11 +7,15 @@ import {
   PauseCircle, 
   CircleDot, 
   Clock, 
-  Hourglass, 
-  Trophy 
+  Hourglass,
+  BrickWall,
+  Check,
+  CheckCheck,
+  CircleMinus
 } from 'lucide-react';
-import { Task, TaskType } from '../../types';
-import { BrickIcon } from '../common/Icons';
+import { Task, TaskType, TaskStatus } from '../../types';
+import { calculateTaskDuration } from '../../utils';
+import phrases from '../../../phrases.json';
 
 interface RoutineTitleLineProps {
   task: Task;
@@ -21,6 +25,7 @@ interface RoutineTitleLineProps {
   onRestart?: (id: string) => void;
   onDoFirst?: (id: string) => void;
   isLocked?: boolean;
+  activeTaskId?: string;
 }
 
 /**
@@ -38,7 +43,8 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   chunkTasks,
   onRestart,
   onDoFirst,
-  isLocked
+  isLocked,
+  activeTaskId
 }) => {
   /**
    * Formats a duration in seconds into a compact time string (m:ss).
@@ -48,59 +54,82 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
    */
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
+    const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   const calculateCurrentDuration = (task: Task) => {
-    let currentSession = 0;
-    if (task.startTime && !task.isPaused) {
-      const [h, m, s] = task.startTime.split(':').map(Number);
-      const start = new Date(currentTime);
-      start.setHours(h, m, s, 0);
-      if (start.getTime() > currentTime.getTime()) {
-        start.setDate(start.getDate() - 1);
-      }
-      currentSession = Math.floor((currentTime.getTime() - start.getTime()) / 1000);
-    }
-    return (task.accumulatedDuration || 0) + currentSession;
+    return calculateTaskDuration(task, currentTime);
   };
 
   // Determine the appropriate status icon and color based on the task's current state
-  let Icon = Circle;
   let iconColor = "text-slate-200";
+  let statusIcon = <Circle className={`w-5 h-5 ${iconColor}`} />;
   
-  if (task.completed) {
-    Icon = CheckCircle2;
+  if (task.status === TaskStatus.PERFECT) {
     iconColor = "text-indigo-600";
-  } else if (task.givenUp) {
-    Icon = XCircle;
-    iconColor = "text-rose-400";
+    statusIcon = (
+      <div className="relative w-5 h-5 flex items-center justify-center">
+        <Circle className={`absolute inset-0 w-full h-full ${iconColor}`} />
+        <CheckCheck className={`absolute w-[60%] h-[60%] ${iconColor}`} strokeWidth={3} />
+      </div>
+    );
+  } else if (task.completed || task.status === TaskStatus.COMPLETED) {
+    iconColor = "text-indigo-600";
+    statusIcon = (
+      <div className="relative w-5 h-5 flex items-center justify-center">
+        <Circle className={`absolute inset-0 w-full h-full ${iconColor}`} />
+        <Check className={`w-3 h-3 ${iconColor}`} strokeWidth={3} />
+      </div>
+    );
+  } else if (task.givenUp || task.status === TaskStatus.SKIP) {
+    iconColor = "text-[#CC9900]";
+    statusIcon = <CircleMinus className={`w-5 h-5 ${iconColor}`} />;
   } else if (task.laterTimestamp) {
-    Icon = ArrowRightCircle;
     iconColor = "text-slate-400";
+    statusIcon = <ArrowRightCircle className={`w-5 h-5 ${iconColor}`} />;
   } else if (task.isPaused) {
-    Icon = PauseCircle;
     iconColor = "text-amber-400";
+    statusIcon = <PauseCircle className={`w-5 h-5 ${iconColor}`} />;
   } else if (task.startTime) {
-    Icon = CircleDot;
     iconColor = "text-indigo-500 animate-pulse";
+    statusIcon = <CircleDot className={`w-5 h-5 ${iconColor}`} />;
   }
 
-  const showRestart = onRestart && (task.isPaused || task.laterTimestamp || task.givenUp);
-  const showDoFirst = onDoFirst && !task.startTime && !task.completed && !task.givenUp && !task.laterTimestamp && !isLocked;
+  const isCompleted = task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT;
+  const isGivenUp = task.givenUp || task.status === TaskStatus.SKIP;
+  
+  const showRestart = onRestart && isCompleted && !task.isClosingRoutine;
+  
+  const allOtherTasksDone = chunkTasks.filter(t => !t.isClosingRoutine).every(t => t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
+  
+  // "Start/Resume" button logic
+  const showStartResume = onDoFirst && 
+    task.id !== activeTaskId && 
+    !isLocked && 
+    (!task.isClosingRoutine ? true : (allOtherTasksDone && !isCompleted));
+
+  let startResumeLabel = '';
+  if (task.isPaused || isCompleted) {
+    startResumeLabel = '이어하기';
+  } else {
+    startResumeLabel = '시작하기';
+  }
 
   const targetDuration = task.targetDuration || task.duration || 0;
 
   return (
-    <div className={`flex items-center gap-3 text-sm w-full ${task.completed ? 'text-slate-400' : 'text-slate-700'} ${isLocked ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`flex items-center gap-3 text-sm w-full ${task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT ? 'text-slate-400' : 'text-slate-700'} ${isLocked ? 'opacity-40 pointer-events-none' : ''}`}>
       <div className="flex items-center gap-2 flex-shrink-0">
-        <Icon className={`w-5 h-5 ${iconColor}`} />
+        {statusIcon}
         <span className="font-bold w-4 text-center">{index + 1}.</span>
       </div>
       
-      <div className="flex items-center gap-2 min-w-0 flex-wrap">
-        <span className={`font-bold truncate max-w-[120px] sm:max-w-[200px] ${task.completed ? 'line-through' : ''}`}>
+      <div className="flex items-center gap-2 min-w-0 flex-grow">
+        <span 
+          className={`font-bold truncate max-w-[120px] sm:max-w-[200px] ${task.completed ? 'line-through' : ''}`}
+          style={{ fontFamily: phrases.settings.base_style.fontFamily ? `'${phrases.settings.base_style.fontFamily}', sans-serif` : 'inherit' }}
+        >
           {index === 0 && "⚡"}{task.text}{task.isClosingRoutine && "🥇"}
         </span>
         
@@ -112,35 +141,41 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
         )}
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-lg font-black text-[8px] uppercase tracking-widest">
-            {task.taskType === TaskType.TIME_INDEPENDENT ? (
-              <Clock className="w-2.5 h-2.5 text-sky-400" />
-            ) : task.taskType === TaskType.TIME_ACCUMULATED ? (
-              <BrickIcon className="w-2.5 h-2.5 text-pink-400" />
-            ) : (
-              <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
-            )}
-            {task.completed ? (
-              <span>{formatTime(task.duration || 0)} / {targetDuration}분</span>
-            ) : task.startTime ? (
-              <span>{formatTime(calculateCurrentDuration(task))} / {targetDuration}분</span>
-            ) : (
-              <span>{targetDuration}분</span>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg font-black text-[8px] uppercase tracking-widest">
-            <Trophy className="w-2.5 h-2.5" />
-            {task.completed ? (
-              <span>{task.earnedPoints || 0} / {task.points || 0}P</span>
-            ) : (
-              <span>{task.points || 0}P</span>
-            )}
-          </div>
+          {!task.isClosingRoutine && (
+            <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-[10px] font-black text-[8px] uppercase tracking-widest">
+              {task.taskType === TaskType.TIME_INDEPENDENT ? (
+                <Clock className="w-2.5 h-2.5 text-sky-400" />
+              ) : task.taskType === TaskType.TIME_ACCUMULATED ? (
+                <BrickWall className="w-2.5 h-2.5 text-pink-400" />
+              ) : (
+                <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
+              )}
+              {task.completed ? (
+                <span>{formatTime(task.duration || 0)} / {targetDuration}분</span>
+              ) : task.startTime ? (
+                <span>{formatTime(calculateCurrentDuration(task))} / {targetDuration}분</span>
+              ) : (
+                <span>{targetDuration}분</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {showRestart && (
+      <div className="flex items-center gap-2 ml-auto justify-end">
+        {showStartResume && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDoFirst(task.id);
+            }}
+            className="flex-shrink-0 px-2 py-1 bg-sky-50 text-sky-600 rounded-md text-[10px] font-black hover:bg-sky-100 transition-all"
+          >
+            {startResumeLabel}
+          </button>
+        )}
+
+        {showRestart && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -151,18 +186,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
             다시하기
           </button>
         )}
-
-        {showDoFirst && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDoFirst(task.id);
-            }}
-            className="flex-shrink-0 px-2 py-1 bg-amber-50 text-amber-600 rounded-md text-[10px] font-black hover:bg-amber-100 transition-all"
-          >
-            먼저하기
-          </button>
-        )}
       </div>
+    </div>
   );
 };

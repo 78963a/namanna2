@@ -12,11 +12,10 @@ import {
   ArrowRightCircle, 
   XCircle, 
   Clock, 
-  Hourglass, 
-  Trophy 
+  Hourglass,
+  BrickWall
 } from 'lucide-react';
 import { Task, TaskType } from '../../types';
-import { BrickIcon } from './Icons';
 import { formatDurationPrecise } from '../../utils';
 
 interface RoutineTitleLineProps {
@@ -86,7 +85,7 @@ export const RoutineTitleLine = ({
               {index === 0 && "⚡"}{task.text}{task.isClosingRoutine && "🥇"}
             </span>
             {task.checklist && task.checklist.length > 0 && (
-              <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter">
+              <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-[10px] text-[8px] font-black uppercase tracking-tighter">
                 <CheckCircle2 className="w-2 h-2" />
                 <span>체크리스트</span>
               </div>
@@ -102,7 +101,7 @@ export const RoutineTitleLine = ({
               e.stopPropagation();
               onRestart(task.id);
             }}
-            className="flex-shrink-0 px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-black hover:bg-indigo-100 transition-all"
+            className="flex-shrink-0 px-2 py-1 bg-indigo-50 text-indigo-600 rounded-[10px] text-[10px] font-black hover:bg-indigo-100 transition-all"
           >
             다시하기
           </button>
@@ -114,18 +113,18 @@ export const RoutineTitleLine = ({
               e.stopPropagation();
               onDoFirst(task.id);
             }}
-            className="flex-shrink-0 px-2 py-1 bg-amber-50 text-amber-600 rounded-md text-[10px] font-black hover:bg-amber-100 transition-all"
+            className="flex-shrink-0 px-2 py-1 bg-amber-50 text-amber-600 rounded-[10px] text-[10px] font-black hover:bg-amber-100 transition-all"
           >
             먼저하기
           </button>
         )}
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-bold text-[10px]">
+          <div className="flex items-center gap-1 bg-slate-100 text-slate-500 px-2 py-0.5 rounded-[10px] font-bold text-[10px]">
             {task.taskType === TaskType.TIME_INDEPENDENT ? (
               <Clock className="w-3 h-3 text-sky-500" />
             ) : task.taskType === TaskType.TIME_ACCUMULATED ? (
-              <BrickIcon className="w-3 h-3 text-pink-500" />
+              <BrickWall className="w-3 h-3 text-pink-500" />
             ) : (
               <Hourglass className="w-3 h-3 text-indigo-600" />
             )}
@@ -133,15 +132,6 @@ export const RoutineTitleLine = ({
               <span>{formatDurationPrecise(task.duration || 0)} / {task.targetDuration}분</span>
             ) : (
               <span>{task.targetDuration}분</span>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md font-bold text-[10px]">
-            <Trophy className="w-3 h-3" />
-            {task.completed ? (
-              <span>{task.earnedPoints || 0} / {task.points}P</span>
-            ) : (
-              <span>{task.points}P</span>
             )}
           </div>
         </div>
