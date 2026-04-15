@@ -1870,7 +1870,7 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 );
 
 const RoutineGroupFormView: React.FC<{
-  addChunk: (name: string, purpose: string, tasks: Task[], scheduleType: 'days' | 'weekly' | 'monthly' | 'yearly', scheduledDays: number[], frequency?: number, startTime?: string, isAlarmEnabled?: boolean, startType?: 'anytime' | 'situation' | 'time', situation?: string) => void;
+  addChunk: (name: string, purpose: string, tasks: Task[], scheduleType: 'days', scheduledDays: number[], startTime?: string, isAlarmEnabled?: boolean, startType?: 'anytime' | 'situation' | 'time', situation?: string) => void;
   updateChunk?: (id: string, updatedData: Partial<RoutineChunk>) => void;
   initialChunk?: RoutineChunk;
   setActiveTab: (tab: any) => void;
@@ -2113,7 +2113,7 @@ const RoutineGroupFormView: React.FC<{
       setSettingsSubView({ type: 'main' });
       setIsSettingsOpen(false);
     } else {
-      addChunk(name, purpose, finalTasks, 'days', scheduledDays, 1, startType === 'time' ? startTime : '', isAlarmEnabled, startType, situation);
+      addChunk(name, purpose, finalTasks, 'days', scheduledDays, startType === 'time' ? startTime : '', isAlarmEnabled, startType, situation);
       setActiveTab('home');
     }
   };
@@ -3400,6 +3400,7 @@ export default function App() {
                 updated.endTime = nowStr;
                 const totalSeconds = calculateTaskDuration(t, now);
                 updated.duration = totalSeconds;
+                updated.startTime = undefined; // 완료 시 startTime 제거하여 타이머 중단
                 
                 // Determine status (PERFECT or COMPLETED)
                 const targetSeconds = (t.targetDuration || 0) * 60;
@@ -3578,9 +3579,8 @@ export default function App() {
     name: string, 
     purpose: string, 
     tasks: Task[], 
-    scheduleType: 'days' | 'weekly' | 'monthly' | 'yearly' = 'days', 
+    scheduleType: 'days' = 'days', 
     scheduledDays: number[] = [0,1,2,3,4,5,6], 
-    frequency?: number,
     startTime?: string,
     isAlarmEnabled?: boolean,
     startType?: 'anytime' | 'situation' | 'time',
@@ -3595,7 +3595,6 @@ export default function App() {
       tasks: tasks,
       scheduleType,
       scheduledDays,
-      frequency,
       startTime,
       isAlarmEnabled,
       startType,

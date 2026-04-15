@@ -35,30 +35,7 @@ export const minutesToTime = (minutes: number): string => {
  */
 export const isChunkScheduledToday = (chunk: RoutineChunk, date: Date, userData: UserData): boolean => {
   const day = date.getDay(); // 0 (Sun) to 6 (Sat)
-  
-  if (chunk.scheduleType === 'days') {
-    return chunk.scheduledDays.includes(day);
-  }
-  
-  // For weekly, monthly, yearly: check frequency vs completion count in period
-  const getStartOfPeriod = (type: string, d: Date) => {
-    const start = new Date(d);
-    if (type === 'weekly') {
-      const day = d.getDay();
-      start.setDate(d.getDate() - day);
-    } else if (type === 'monthly') {
-      start.setDate(1);
-    } else if (type === 'yearly') {
-      start.setMonth(0, 1);
-    }
-    start.setHours(0, 0, 0, 0);
-    return start;
-  };
-
-  const startOfPeriod = getStartOfPeriod(chunk.scheduleType, date);
-  const completionsInPeriod = (chunk.completionDates || []).filter(d => new Date(d) >= startOfPeriod).length;
-  
-  return completionsInPeriod < (chunk.frequency || 1);
+  return chunk.scheduledDays.includes(day);
 };
 
 /**

@@ -43,6 +43,30 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     const titleHtml = `<span style="color: ${titleStyle.color}; font-size: ${titleStyle.fontSize}; font-weight: ${titleStyle.fontWeight}; font-family: '${titleStyle.fontFamily || 'inherit'}', sans-serif;">${chunk.name}</span>`;
     const purposeHtml = `<span style="color: ${purposeStyle.color}; font-size: ${purposeStyle.fontSize}; font-weight: ${purposeStyle.fontWeight}; font-family: '${purposeStyle.fontFamily || 'inherit'}', sans-serif;">${chunk.purpose || '목표'}</span>`;
 
+    // --- [사용자 정의 변수 추출] ---
+    
+    // 1. 요일 정보 (days)
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const daysText = chunk.scheduledDays.map(d => dayNames[d]).join(', ') + '요일';
+    const daysHtml = `<span style="color: #64748b; font-weight: bold;">${daysText}</span>`;
+
+    // 2. 시작 상황/시간 정보 (start_info)
+    let startInfoText = '아무때나';
+    if (chunk.startType === 'time' && chunk.startTime) {
+      startInfoText = `${chunk.startTime}시`;
+    } else if (chunk.startType === 'situation' && chunk.situation) {
+      startInfoText = chunk.situation;
+    }
+    const startInfoHtml = `<span style="color: #6366f1; font-weight: bold;">${startInfoText}</span>`;
+
+    // 3. 소요 시간 정보 (duration)
+    const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || 0), 0);
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
+    const durationHtml = `<span style="color: #10b981; font-weight: bold;">${durationText}</span>`;
+
+    // --- [메시지 치환 로직] ---
+
     // Handle particles: {{title}}이/가, {{purpose}}을/를 etc.
     const replaceWithJosa = (msg: string, tag: 'title' | 'purpose', value: string, html: string) => {
       const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는)`, 'g');
@@ -54,9 +78,12 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     message = replaceWithJosa(message, 'title', chunk.name, titleHtml);
     message = replaceWithJosa(message, 'purpose', chunk.purpose || '목표', purposeHtml);
 
-    // Handle remaining placeholders without particles
+    // Handle remaining placeholders
     message = message.replace(/\{\{title\}\}/g, titleHtml);
     message = message.replace(/\{\{purpose\}\}/g, purposeHtml);
+    message = message.replace(/\{\{days\}\}/g, daysHtml);
+    message = message.replace(/\{\{start_info\}\}/g, startInfoHtml);
+    message = message.replace(/\{\{duration\}\}/g, durationHtml);
 
     return message;
   }, [chunk.id, chunk.name, chunk.purpose, status]);

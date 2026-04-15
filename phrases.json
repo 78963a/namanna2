@@ -6,7 +6,7 @@
       "fontFamily": "Font1",
       "fontWeight":"bold"
     },
-    "purpose_style": { "color": "#000099", "fontSize": "3.1rem", "fontWeight": "bold", "fontFamily": "Font1" },
+    "purpose_style": { "color": "#000099", "fontSize": "3.1rem", "fontWeight": "bold", "fontFamily": "맑은 고딕" },
     "title_style": { "color": "#660000", "fontSize": "4.3rem", "fontWeight": "bold", "fontFamily": "Font1" }
   },
   "routine_messages": {
@@ -14,16 +14,19 @@
       "{{purpose}}이/가 되려면 때로는 {{title}}을/를 쉬어가야하지"
     ],
     "NOT_STARTED": [
+      "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}}에 실천하기로 했다",
       "나는 오늘도 {{purpose}}이/가 되기 위해 {{title}}을/를 할거야",
       "{{title}}하여 {{purpose}}이/가 되자",
       "성실한 나는 {{purpose}}을/를 목표로 {{title}}에 매진한다"
     ],
     "IN_PROGRESS": [
+      "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}}에 실천하기로 했다",
       "나는 오늘도 {{purpose}}이/가 되기 위해 {{title}}을/를 할거야",
       "{{title}}하여 {{purpose}}이/가 되자",
       "성실한 나는 {{purpose}}을/를 목표로 {{title}}에 매진한다"
     ],
     "COMPLETED": [
+      "나는 {{purpose}}을/를 달성하기 위한 {{title}}을/를 {{duration}}에 걸쳐 완료했다",
       "나는 {{title}}을/를 완료한 {{purpose}}이다!",
       "나는 오늘도 {{title}}을/를 완료함으로써 {{purpose}}에 한발짝 더 나아갔다",
       "제가 {{purpose}}이/가 될 수 있었던 비결은 {{title}}을/를 성실히 수행한 것에 있습니다",
@@ -31,6 +34,7 @@
       "내가 {{title}} 해냄"
     ],
     "PERFECT": [
+      "나는 {{purpose}}을/를 달성하기 위한 {{title}}을/를 {{duration}}에 걸쳐 완료했다",
       "나는 {{title}}을/를 완료한 {{purpose}}이다!",
       "나는 오늘도 {{title}}을/를 완료함으로써 {{purpose}}에 한발짝 더 나아갔다",
       "제가 {{purpose}}이/가 될 수 있었던 비결은 {{title}}을/를 성실히 수행한 것에 있습니다",

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Calendar } from 'lucide-react';
 import { UserData } from '../../types';
-import { isTaskScheduledToday } from '../../utils';
+import { isTaskScheduledToday, calculateTaskDuration } from '../../utils';
 
 interface HeaderBoxProps {
   userData: UserData;
@@ -37,6 +37,20 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
     ? Number(((totalCompleted / totalScheduledTasksCount) * 100).toFixed(1)) 
     : 0;
 
+  // --- [합산시간 계산] ---
+  const totalDurationSeconds = userData.routineChunks.reduce((acc, chunk) => {
+    const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+    const chunkDuration = scheduledTasks.reduce((taskAcc, task) => {
+      // 완료된 루틴은 기록된 duration을 사용, 진행 중이거나 일시정지된 루틴은 실시간 계산
+      if (task.completed || task.givenUp) {
+        return taskAcc + (task.duration || 0);
+      }
+      return taskAcc + calculateTaskDuration(task, currentTime);
+    }, 0);
+    return acc + chunkDuration;
+  }, 0);
+  const totalDurationMinutes = Math.floor(totalDurationSeconds / 60);
+
   const last7Days = useMemo(() => {
     const days = [];
     const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
@@ -64,6 +78,15 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
           <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
               <span>
                 {challengeDays}일째 도전중, {successDays}일째 성공중 ({completionPercentage}%)
+               </span>
+               {/* --- [합산시간 스타일 수정 가능 구역] --- */}
+               <span style={{ 
+                 marginLeft: '8px', 
+                 color: '#ff0033', // 합산시간 글꼴 색상
+                 fontSize: '0.875rem', // 합산시간 글꼴 크기
+                 fontWeight: '900' // 합산시간 글꼴 두께
+               }}>
+                 합산시간: {totalDurationMinutes}분
                </span>
           </div>
         </div>

@@ -54,9 +54,8 @@ export interface RoutineChunk {
   purpose?: string;
   completionDates?: string[];
   inactiveDates?: string[];
-  scheduleType: 'days' | 'weekly' | 'monthly' | 'yearly';
+  scheduleType: 'days';
   scheduledDays: number[]; // 0-6
-  frequency?: number;
   isAlarmEnabled?: boolean;
   lastAlarmTriggeredDate?: string;
   startType?: 'anytime' | 'situation' | 'time';
@@ -204,9 +203,8 @@ export interface AddRoutineGroupViewProps {
     name: string, 
     purpose: string, 
     tasks: Task[], 
-    scheduleType: 'days' | 'weekly' | 'monthly' | 'yearly', 
+    scheduleType: 'days', 
     scheduledDays: number[], 
-    frequency?: number,
     startTime?: string,
     isAlarmEnabled?: boolean,
     startType?: 'anytime' | 'situation' | 'time',

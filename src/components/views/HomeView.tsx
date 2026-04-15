@@ -212,19 +212,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       {displayStatus} ({completedTasks.length}/{scheduledTasks.length})
                     </span>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleInactive(chunk.id);
-                    }}
-                    className={`px-3 py-1 rounded-[10px] text-[10px] font-black transition-all ${
-                      isInactive 
-                        ? 'bg-indigo-600 text-white' 
-                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                    }`}
-                  >
-                    {isInactive ? '활성화하기' : '오늘은 건너뛰기'}
-                  </button>
+                  {!isFullyCompleted && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleInactive(chunk.id);
+                      }}
+                      className={`px-3 py-1 rounded-[10px] text-[10px] font-black transition-all ${
+                        isInactive 
+                          ? 'bg-indigo-600 text-white' 
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                    >
+                      {isInactive ? '활성화하기' : '오늘은 건너뛰기'}
+                    </button>
+                  )}
                 </div>
                 
                 <div className="mb-1 pr-8">
