@@ -608,11 +608,14 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2 w-full overflow-hidden">
               <h2 className="text-base font-black text-white tracking-tight leading-relaxed whitespace-nowrap overflow-hidden text-ellipsis">
-                {/* 루틴그룹 제목 스타일 설정 (글자 색, 크기, 글꼴 등) */}
-                <span style={{ color: '#ffffff', fontSize: '10rem', fontFamily: "'Font1', sans-serif" }}>
+                {/* 실행화면의 루틴그룹 제목 스타일 설정 (글자 색, 크기, 글꼴 등) */}
+                  <span style={{
+                  color: '#ffffff',
+                 fontSize: '1rem',
+                 fontFamily: '"Malgun Gothic", "Apple SD Gothic Neo", "Nanum Gothic", "Dotum", sans-serif'
+                  }}>
                   {chunk.purpose}{getJosa(chunk.purpose || '', '이/가')} 되기 위한 {chunk.name}
-                </span>
-                <button 
+                  </span>                <button 
                   onClick={() => {
                     setSettingsSubView({ type: 'detail', chunkId: chunk.id });
                     setIsSettingsOpen(true);

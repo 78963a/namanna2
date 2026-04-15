@@ -1,16 +1,14 @@
-# Routine Management App 이라는것은 너의 희망사항.
+# Routine Management App
 
 A sophisticated, production-grade routine management application built with React, TypeScript, and Tailwind CSS. This app is designed to help users build and maintain healthy habits through structured routine groups, real-time tracking, and gamified progress.
 
 ## 🌟 Key Features
 
 - **Routine Grouping**: Organize tasks into logical groups (e.g., Morning Routine, Evening Routine) with specific purposes and schedules.
-- **Dynamic Scheduling**: Support for daily, weekly, monthly, and yearly routine execution.
 - **Real-time Execution**: Interactive timer-based task execution with pause, resume, and "later" functionality.
-- **Gamification**: Earn points for completing tasks and maintaining streaks.
 - **Visual Progress**: Comprehensive statistics view with charts (using Recharts) to track wake-up times and point accumulation.
 - **Responsive Design**: Polished, mobile-first UI with smooth animations (using Framer Motion).
-- **Check-in System**: Daily wake-up check-in with bonus points for consistency.
+- **Check-in System**: Daily wake-up check-in for consistency.
 - **Checklists**: Support for sub-tasks within individual routines.
 - **Alarms**: Integrated alarm system to notify users when it's time to start a routine.
 
