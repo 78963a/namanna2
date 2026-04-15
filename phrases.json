@@ -3,11 +3,11 @@
     "base_style": { 
       "color": "#330000", 
       "fontSize": "1rem", 
-      "fontFamily": "Font1",
+      "fontFamily": "Font2",
       "fontWeight":"bold"
     },
-    "purpose_style": { "color": "#000099", "fontSize": "3.1rem", "fontWeight": "bold", "fontFamily": "맑은 고딕" },
-    "title_style": { "color": "#660000", "fontSize": "4.3rem", "fontWeight": "bold", "fontFamily": "Font1" }
+    "purpose_style": { "color": "#000099", "fontSize": "1.7rem", "fontWeight": "bold", "fontFamily": "바탕" },
+    "title_style": { "color": "#660000", "fontSize": "2rem", "fontWeight": "bold", "fontFamily": "궁서" }
   },
   "routine_messages": {
     "INACTIVE": [
