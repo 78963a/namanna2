@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { RoutineChunk } from '../../types';
 import { getJosa } from '../../utils';
-import phrases from '../../../phrases.json';
+import phrases from '../../phrases.json';
 
 interface RoutineTitleProps {
   chunk: RoutineChunk;

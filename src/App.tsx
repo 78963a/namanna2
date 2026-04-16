@@ -8,8 +8,6 @@ import {
   Sun,
   CheckCircle2, 
   Circle, 
-  CircleDot,
-  PauseCircle,
   ArrowRightCircle,
   Settings, 
   Plus, 
@@ -17,8 +15,6 @@ import {
   Clock,
   ChevronRight,
   ChevronLeft,
-  ChevronUp,
-  ChevronDown,
   BarChart3,
   Home,
   Calendar,
@@ -30,7 +26,6 @@ import {
   Timer,
   X,
   GripVertical,
-  ArrowRight,
   RotateCcw,
   Target,
   Zap,
@@ -43,19 +38,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import confetti from 'canvas-confetti';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar
-} from 'recharts';
 import {
   DndContext, 
   closestCenter,
@@ -102,12 +84,16 @@ import {
   isChunkScheduledToday, 
   isTaskScheduledToday, 
   formatDate, 
+  getEffectiveDate,
+  getEffectiveDateObject,
   getAverageWakeUpTime,
   getDaysBetween,
   formatDurationPrecise,
   getJosa,
   calculateTaskDuration
 } from './utils';
+import phrases from './phrases.json';
+import { CheckCheckIcon } from './components/CheckCheckIcon';
 
 // Components
 import { HeaderBox } from './components/layout/HeaderBox';
@@ -188,6 +174,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   selectedChunkId,
   setActiveTab,
   currentTime,
+  effectiveDate,
   todayStr,
   toggleTask,
   togglePauseTask,
@@ -200,14 +187,29 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   setIsSettingsOpen,
   setSelectedChunkId,
   handleCheckCheckClick,
-  isSad
+  isCheckCheckAvailable
 }) => {
   const chunk = userData.routineChunks.find(c => c.id === selectedChunkId);
   if (!chunk) return null;
 
   const tasks = chunk.tasks;
-  const scheduledTasks = tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+  const scheduledTasks = tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
   
+  // 체크체크박스 아이콘 결정 로직
+  const checkCheckIconId = (() => {
+    const count = (userData.dailyCheckCheckCounts?.[todayStr]) || 0;
+    const stages = phrases.checkCheckSettings.evolutionStages;
+    let currentStage = stages[0];
+    for (const stage of stages) {
+      if (count >= stage.minClicks) {
+        currentStage = stage;
+      } else {
+        break;
+      }
+    }
+    return currentStage.iconId;
+  })();
+
   // 9-2-1. '현재 실행중인 루틴' 우선순위 로직
   // 1. 현재 실행 중인 루틴 (startTime 있고, 일시정지 아님, 완료/포기 아님)
   let activeTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
@@ -457,29 +459,31 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   <BarChart3 className="w-5 h-5" />
                 </button>
 
-                {/* Check-Check Box in Nav */}
+                {/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}
                 <button 
                   onClick={handleCheckCheckClick}
-                  className={`transition-all w-10 h-10 flex flex-col items-center justify-center rounded-[10px] border shadow-sm relative overflow-hidden ${
-                    isSad 
+                  className={`transition-all w-16 h-10 flex items-center px-1.5 rounded-[10px] border shadow-sm relative overflow-hidden ${
+                    isCheckCheckAvailable 
                       ? 'bg-white border-indigo-200 cursor-pointer hover:border-indigo-400' 
                       : 'bg-white border-slate-100 cursor-default'
                   }`}
                 >
-                  <span className="text-xl leading-none">
-                    {isSad ? '😞' : '😊'}
-                  </span>
-                  <span className="text-[8px] font-black text-slate-500 mt-0.5">
-                    {(userData.dailyCheckCheckCounts?.[todayStr]) || 0}
-                  </span>
-                  {isSad && (
-                    <div className="absolute top-1 right-1">
-                      <span className="flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex-shrink-0 flex items-center justify-center w-9">
+                    <CheckCheckIcon iconId={checkCheckIconId} size={32} />
+                  </div>
+                  <div className="flex-grow flex flex-col items-center justify-center ml-0.5 relative">
+                    <span className="text-[10px] font-black text-slate-500 leading-none">
+                      {(userData.dailyCheckCheckCounts?.[todayStr]) || 0}
+                    </span>
+                    {isCheckCheckAvailable && (
+                      <div className="mt-1">
+                        <span className="flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </button>
               </nav>
             </div>
@@ -1008,7 +1012,7 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
               <div className="relative group/tooltip flex-shrink-0">
                 <Settings className="w-4 h-4 text-slate-300 group-hover/title:text-indigo-400 transition-colors" />
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                  상세설정
+                  수정
                 </div>
               </div>
             </button>
@@ -2213,7 +2217,7 @@ const RoutineGroupFormView: React.FC<{
             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
               <PlusCircle className="w-6 h-6 text-indigo-600" />
             </div>
-            <h2 className="text-2xl font-black text-slate-900">{mode === 'edit' ? '루틴 그룹 상세 설정' : '새로운 루틴 그룹 만들기'}</h2>
+            <h2 className="text-2xl font-black text-slate-900">{mode === 'edit' ? '루틴 그룹 수정' : '새로운 루틴 그룹 만들기'}</h2>
           </div>
         </div>
         <div className="space-y-5">
@@ -2472,7 +2476,7 @@ export default function App() {
   const [selectedChunkId, setSelectedChunkId] = useState<string | null>(null);
   const [showCheckInCelebration, setShowCheckInCelebration] = useState(false);
   const [userData, setUserData] = useState<UserData>(() => {
-    const saved = localStorage.getItem('morning-routine-data');
+    const saved = localStorage.getItem(STORAGE_KEY);
     const today = formatDate(new Date());
     
     let parsed: any;
@@ -2480,7 +2484,7 @@ export default function App() {
       try {
         parsed = JSON.parse(saved);
       } catch (e) {
-        console.error('Failed to parse morning-routine-data', e);
+        console.error(`Failed to parse ${STORAGE_KEY}`, e);
         parsed = null;
       }
     }
@@ -2495,7 +2499,8 @@ export default function App() {
         history: [],
         startDate: today,
         dailyCompletionRate: {},
-        resetTime: '04:00',
+        resetTime: '00:00',
+        dailyResetHour: 0,
         lastCheckCheckTime: Date.now(),
         lastResetDate: null,
         dailyCheckCheckCounts: {},
@@ -2522,7 +2527,11 @@ export default function App() {
     if (!parsed.startDate) parsed.startDate = today;
     
     if (!parsed.dailyCompletionRate) parsed.dailyCompletionRate = {};
-    if (parsed.resetTime === undefined) parsed.resetTime = '04:00';
+    if (parsed.resetTime === undefined) parsed.resetTime = '00:00';
+    if (parsed.dailyResetHour === undefined) {
+      const h = parseInt(parsed.resetTime.split(':')[0]) || 0;
+      parsed.dailyResetHour = h;
+    }
     if (parsed.lastCheckCheckTime === undefined) parsed.lastCheckCheckTime = Date.now();
     if (parsed.lastResetDate === undefined) parsed.lastResetDate = null;
     if (parsed.dailyCheckCheckCounts === undefined) parsed.dailyCheckCheckCounts = {};
@@ -2542,8 +2551,7 @@ export default function App() {
         purpose: '더 나은 나',
         completionDates: [],
         tasks: parsed.routine.map((t: any) => ({
-          ...t,
-          points: t.points || 5
+          ...t
         })),
         startTime: '',
         duration: 0,
@@ -2568,7 +2576,6 @@ export default function App() {
         lastAlarmTriggeredDate: chunk.lastAlarmTriggeredDate || null,
         tasks: (chunk.tasks || []).map((t: any) => ({
           ...t,
-          points: t.points || 5,
           scheduledDays: t.scheduledDays || [0, 1, 2, 3, 4, 5, 6]
         }))
       }));
@@ -2629,17 +2636,12 @@ export default function App() {
   });
 
   // --- Effects ---
-  const todayStr = useMemo(() => {
-    const [resetH, resetM] = userData.resetTime.split(':').map(Number);
-    const effectiveDate = new Date(currentTime);
-    if (currentTime.getHours() < resetH || (currentTime.getHours() === resetH && currentTime.getMinutes() < resetM)) {
-      effectiveDate.setDate(effectiveDate.getDate() - 1);
-    }
-    const y = effectiveDate.getFullYear();
-    const m = String(effectiveDate.getMonth() + 1).padStart(2, '0');
-    const d = String(effectiveDate.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+  const effectiveDate = useMemo(() => {
+    const [resetH] = userData.resetTime.split(':').map(Number);
+    return getEffectiveDateObject(currentTime, resetH);
   }, [currentTime, userData.resetTime]);
+
+  const todayStr = useMemo(() => formatDate(effectiveDate), [effectiveDate]);
 
   useEffect(() => {
     if (settingsSubView.type === 'detail') {
@@ -2688,7 +2690,7 @@ export default function App() {
 
     userData.routineChunks.forEach(chunk => {
       if (chunk.isAlarmEnabled && chunk.startTime === nowTimeStr && chunk.lastAlarmTriggeredDate !== todayStr && !activeAlarmChunk) {
-        if (isChunkScheduledToday(chunk, currentTime, userData)) {
+        if (isChunkScheduledToday(chunk, effectiveDate, userData)) {
           setActiveAlarmChunk(chunk);
           const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
           audio.play().catch(e => console.log('Audio play failed:', e));
@@ -2714,10 +2716,10 @@ export default function App() {
 
   useEffect(() => {
     const totalCompleted = userData.routineChunks.reduce((acc, chunk) => 
-      acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && (t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT)).length, 0
+      acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData) && (t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT)).length, 0
     );
     const totalScheduledTasksCount = userData.routineChunks.reduce((acc, chunk) => 
-      acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData)).length, 0
+      acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData)).length, 0
     );
     const completionPercentage = totalScheduledTasksCount > 0 
       ? Math.floor((totalCompleted / totalScheduledTasksCount) * 100) 
@@ -2736,7 +2738,7 @@ export default function App() {
 
   const saveData = (data: UserData) => {
     try {
-      localStorage.setItem('morning-routine-data', JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       if (data.wakeUpTimeHistory) {
         localStorage.setItem('WakeUpTimeHistory', JSON.stringify(data.wakeUpTimeHistory));
       }
@@ -2757,7 +2759,8 @@ export default function App() {
 
   // --- Helpers ---
   const syncHistory = (data: UserData, today: string): UserData => {
-    const now = new Date();
+    const [y, m, d] = today.split('-').map(Number);
+    const syncDate = new Date(y, m - 1, d);
 
     let newTaskHistory = [...(data.taskHistory || [])];
     let newGroupHistory = [...(data.routineGroupHistory || [])];
@@ -2778,7 +2781,7 @@ export default function App() {
 
     // Update Task and Group History
     data.routineChunks.forEach(chunk => {
-      const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, now, data));
+      const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, syncDate, data));
       const isActive = scheduledTasks.length > 0;
       
       let firstStartTime: string | null = null;
@@ -2872,19 +2875,19 @@ export default function App() {
     if (userData.lastCheckInDate === todayStr) return false;
     
     const [targetH, targetM] = userData.targetWakeUpTime.split(':').map(Number);
-    const targetDate = new Date();
+    const targetDate = new Date(effectiveDate);
     targetDate.setHours(targetH, targetM, 0, 0);
     
     const diffMinutes = (currentTime.getTime() - targetDate.getTime()) / (1000 * 60);
     return diffMinutes >= -30 && diffMinutes <= 10;
-  }, [userData.targetWakeUpTime, userData.lastCheckInDate, currentTime, todayStr]);
+  }, [userData.targetWakeUpTime, userData.lastCheckInDate, currentTime, todayStr, effectiveDate]);
 
   const isLate = useMemo(() => {
     const [targetH, targetM] = userData.targetWakeUpTime.split(':').map(Number);
-    const targetDate = new Date();
+    const targetDate = new Date(effectiveDate);
     targetDate.setHours(targetH, targetM, 0, 0);
     return currentTime.getTime() > targetDate.getTime() + (10 * 60 * 1000);
-  }, [userData.targetWakeUpTime, currentTime]);
+  }, [userData.targetWakeUpTime, currentTime, effectiveDate]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -2936,7 +2939,7 @@ export default function App() {
     if (!chunk) return;
 
     // Find best task to start
-    const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+    const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
     const isFinished = (t: Task) => t.completed || t.givenUp || t.status === TaskStatus.PERFECT || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.SKIP;
     
     // 1. Active task (already running)
@@ -2972,7 +2975,7 @@ export default function App() {
     if (!canCheckIn) return;
 
     let newStreak = userData.streak;
-    const yesterday = new Date();
+    const yesterday = new Date(effectiveDate);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = formatDate(yesterday);
 
@@ -3278,6 +3281,7 @@ export default function App() {
               }
               
               // If we are resuming the target task, pause all other active tasks
+              // BUT if we are pausing the target task, do NOT touch other tasks
               if (isTargetResuming) {
                 const isActive = t.startTime && !t.isPaused && !t.completed && !t.givenUp;
                 if (isActive) {
@@ -3348,10 +3352,10 @@ export default function App() {
 
           // Recalculate completion percentage for today
           const totalCompleted = newChunks.reduce((acc, chunk) => 
-            acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && (t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP)).length, 0
+            acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData) && (t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP)).length, 0
           );
           const totalScheduledTasksCount = newChunks.reduce((acc, chunk) => 
-            acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData)).length, 0
+            acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData)).length, 0
           );
           const completionPercentage = totalScheduledTasksCount > 0 
             ? Math.floor((totalCompleted / totalScheduledTasksCount) * 100) 
@@ -3481,10 +3485,10 @@ export default function App() {
       }
 
       const totalCompleted = newChunks.reduce((acc, chunk) => 
-        acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && t.completed).length, 0
+        acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData) && t.completed).length, 0
       );
       const totalScheduledTasksCount = newChunks.reduce((acc, chunk) => 
-        acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData)).length, 0
+        acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData)).length, 0
       );
       const completionPercentage = totalScheduledTasksCount > 0 
         ? Math.floor((totalCompleted / totalScheduledTasksCount) * 100) 
@@ -3646,8 +3650,8 @@ export default function App() {
 
   const getChunkStatus = (chunk: RoutineChunk) => {
     if (chunk.inactiveDates?.includes(todayStr)) return '불활성';
-    if (!isChunkScheduledToday(chunk, currentTime, userData)) return '불활성';
-    const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+    if (!isChunkScheduledToday(chunk, effectiveDate, userData)) return '불활성';
+    const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
     if (scheduledTasks.length === 0) return '불활성';
     const allFinished = scheduledTasks.every(t => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
     if (allFinished) return '전체완료';
@@ -3784,17 +3788,24 @@ export default function App() {
       title: '리셋 시간 변경',
       message: `하루 리셋 시간을 ${time}으로 변경하시겠습니까?`,
       onConfirm: () => {
-        setUserData(prev => ({ ...prev, resetTime: time }));
+        const h = parseInt(time.split(':')[0]);
+        setUserData(prev => ({ ...prev, resetTime: time, dailyResetHour: h }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
     });
   };
 
+  // --- 체크체크박스 (Check-Check Box) 로직 ---
+  // 이 부분에서 체크체크박스의 클릭 가능 간격과 상태를 관리합니다.
   const checkCheckDiff = currentTime.getTime() - userData.lastCheckCheckTime;
-  const isSad = checkCheckDiff >= 30 * 60 * 1000;
+  
+  // 클릭 가능 시간 간격 설정 (기본 30분). phrases.json의 intervalMinutes 값을 변경하여 조절할 수 있습니다.
+  // 예: 1초로 바꾸려면 phrases.json에서 intervalMinutes를 1/60으로 하거나, 아래 식을 직접 수정하세요.
+  const checkCheckIntervalMs = phrases.checkCheckSettings.intervalMinutes * 60 * 1000;
+  const isCheckCheckAvailable = checkCheckDiff >= checkCheckIntervalMs;
 
   const handleCheckCheckClick = () => {
-    if (isSad) {
+    if (isCheckCheckAvailable) {
       setUserData(prev => {
         const currentCheckCount = (prev.dailyCheckCheckCounts?.[todayStr]) || 0;
         return {
@@ -3808,6 +3819,21 @@ export default function App() {
       });
     }
   };
+
+  // 체크체크박스 아이콘 결정 로직 (클릭 횟수에 따라 진화)
+  const checkCheckIconId = useMemo(() => {
+    const count = (userData.dailyCheckCheckCounts?.[todayStr]) || 0;
+    const stages = phrases.checkCheckSettings.evolutionStages;
+    let currentStage = stages[0];
+    for (const stage of stages) {
+      if (count >= stage.minClicks) {
+        currentStage = stage;
+      } else {
+        break;
+      }
+    }
+    return currentStage.iconId;
+  }, [userData.dailyCheckCheckCounts, todayStr]);
 
   const challengeDays = useMemo(() => {
     if (!userData.startDate) return 1;
@@ -3969,13 +3995,13 @@ export default function App() {
   };
 
   const formattedDate = useMemo(() => {
-    return currentTime.toLocaleDateString('ko-KR', { 
+    return effectiveDate.toLocaleDateString('ko-KR', { 
       year: 'numeric', 
       month: 'long', 
       day: 'numeric', 
       weekday: 'long' 
     });
-  }, [currentTime]);
+  }, [effectiveDate]);
 
   return (
     <div className="min-h-screen bg-[#F7FEE7] text-slate-900 font-sans pb-20">
@@ -4115,29 +4141,31 @@ export default function App() {
               <BarChart3 className="w-5 h-5" />
             </button>
 
-            {/* Check-Check Box in Nav */}
+            {/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}
             <button 
               onClick={handleCheckCheckClick}
-              className={`transition-all w-10 h-10 flex flex-col items-center justify-center rounded-[10px] border shadow-sm relative overflow-hidden ${
-                isSad 
+              className={`transition-all w-16 h-10 flex items-center px-1.5 rounded-[10px] border shadow-sm relative overflow-hidden ${
+                isCheckCheckAvailable 
                   ? 'bg-white border-indigo-200 cursor-pointer hover:border-indigo-400' 
                   : 'bg-white border-slate-100 cursor-default'
               }`}
             >
-              <span className="text-xl leading-none">
-                {isSad ? '😞' : '😊'}
-              </span>
-              <span className="text-[8px] font-black text-slate-500 mt-0.5">
-                {(userData.dailyCheckCheckCounts?.[todayStr]) || 0}
-              </span>
-              {isSad && (
-                <div className="absolute top-1 right-1">
-                  <span className="flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
-                  </span>
-                </div>
-              )}
+              <div className="flex-shrink-0 flex items-center justify-center w-9">
+                <CheckCheckIcon iconId={checkCheckIconId} size={32} />
+              </div>
+              <div className="flex-grow flex flex-col items-center justify-center ml-0.5 relative">
+                <span className="text-[10px] font-black text-slate-500 leading-none">
+                  {(userData.dailyCheckCheckCounts?.[todayStr]) || 0}
+                </span>
+                {isCheckCheckAvailable && (
+                  <div className="mt-1">
+                    <span className="flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
+                    </span>
+                  </div>
+                )}
+              </div>
             </button>
           </nav>
         </div>
@@ -4161,11 +4189,13 @@ export default function App() {
                 challengeDays={challengeDays}
                 successDays={successDays}
                 currentTime={currentTime}
+                effectiveDate={effectiveDate}
               />
               <HomeView 
                 userData={userData}
                 setUserData={setUserData}
                 currentTime={currentTime}
+                effectiveDate={effectiveDate}
                 todayStr={todayStr}
                 handleCheckIn={handleCheckIn}
                 handleLateCheckIn={handleLateCheckIn}
@@ -4192,6 +4222,7 @@ export default function App() {
               <StatsView 
                 userData={userData} 
                 currentTime={currentTime}
+                effectiveDate={effectiveDate}
                 deleteReview={deleteReview}
               />
             </motion.div>
@@ -4209,6 +4240,7 @@ export default function App() {
                 selectedChunkId={selectedChunkId}
                 setActiveTab={setActiveTab}
                 currentTime={currentTime}
+                effectiveDate={effectiveDate}
                 todayStr={todayStr}
                 toggleTask={toggleTask}
                 togglePauseTask={togglePauseTask}
@@ -4221,7 +4253,7 @@ export default function App() {
                 setIsSettingsOpen={setIsSettingsOpen}
                 setSelectedChunkId={setSelectedChunkId}
                 handleCheckCheckClick={handleCheckCheckClick}
-                isSad={isSad}
+                isCheckCheckAvailable={isCheckCheckAvailable}
               />
             </motion.div>
           ) : activeTab === 'add' ? (

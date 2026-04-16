@@ -138,10 +138,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
         <h2 className="text-xl font-black text-slate-900">전체설정화면</h2>
       </div>
-      <div className="space-y-[15px] overflow-y-auto pr-2 custom-scrollbar flex-grow">
+            <div className="space-y-[15px] overflow-y-auto pr-2 custom-scrollbar flex-grow">
         <div className="p-[15px] bg-slate-50 rounded-[10px] border border-slate-100 space-y-[15px] shadow-sm">
           <div className="flex flex-col gap-1 mb-1">
-            <h3 className="text-base font-black text-slate-800 whitespace-nowrap ml-1">기상 목표 시간</h3>
+            <h3 className="text-base font-black text-slate-800 whitespace-nowrap ml-1">기상 목표 시간 수정해보기</h3>
           </div>
           <div className="flex gap-2">
             <input 
@@ -162,29 +162,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        <div className="p-[15px] bg-slate-50 rounded-[10px] border border-slate-100 space-y-[15px] shadow-sm">
-          <div className="flex flex-col gap-1 mb-1">
-            <h3 className="text-base font-black text-slate-800 whitespace-nowrap ml-1">하루 리셋 시간</h3>
-            <p className="text-[10px] font-bold text-slate-400 leading-tight ml-1">이 시간이 되면 모든 루틴의 완료 상태가 초기화됩니다.</p>
-          </div>
-          <div className="flex gap-2">
-            <input 
-              type="time" 
-              defaultValue={userData.resetTime}
-              id="resetTimeInput"
-              className="flex-grow text-lg font-black p-3 bg-white border border-slate-200 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
-            />
-            <button 
-              onClick={() => {
-                const input = document.getElementById('resetTimeInput') as HTMLInputElement;
-                if (input) updateResetTime(input.value);
-              }}
-              className="bg-indigo-600 text-white px-5 rounded-[10px] font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
-            >
-              변경
-            </button>
-          </div>
-        </div>
+
 
         <div className="p-[15px] bg-slate-50 rounded-[10px] border border-slate-100 space-y-[15px] shadow-sm">
           <div className="flex items-center justify-between ml-1">

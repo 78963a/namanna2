@@ -17,6 +17,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   userData, 
   setUserData,
   currentTime, 
+  effectiveDate,
   todayStr, 
   handleCheckIn, 
   handleLateCheckIn, 
@@ -38,7 +39,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   };
 
   const getGroupStats = (chunk: RoutineChunk) => {
-    const tasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+    const tasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
     let startTime = '';
     let endTime = '';
     let totalDurationSeconds = 0;
@@ -155,7 +156,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             return 0;
           })
           .map(({ chunk, status }) => {
-            const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+            const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
             const completedTasks = scheduledTasks.filter(t => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
             const startedTasks = scheduledTasks.filter(t => t.startTime || t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
             const isFullyCompleted = status === '전체완료';

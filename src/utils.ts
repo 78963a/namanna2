@@ -67,6 +67,34 @@ export const formatDate = (date: Date): string => {
 };
 
 /**
+ * Returns the effective date object based on the reset hour.
+ * If the current hour is less than the reset hour, it returns the previous day's date.
+ * 
+ * @param {Date} date - The current date/time
+ * @param {number} resetHour - The hour (0-23) when the day resets
+ * @returns {Date} Effective date object
+ */
+export const getEffectiveDateObject = (date: Date, resetHour: number): Date => {
+  const d = new Date(date);
+  if (d.getHours() < resetHour) {
+    d.setDate(d.getDate() - 1);
+  }
+  return d;
+};
+
+/**
+ * Returns the effective date string (YYYY-MM-DD) based on the reset hour.
+ * If the current hour is less than the reset hour, it returns the previous day's date.
+ * 
+ * @param {Date} date - The current date/time
+ * @param {number} resetHour - The hour (0-23) when the day resets
+ * @returns {string} Effective date string
+ */
+export const getEffectiveDate = (date: Date, resetHour: number): string => {
+  return formatDate(getEffectiveDateObject(date, resetHour));
+};
+
+/**
  * Calculates the average wake-up time from a list of records.
  * 
  * @param {WakeUpRecord[]} history - List of wake-up records

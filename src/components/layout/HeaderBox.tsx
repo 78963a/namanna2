@@ -86,7 +86,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
                  fontSize: '0.875rem', // 합산시간 글꼴 크기
                  fontWeight: '900' // 합산시간 글꼴 두께
                }}>
-                 합산시간: {totalDurationMinutes}분
+                 합산시간: {totalDurationMinutes}분 테스트
                </span>
           </div>
         </div>

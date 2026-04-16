@@ -129,6 +129,7 @@ export interface UserData {
   wakeUpTimeHistory?: WakeUpTimeHistoryEntry[];
   routineGroupHistory?: RoutineGroupHistoryEntry[];
   taskHistory?: TaskHistoryEntry[];
+  dailyResetHour?: number; // 0-4
 }
 
 /**
@@ -148,12 +149,14 @@ export interface HeaderBoxProps {
   challengeDays: number;
   successDays: number;
   currentTime: Date;
+  effectiveDate: Date;
 }
 
 export interface HomeViewProps {
   userData: UserData;
   setUserData: React.Dispatch<React.SetStateAction<UserData>>;
   currentTime: Date;
+  effectiveDate: Date;
   todayStr: string;
   handleCheckIn: () => void;
   handleLateCheckIn: () => void;
@@ -183,6 +186,7 @@ export interface ExecutionViewProps {
   selectedChunkId: string | null;
   setActiveTab: (tab: string) => void;
   currentTime: Date;
+  effectiveDate: Date;
   todayStr: string;
   toggleTask: (taskId: string, closingData?: { note?: string, satisfaction?: number }) => void;
   togglePauseTask: (taskId: string) => void;
@@ -195,7 +199,7 @@ export interface ExecutionViewProps {
   setIsSettingsOpen: (isOpen: boolean) => void;
   setSelectedChunkId: (id: string | null) => void;
   handleCheckCheckClick: () => void;
-  isSad: boolean;
+  isCheckCheckAvailable: boolean;
 }
 
 export interface AddRoutineGroupViewProps {

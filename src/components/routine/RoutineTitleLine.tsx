@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Task, TaskType, TaskStatus } from '../../types';
 import { calculateTaskDuration } from '../../utils';
-import phrases from '../../../phrases.json';
+import phrases from '../../phrases.json';
 
 interface RoutineTitleLineProps {
   task: Task;
