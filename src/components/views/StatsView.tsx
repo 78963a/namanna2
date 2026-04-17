@@ -477,7 +477,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
                   {/* 여백 조정 포인트: px-2 py-2 (기존 px-4 py-3에서 축소) 및 컬럼 간격 조정 */}
                   <th className="px-2 py-2">날짜</th>
                   <th className="px-2 py-2">달성률</th>
-                  <th className="px-2 py-2">루틴(실패/스킵/완료/완벽)</th>
+                  <th className="px-2 py-2 whitespace-nowrap">
+                    루틴<br className="md:hidden" />(실패/스킵/완료/완벽)
+                  </th>
                   <th className="px-2 py-2 text-center">시작 ~ 종료</th>
                   <th className="px-2 py-2 text-right">합계</th>
                 </tr>
@@ -487,7 +489,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                   <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-2 py-2 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
                     <td className="px-2 py-2 font-black text-violet-600">{h.rate}</td>
-                    <td className="px-2 py-2 font-bold text-slate-700">
+                    <td className="px-2 py-2 font-bold text-slate-700 whitespace-nowrap">
                       {h.totalActive}{h.breakdown}
                     </td>
                     <td className="px-2 py-2 text-center font-black text-slate-700">

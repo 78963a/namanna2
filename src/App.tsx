@@ -2604,6 +2604,7 @@ export default function App() {
   const [lastCompletedTaskName, setLastCompletedTaskName] = useState<string | null>(null);
   const [activeAlarmChunk, setActiveAlarmChunk] = useState<RoutineChunk | null>(null);
   const [isResetTimeDropdownOpen, setIsResetTimeDropdownOpen] = useState(false);
+  const [swUpdateRegistration, setSwUpdateRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
   // Initialize/Sync chunk time inputs when settings open or routineChunks change
   useEffect(() => {
@@ -2647,6 +2648,26 @@ export default function App() {
       }
     }
   }, [settingsSubView.type]);
+
+  // Listen for Service Worker updates
+  useEffect(() => {
+    const handleUpdate = (event: Event) => {
+      const registration = (event as CustomEvent).detail;
+      setSwUpdateRegistration(registration);
+    };
+
+    window.addEventListener('swUpdateAvailable', handleUpdate);
+    return () => window.removeEventListener('swUpdateAvailable', handleUpdate);
+  }, []);
+
+  const handleUpdateApp = () => {
+    if (swUpdateRegistration?.waiting) {
+      swUpdateRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      // Fallback: just reload if something went wrong but we know there's an update
+      window.location.reload();
+    }
+  };
 
   // Reset tasks when todayStr changes
   useEffect(() => {
@@ -4570,6 +4591,36 @@ export default function App() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* 앱 업데이트 알림 */}
+      <AnimatePresence>
+        {swUpdateRegistration && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-24 left-4 right-4 z-[1001]"
+          >
+            <div className="bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-[20px] shadow-2xl border border-white/10 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
+                  <RotateCcw className="w-5 h-5 text-white animate-spin-slow" />
+                </div>
+                <div>
+                  <p className="text-sm font-black">새로운 버전이 있습니다!</p>
+                  <p className="text-[10px] text-slate-400">데이터 손실 없이 지금 업데이트하세요.</p>
+                </div>
+              </div>
+              <button
+                onClick={handleUpdateApp}
+                className="bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-[12px] text-xs font-black transition-all active:scale-95 whitespace-nowrap"
+              >
+                지금 새로고침
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

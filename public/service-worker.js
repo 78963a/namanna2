@@ -7,12 +7,19 @@ const ASSETS_TO_CACHE = [
 
 // 서비스 워커 설치: 자산 캐싱
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // 즉시 활성화를 유도
+  // self.skipWaiting(); // 사용자에게 알림을 주기 위해 즉시 활성화를 주석 처리하거나 제거합니다.
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+});
+
+// 메세지 수신: 업데이트 적용을 위한 skipWaiting 실행
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // 서비스 워커 활성화: 오래된 캐시 정리

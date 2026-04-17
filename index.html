@@ -21,15 +21,20 @@
           navigator.serviceWorker.register('service-worker.js').then((registration) => {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
             
-            // 업데이트가 업데이트 되었을 때 즉시 페이지를 새로고침하는 옵션을 고려하거나
-            // 사용자에게 알림을 줄 수 있는 기반을 마련합니다.
+            // 이미 대기 중인 서비스 워커가 있는지 확인
+            if (registration.waiting) {
+              window.dispatchEvent(new CustomEvent('swUpdateAvailable', { detail: registration }));
+            }
+
+            // 새로운 서비스 워커가 발견되었을 때
             registration.onupdatefound = () => {
               const installingWorker = registration.installing;
               if (installingWorker) {
                 installingWorker.onstatechange = () => {
                   if (installingWorker.state === 'installed') {
                     if (navigator.serviceWorker.controller) {
-                      console.log('New version available. Refreshing might be needed.');
+                      // 새로운 업데이트가 설치되었음을 알림
+                      window.dispatchEvent(new CustomEvent('swUpdateAvailable', { detail: registration }));
                     }
                   }
                 };
