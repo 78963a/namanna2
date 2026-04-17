@@ -93,6 +93,7 @@ export interface RoutineGroupHistoryEntry {
   completionStatus: '비활성' | '미실행' | '미완료' | '전체완료';
   completedAt: string | null; // HH:mm:ss
   totalDuration: number; // seconds
+  selectedPhrase?: string;
   satisfaction?: number;
   closingNote?: string;
 }
@@ -130,6 +131,8 @@ export interface UserData {
   routineGroupHistory?: RoutineGroupHistoryEntry[];
   taskHistory?: TaskHistoryEntry[];
   dailyResetHour?: number; // 0-4
+  autoStartTimer?: boolean;
+  userName?: string;
 }
 
 /**

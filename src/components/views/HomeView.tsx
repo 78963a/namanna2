@@ -188,6 +188,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
               }
             }
           
+            // [코멘트] 루틴그룹 박스 배경색 설정 (상태에 따라 연한 배경색 적용)
+            // 미실행: bg-white, 실행중: bg-amber-50(연노랑), 완료: bg-emerald-50(연초록), 완벽: bg-sky-50(연파란)
+            let boxBgColor = 'bg-white';
+            if (!isInactive) {
+              if (displayStatus === '실행중') boxBgColor = 'bg-amber-50';
+              else if (displayStatus === '완료') boxBgColor = 'bg-emerald-50';
+              else if (displayStatus === '완벽') boxBgColor = 'bg-sky-50';
+            }
+          
           return (
             <section 
               key={chunk.id} 
@@ -204,7 +213,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 }
                 onEnterExecution(chunk.id);
               }}
-              className={`bg-white rounded-[10px] border border-slate-100 shadow-sm overflow-hidden transition-all group ${isInactive ? 'opacity-60 grayscale cursor-default' : 'cursor-pointer active:scale-[0.99]'}`}
+              className={`${boxBgColor} rounded-[10px] border border-slate-100 shadow-sm overflow-hidden transition-all group ${isInactive ? 'opacity-60 grayscale cursor-default' : 'cursor-pointer active:scale-[0.99]'}`}
             >
               <div className="p-[15px] relative">
                 <div className="flex justify-between items-start mb-2">
@@ -232,7 +241,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 
                 <div className="mb-1 pr-8">
                   <h3 className="text-sm font-bold text-slate-800 leading-relaxed">
-                    <RoutineTitle chunk={chunk} status={displayStatus} />
+                    {(() => {
+                      const entry = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
+                      return <RoutineTitle chunk={chunk} status={displayStatus} selectedPhrase={entry?.selectedPhrase} />;
+                    })()}
                   </h3>
                 </div>
 

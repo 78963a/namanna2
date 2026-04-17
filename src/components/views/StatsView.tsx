@@ -35,7 +35,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [calendarYear, setCalendarYear] = useState(currentTime.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(currentTime.getMonth());
-  const [selectedReview, setSelectedReview] = useState<{ date: string; note: string; satisfaction: number } | null>(null);
 
   // Scroll to top when entering detailed view
   useEffect(() => {
@@ -45,8 +44,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
       setCalendarMonth(currentTime.getMonth());
     }
   }, [selectedGroupId]);
-
-  const satisfactionIcons = ['🥵', '🥲', '😊', '😁', '🥳'];
 
   const prevMonth = () => {
     if (calendarMonth === 0) {
@@ -179,12 +176,53 @@ export const StatsView: React.FC<StatsViewProps> = ({
       };
     });
 
+    const dailyHistory7 = last7Days.map(date => {
+      const rate = (userData.dailyCompletionRate?.[date]) || 0;
+      const dayTaskHistory = (userData.taskHistory || []).filter(h => h.date === date && h.isActive);
+      const dayGroupHistory = (userData.routineGroupHistory || []).filter(h => h.date === date && h.isActive);
+
+      let perfect = 0;
+      let completed = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      dayTaskHistory.forEach(h => {
+        if (h.status === '완벽') perfect++;
+        else if (h.status === '완료') completed++;
+        else if (h.status === '스킵') skipped++;
+        else failed++;
+      });
+
+      const firstStarts = dayGroupHistory
+        .filter(h => h.firstTaskStartTime)
+        .map(h => timeToMinutes(h.firstTaskStartTime!));
+      const completions = dayGroupHistory
+        .filter(h => h.completedAt)
+        .map(h => timeToMinutes(h.completedAt!));
+      const durations = dayGroupHistory.map(h => h.totalDuration || 0);
+
+      const minStart = firstStarts.length > 0 ? Math.min(...firstStarts) : null;
+      const maxEnd = completions.length > 0 ? Math.max(...completions) : null;
+      const sumDurationSeconds = durations.reduce((a, b) => a + b, 0);
+
+      return {
+        date,
+        rate: Math.floor(rate) + '%',
+        totalActive: dayTaskHistory.length,
+        breakdown: `(${failed}/${skipped}/${completed}/${perfect})`,
+        startTime: minStart !== null ? minutesToTime(minStart) : '--:--',
+        endTime: maxEnd !== null ? minutesToTime(maxEnd) : '--:--',
+        duration: sumDurationSeconds > 0 ? Math.floor(sumDurationSeconds / 60) + '분' : '0분'
+      };
+    }).reverse();
+
     return {
       avgTotalRate7: Math.floor(avgRate7).toString(),
       avgTotalRate30: Math.floor(avgRate30).toString(),
-      groups: groupStats
+      groups: groupStats,
+      dailyHistory: dailyHistory7
     };
-  }, [userData.routineChunks, userData.routineGroupHistory, userData.dailyCompletionRate, last7Days, last30Days]);
+  }, [userData.routineChunks, userData.routineGroupHistory, userData.taskHistory, userData.dailyCompletionRate, last7Days, last30Days]);
 
   // --- Detail View Data ---
   const detailData = useMemo(() => {
@@ -262,7 +300,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           <h2 className="text-xl font-black text-slate-900">{detailData.name} 상세 통계</h2>
         </div>
 
-        {/* 7-Day History Table */}
+        {/* 7-Day History Table 루틴그룹별 최근 7일간 통계*/}
         <section className="bg-white rounded-[15px] shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-4 bg-slate-50 border-b border-slate-100">
             <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
@@ -334,177 +372,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
             </div>
           ))}
         </div>
-
-        {/* Review Box (후기박스) */}
-        <section className="bg-white p-6 rounded-[20px] shadow-sm border border-slate-100 space-y-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-amber-50 p-2.5 rounded-[12px]">
-                <Calendar className="w-5 h-5 text-amber-600" />
-              </div>
-              <div><h2 className="text-lg font-black text-slate-800">루틴 후기</h2></div>
-            </div>
-            <div className="flex items-center gap-2 ml-1">
-              {(() => {
-                const hasDataInYear = (year: number) => 
-                  (userData.routineGroupHistory || []).some(h => h.groupId === selectedGroupId && new Date(h.date).getFullYear() === year);
-                const hasDataInMonth = (year: number, month: number) => 
-                  (userData.routineGroupHistory || []).some(h => {
-                    const d = new Date(h.date);
-                    return h.groupId === selectedGroupId && d.getFullYear() === year && d.getMonth() === month;
-                  });
-
-                const canPrevYear = hasDataInYear(calendarYear - 1);
-                const canNextYear = hasDataInYear(calendarYear + 1);
-                
-                let prevM = calendarMonth - 1;
-                let prevY = calendarYear;
-                if (prevM < 0) { prevM = 11; prevY--; }
-                const canPrevMonth = hasDataInMonth(prevY, prevM);
-
-                let nextM = calendarMonth + 1;
-                let nextY = calendarYear;
-                if (nextM > 11) { nextM = 0; nextY++; }
-                const canNextMonth = hasDataInMonth(nextY, nextM);
-
-                return (
-                  <>
-                    <button 
-                      disabled={!canPrevYear}
-                      onClick={prevYear} 
-                      className={`p-1 rounded-full border transition-all ${canPrevYear ? 'hover:bg-slate-100 text-slate-600 border-slate-200' : 'text-slate-200 border-slate-100 cursor-not-allowed'}`}
-                    >
-                      <ChevronsLeft className="w-4 h-4" />
-                    </button>
-                    <button 
-                      disabled={!canPrevMonth}
-                      onClick={prevMonth} 
-                      className={`p-1 rounded-full border transition-all ${canPrevMonth ? 'hover:bg-slate-100 text-slate-600 border-slate-200' : 'text-slate-200 border-slate-100 cursor-not-allowed'}`}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <span className="text-sm font-black text-slate-700 min-w-[80px] text-center">
-                      {calendarYear}.{String(calendarMonth + 1).padStart(2, '0')}
-                    </span>
-                    <button 
-                      disabled={!canNextMonth}
-                      onClick={nextMonth} 
-                      className={`p-1 rounded-full border transition-all ${canNextMonth ? 'hover:bg-slate-100 text-slate-600 border-slate-200' : 'text-slate-200 border-slate-100 cursor-not-allowed'}`}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                    <button 
-                      disabled={!canNextYear}
-                      onClick={nextYear} 
-                      className={`p-1 rounded-full border transition-all ${canNextYear ? 'hover:bg-slate-100 text-slate-600 border-slate-200' : 'text-slate-200 border-slate-100 cursor-not-allowed'}`}
-                    >
-                      <ChevronsRight className="w-4 h-4" />
-                    </button>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1">
-            {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-              <div key={d} className="text-center text-[10px] font-black text-slate-400 py-2">{d}</div>
-            ))}
-            {calendarDays.map((day, i) => {
-              if (day === null) return <div key={`empty-${i}`} />;
-              
-              const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              const historyEntry = (userData.routineGroupHistory || []).find(h => h.groupId === selectedGroupId && h.date === dateStr);
-              const hasReview = historyEntry?.satisfaction !== undefined || historyEntry?.closingNote;
-
-              return (
-                <button
-                  key={day}
-                  disabled={!hasReview}
-                  onClick={() => {
-                    if (hasReview) {
-                      setSelectedReview({
-                        date: dateStr,
-                        note: historyEntry?.closingNote || '',
-                        satisfaction: historyEntry?.satisfaction || 3
-                      });
-                    }
-                  }}
-                  className={`aspect-square flex flex-col items-center justify-center rounded-[12px] transition-all ${
-                    hasReview 
-                      ? 'bg-indigo-50 hover:bg-indigo-100 ring-1 ring-indigo-100' 
-                      : 'bg-slate-50 text-slate-400'
-                  }`}
-                >
-                  {hasReview ? (
-                    <span className="text-xl">{satisfactionIcons[(historyEntry?.satisfaction || 3) - 1]}</span>
-                  ) : (
-                    <span className="text-xs font-bold">{day}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Review Detail Popup */}
-        <AnimatePresence>
-          {selectedReview && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="bg-white rounded-[25px] w-full max-w-sm shadow-2xl overflow-hidden"
-              >
-                <div className="p-6 space-y-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{selectedReview.date}</p>
-                      <h3 className="text-xl font-black text-slate-900">오늘의 후기</h3>
-                    </div>
-                    <button 
-                      onClick={() => setSelectedReview(null)}
-                      className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
-                    >
-                      <ChevronRight className="w-6 h-6 rotate-90" />
-                    </button>
-                  </div>
-
-                  <div className="flex justify-center py-4">
-                    <div className="text-6xl animate-bounce">
-                      {satisfactionIcons[selectedReview.satisfaction - 1]}
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-50 p-5 rounded-[20px] border border-slate-100 min-h-[100px]">
-                    <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
-                      {selectedReview.note || '작성된 메모가 없습니다.'}
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        deleteReview(selectedGroupId!, selectedReview.date);
-                        setSelectedReview(null);
-                      }}
-                      className="flex-1 py-4 bg-rose-50 text-rose-600 rounded-[15px] font-black text-sm hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
-                    >
-                      <AlertCircle className="w-4 h-4" /> 삭제하기
-                    </button>
-                    <button
-                      onClick={() => setSelectedReview(null)}
-                      className="flex-[2] py-4 bg-slate-900 text-white rounded-[15px] font-black text-sm hover:bg-slate-800 transition-all"
-                    >
-                      닫기
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
       </div>
     );
   }
@@ -512,7 +379,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* 기상시각통계박스 */}
-      <section className="bg-white p-6 rounded-[20px] shadow-sm border border-slate-100 space-y-6">
+      {/* 여백 조정 포인트: px-3 (기존 px-6에서 절반으로 축소) */}
+      <section className="bg-white px-3 py-6 rounded-[20px] shadow-sm border border-slate-100 space-y-6">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-50 p-2.5 rounded-[12px]">
             <Clock className="w-5 h-5 text-indigo-600" />
@@ -544,17 +412,18 @@ export const StatsView: React.FC<StatsViewProps> = ({
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                  <th className="px-4 py-3">날짜</th>
-                  <th className="px-4 py-3">기상 시각</th>
-                  <th className="px-4 py-3 text-right">상태</th>
+                  {/* 여백 조정 포인트: px-2 py-2 (기존 px-4 py-3에서 축소) */}
+                  <th className="px-2 py-2">날짜</th>
+                  <th className="px-2 py-2">기상 시각</th>
+                  <th className="px-2 py-2 text-right">상태</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {wakeUpStats.history.map((h, i) => (
                   <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
-                    <td className="px-4 py-3 font-black text-slate-700">{h.time || '--:--'}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2 py-2 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
+                    <td className="px-2 py-2 font-black text-slate-700">{h.time || '--:--'}</td>
+                    <td className="px-2 py-2 text-right">
                       <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black ${
                         h.status === '달성' ? 'bg-emerald-100 text-emerald-600' : 
                         h.status === '지각' ? 'bg-rose-100 text-rose-600' : 
@@ -572,7 +441,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
       </section>
 
       {/* 달성율통계박스 */}
-      <section className="bg-white p-6 rounded-[20px] shadow-sm border border-slate-100 space-y-6">
+      {/* 여백 조정 포인트: px-3 (기존 px-6에서 절반으로 축소) */}
+      <section className="bg-white px-3 py-6 rounded-[20px] shadow-sm border border-slate-100 space-y-6">
         <div className="flex items-center gap-3">
           <div className="bg-violet-50 p-2.5 rounded-[12px]">
             <Target className="w-5 h-5 text-violet-600" />
@@ -590,6 +460,49 @@ export const StatsView: React.FC<StatsViewProps> = ({
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균 달성률</p>
             <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
             <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate30}%</h3>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[15px] border border-slate-100 overflow-hidden">
+          <div className="p-4 bg-slate-50 border-b border-slate-100">
+            <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
+              <History className="w-4 h-4 text-violet-500" />
+              최근 7일 기록
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[12px]">
+              <thead>
+                <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
+                  {/* 여백 조정 포인트: px-2 py-2 (기존 px-4 py-3에서 축소) 및 컬럼 간격 조정 */}
+                  <th className="px-2 py-2">날짜</th>
+                  <th className="px-2 py-2">달성률</th>
+                  <th className="px-2 py-2">루틴(실패/스킵/완료/완벽)</th>
+                  <th className="px-2 py-2 text-center">시작 ~ 종료</th>
+                  <th className="px-2 py-2 text-right">합계</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {achievementStats.dailyHistory.map((h, i) => (
+                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-2 py-2 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
+                    <td className="px-2 py-2 font-black text-violet-600">{h.rate}</td>
+                    <td className="px-2 py-2 font-bold text-slate-700">
+                      {h.totalActive}{h.breakdown}
+                    </td>
+                    <td className="px-2 py-2 text-center font-black text-slate-700">
+                      {/* 모바일 대응 시작시각/~/종료시각 줄바꿈 */}
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-0 md:gap-1 tracking-tighter">
+                        <span>{h.startTime}</span>
+                        <span className="text-[8px] text-slate-300 md:text-xs">~</span>
+                        <span>{h.endTime}</span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-2 text-right font-black text-indigo-600">{h.duration}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 

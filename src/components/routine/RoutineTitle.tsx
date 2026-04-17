@@ -7,14 +7,32 @@ interface RoutineTitleProps {
   chunk: RoutineChunk;
   status?: string;
   nameClassName?: string;
+  selectedPhrase?: string;
 }
 
 export const RoutineTitle: React.FC<RoutineTitleProps> = ({ 
   chunk, 
   status = '미실행',
-  nameClassName = "text-slate-900"
+  nameClassName = "text-slate-900",
+  selectedPhrase
 }) => {
   const processedMessage = useMemo(() => {
+    if (selectedPhrase) {
+      const titleStyle = phrases.settings.title_style;
+      const purposeStyle = phrases.settings.purpose_style;
+
+      const titleHtml = `<span style="color: ${titleStyle.color}; font-size: ${titleStyle.fontSize}; font-weight: ${titleStyle.fontWeight}; font-family: '${titleStyle.fontFamily || 'inherit'}', sans-serif;">${chunk.name}</span>`;
+      const purposeHtml = `<span style="color: ${purposeStyle.color}; font-size: ${purposeStyle.fontSize}; font-weight: ${purposeStyle.fontWeight}; font-family: '${purposeStyle.fontFamily || 'inherit'}', sans-serif;">${chunk.purpose || '목표'}</span>`;
+
+      let message = selectedPhrase;
+      message = message.replace(/\{\{title\}\}/g, titleHtml);
+      message = message.replace(/\{\{purpose\}\}/g, purposeHtml);
+      // Even though ExecutionView already replaced placeholders, we do it again just in case or for future proofing if we store templates
+      // Actually handleFinalSave stores the already processed phrase (with names, but maybe not styles).
+      // Wait, if handleFinalSave stores "나는 아침 루틴을 완료한 멋진 사람이다", then we don't need to replace anything.
+      return message;
+    }
+
     const statusMap: Record<string, string> = {
       '비활성': 'INACTIVE',
       '미실행': 'NOT_STARTED',

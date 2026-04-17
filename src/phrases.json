@@ -10,6 +10,10 @@
     "title_style": { "color": "#660000", "fontSize": "2rem", "fontWeight": "bold", "fontFamily": "궁서" }
   },
   "routine_messages": {
+    "COMPLETION_SELECTION_TEMPLATES": [
+      "나는 {{title}}을 완료한 {{purpose}}이다",
+      "{{title}}을 완료하다니, 정말 훌륭해!"
+    ],
     "INACTIVE": [
       "{{purpose}}이/가 되려면 때로는 {{title}}을/를 쉬어가야하지"
     ],

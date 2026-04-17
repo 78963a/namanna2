@@ -104,7 +104,6 @@ export const CheckCheckIcon: React.FC<PixelArtProps> = ({ iconId, size = 32 }) =
     chick: {
       pixels: [
         "                  ",
-        "                  ",
         "       yyyy       ",
         "     yyYYYYyy     ",
         "    yYYYYYYYYy    ",
@@ -117,10 +116,12 @@ export const CheckCheckIcon: React.FC<PixelArtProps> = ({ iconId, size = 32 }) =
         "   yyyyyyyyyyyy   ",
         "  yyyyyyyyyyyyyy  ",
         "   yyyyyyyyyyyy   ",
-        "     yy    yy     ",
+        "   yyyyyyyyyyyy   ",
+        "     yyyyyyyy     ",
         "     yy    yy     ",
         "    yyy    yyy    ",
         "                  "
+
       ],
       colors: { Y: '#FDE047', y: '#FACC15', E: '#000000', B: '#F97316' }
     },

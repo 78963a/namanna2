@@ -9,6 +9,7 @@ import {
   CheckCircle2, 
   Circle, 
   ArrowRightCircle,
+  User,
   Settings, 
   Plus, 
   Trash2, 
@@ -28,6 +29,7 @@ import {
   GripVertical,
   RotateCcw,
   Target,
+  ChevronDown,
   Zap,
   PlusCircle,
   Hourglass,
@@ -101,11 +103,8 @@ import { HomeView } from './components/views/HomeView';
 import { StatsView } from './components/views/StatsView';
 // import { ExecutionView } from './components/views/ExecutionView';
 // import { AddRoutineGroupView } from './components/views/AddRoutineGroupView';
-import { SettingsView } from './components/views/SettingsView';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { CelebrationModal } from './components/common/CelebrationModal';
-// import { ChecklistModal } from './components/routine/ChecklistModal';
-// import { RoutineTitle } from './components/routine/RoutineTitle';
 import { RoutineTitleLine } from './components/routine/RoutineTitleLine';
 // import { TaskInputSection } from './components/routine/TaskInputSection';
 // import { SortableTaskItem } from './components/routine/SortableTaskItem';
@@ -238,6 +237,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   const allTasksDone = scheduledTasks.length > 0 && scheduledTasks.every(t => t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
   const wasDoneOnMount = useRef(allTasksDone);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Re-completion logic: if it becomes not done, reset the mount flag
   useEffect(() => {
@@ -315,18 +315,19 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     }
   }, [animationStage]);
 
-  const emojis = [
-    { value: 1, icon: '🥵' },
-    { value: 2, icon: '🥲' },
-    { value: 3, icon: '😊' },
-    { value: 4, icon: '😁' },
-    { value: 5, icon: '🥳' }
-  ];
-
-  const [closingNote, setClosingNote] = useState('');
-  const [satisfaction, setSatisfaction] = useState(3);
-
-  const memoRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (animationStage === 'final') {
+      const timer = setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({
+            top: scrollContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 300); // Give a bit more time for the phrase list entrance animation
+      return () => clearTimeout(timer);
+    }
+  }, [animationStage]);
 
   const getElapsed = (task: Task) => {
     return calculateTaskDuration(task, currentTime);
@@ -360,16 +361,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  useEffect(() => {
-    if (animationStage === 'final') {
-      // Scroll to satisfaction/memo
-      setTimeout(() => {
-        memoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 500);
-    }
-  }, [animationStage]);
-
-  const handleFinalSave = () => {
+  const handleFinalSave = (phrase: string) => {
     if (selectedChunkId) {
       setUserData(prev => {
         const newGroupHistory = [...(prev.routineGroupHistory || [])];
@@ -378,8 +370,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
         if (entryIdx >= 0) {
           newGroupHistory[entryIdx] = {
             ...newGroupHistory[entryIdx],
-            satisfaction,
-            closingNote
+            selectedPhrase: phrase
           };
         } else {
           newGroupHistory.push({
@@ -390,8 +381,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
             completionStatus: '전체완료',
             completedAt: null,
             totalDuration: 0,
-            satisfaction,
-            closingNote
+            selectedPhrase: phrase
           });
         }
         
@@ -403,8 +393,6 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     }
     
     // Reset states and go home
-    setClosingNote('');
-    setSatisfaction(3);
     setSelectedChunkId(null);
     setActiveTab('home');
     setAnimationStage('none');
@@ -415,7 +403,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     return (
       <div className={`fixed inset-0 z-[300] flex flex-col ${animationStage === 'whiteout' ? 'bg-white' : 'bg-[#F7FEE7]'} transition-colors duration-500`}>
         {/* 홈아이콘줄 (Sticky Header Box) - Replicated from Home Screen */}
-        {(animationStage === 'final' || animationStage === 'fireworks' || animationStage === 'title') && (
+        {(animationStage === 'final') && (
           <div className="sticky top-0 z-40 bg-[#F7FEE7]/80 backdrop-blur-md pt-2.5 pb-0 flex-shrink-0">
             <div className="max-w-2xl mx-auto px-4">
               <nav className="flex items-center gap-3">
@@ -490,7 +478,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           </div>
         )}
 
-        <div className="flex-grow overflow-y-auto pb-20">
+        <div ref={scrollContainerRef} className="flex-grow overflow-y-auto pb-20">
           <div className="p-6 flex flex-col items-center">
             {/* Rising Tasks List */}
             <div className="w-full max-w-sm space-y-3 mt-8">
@@ -545,45 +533,47 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
             </motion.div>
           )}
 
-          {/* Satisfaction and Memo (Final Stage) */}
+          {/* Completion Phrase Selection (Final Stage) */}
           {animationStage === 'final' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-sm space-y-8 mt-4"
+              className="w-full max-w-sm space-y-4 mt-8"
             >
-              <div className="space-y-4">
-                <h3 className="text-center text-lg font-black text-slate-700">오늘의 루틴은 어땠나요?</h3>
-                <div className="flex justify-around items-center py-4">
-                  {emojis.map((emoji) => (
-                    <button
-                      key={emoji.value}
-                      onClick={() => setSatisfaction(emoji.value)}
-                      className={`flex flex-col items-center gap-1 transition-all ${satisfaction === emoji.value ? 'scale-150' : 'opacity-40 grayscale hover:opacity-100 hover:grayscale-0'}`}
-                    >
-                      <span className="text-4xl">{emoji.icon}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+              <h3 className="text-center text-lg font-black text-slate-700 mb-6">축하합니다! 문구를 선택해주세요.</h3>
+              
               <div className="space-y-3">
-                <label className="block text-sm font-black text-slate-500 ml-1">오늘의 한 줄 메모</label>
-                <textarea
-                  ref={memoRef}
-                  value={closingNote}
-                  onChange={(e) => setClosingNote(e.target.value.slice(0, 140))}
-                  placeholder="오늘의 소감을 남겨주세요..."
-                  className="w-full bg-white border border-slate-200 rounded-[20px] p-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[120px] resize-none shadow-sm"
-                />
-              </div>
+                {phrases.routine_messages.COMPLETION_SELECTION_TEMPLATES.map((template, idx) => {
+                  let storedPhrase = template;
+                  // Resolve particles but keep the placeholder for RoutineTitle to style
+                  const resolveParticles = (msg: string, tag: 'title' | 'purpose', value: string) => {
+                    const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는)`, 'g');
+                    return msg.replace(regex, (_, p1) => {
+                      return `{{${tag}}}` + getJosa(value, p1 as any);
+                    });
+                  };
 
-              <button 
-                onClick={handleFinalSave}
-                className="w-full py-5 bg-indigo-600 text-white rounded-[20px] font-black text-xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-[0.98]"
-              >
-                기록 완료하고 홈으로
-              </button>
+                  storedPhrase = resolveParticles(storedPhrase, 'title', chunk.name);
+                  storedPhrase = resolveParticles(storedPhrase, 'purpose', chunk.purpose || '목표');
+
+                  // For the UI display in buttons, replace everything
+                  let displayPhrase = storedPhrase;
+                  displayPhrase = displayPhrase.replace(/\{\{title\}\}/g, chunk.name);
+                  displayPhrase = displayPhrase.replace(/\{\{purpose\}\}/g, chunk.purpose || '목표');
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handleFinalSave(storedPhrase)}
+                      className="w-full p-6 bg-white border-2 border-slate-100 rounded-[20px] text-left hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-100 transition-all active:scale-[0.98] group"
+                    >
+                      <p className="text-base font-black text-slate-700 group-hover:text-indigo-600 leading-relaxed">
+                        {displayPhrase}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
             </motion.div>
           )}
         </div>
@@ -720,8 +710,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                         <span className="text-xl text-slate-400 ml-2">/ {activeTask.targetDuration}분</span>
                       </div>
                       <div className="flex items-center gap-2 mt-2">
-                        <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${activeTask.isPaused ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {activeTask.isPaused ? 'Paused' : 'In Progress'}
+                        <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${activeTask.isPaused || !activeTask.startTime ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {!activeTask.startTime ? 'Ready' : activeTask.isPaused ? 'Paused' : 'In Progress'}
                         </p>
                       </div>
                     </div>
@@ -796,7 +786,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                       }`}
                     >
                       {activeTask.isPaused || !activeTask.startTime ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
-                      {activeTask.isPaused || !activeTask.startTime ? 'RESUME' : 'PAUSE'}
+                      {!activeTask.startTime ? 'START' : activeTask.isPaused ? 'RESUME' : 'PAUSE'}
                     </button>
                     <button 
                       onClick={() => laterTask(activeTask.id)}
@@ -2211,13 +2201,14 @@ const RoutineGroupFormView: React.FC<{
         }}
         setConfirmModal={setConfirmModal}
       />
-      <div className="bg-white border border-slate-200 rounded-[10px] p-5 shadow-none space-y-5">
+      {/* 여백 조정 포인트: px-2.5 (기존 p-5에서 좌우 여백만 절반으로 축소) */}
+      <div className="bg-white border border-slate-200 rounded-[10px] px-2.5 py-5 shadow-none space-y-5">
         <div className="space-y-1 mb-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
               <PlusCircle className="w-6 h-6 text-indigo-600" />
             </div>
-            <h2 className="text-2xl font-black text-slate-900">{mode === 'edit' ? '루틴 그룹 수정' : '새로운 루틴 그룹 만들기'}</h2>
+            <h2 className="text-xl font-black text-slate-900">{mode === 'edit' ? '루틴 그룹 수정' : '새로운 루틴 그룹 만들기'}</h2>
           </div>
         </div>
         <div className="space-y-5">
@@ -2504,7 +2495,9 @@ export default function App() {
         lastCheckCheckTime: Date.now(),
         lastResetDate: null,
         dailyCheckCheckCounts: {},
-        autoReorderGroups: false
+        autoReorderGroups: false,
+        autoStartTimer: false,
+        userName: '나'
       };
     }
 
@@ -2610,6 +2603,7 @@ export default function App() {
   const [chunkScheduleInputs, setChunkScheduleInputs] = useState<Record<string, { type: 'days' | 'weekly' | 'monthly' | 'yearly', days: number[], freq: number }>>({});
   const [lastCompletedTaskName, setLastCompletedTaskName] = useState<string | null>(null);
   const [activeAlarmChunk, setActiveAlarmChunk] = useState<RoutineChunk | null>(null);
+  const [isResetTimeDropdownOpen, setIsResetTimeDropdownOpen] = useState(false);
 
   // Initialize/Sync chunk time inputs when settings open or routineChunks change
   useEffect(() => {
@@ -2850,7 +2844,7 @@ export default function App() {
         isActive,
         firstTaskStartTime: firstStartTime,
         completionStatus,
-        completedAt: allFinished ? lastEndTime : null,
+        completedAt: lastEndTime,
         totalDuration,
         satisfaction,
         closingNote
@@ -2965,7 +2959,7 @@ export default function App() {
     setActiveTab('execution');
 
     // Only start if it's not already active (to avoid resetting startTime)
-    if (targetTask && (!targetTask.startTime || targetTask.isPaused || targetTask.laterTimestamp)) {
+    if (userData.autoStartTimer && targetTask && (!targetTask.startTime || targetTask.isPaused || targetTask.laterTimestamp)) {
       const shouldReset = !!targetTask.laterTimestamp || !targetTask.isPaused;
       startTask(targetTask.id, shouldReset);
     }
@@ -3753,6 +3747,20 @@ export default function App() {
     });
   };
 
+  const updateUserName = (name: string) => {
+    const trimmed = name.trim();
+    const finalName = trimmed === '' ? '나' : trimmed;
+    setConfirmModal({
+      isOpen: true,
+      title: '사용자 이름 변경',
+      message: `사용자 이름을 '${finalName}'으로 변경하시겠습니까?`,
+      onConfirm: () => {
+        setUserData(prev => ({ ...prev, userName: finalName }));
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   const updateWakeUpTime = (time: string) => {
     setConfirmModal({
       isOpen: true,
@@ -3850,23 +3858,51 @@ export default function App() {
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <User className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">사용자 이름</h3>
+              </div>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  defaultValue={userData.userName || '나'}
+                  id="userNameInput"
+                  placeholder="나"
+                  className="flex-grow text-base font-black p-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+                <button 
+                  onClick={() => {
+                    const input = document.getElementById('userNameInput') as HTMLInputElement;
+                    if (input) updateUserName(input.value);
+                  }}
+                  className="bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+                >
+                  저장
+                </button>
+              </div>
+            </div>
+
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Settings className="w-5 h-5 text-indigo-600" />
                 </div>
                 <h3 className="text-base font-black text-slate-800 whitespace-nowrap">기상 목표 시간</h3>
               </div>
               <div className="flex gap-2">
+                {/* [코멘트] 기상 목표 시간 입력창 및 버튼 크기 줄임 / text-base: 글자크기, p-2: 안쪽여백, px-4: 가로여백, rounded-xl: 모서리곡률 */}
                 <input 
                   type="time" 
                   defaultValue={userData.targetWakeUpTime}
                   id="wakeUpTimeInput"
-                  className="flex-grow text-lg font-black p-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
+                  className="flex-grow text-base font-black p-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
                 <button 
                   onClick={() => {
                     const input = document.getElementById('wakeUpTimeInput') as HTMLInputElement;
                     if (input) updateWakeUpTime(input.value);
                   }}
-                  className="bg-indigo-600 text-white px-5 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+                  className="bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
                 >
                   변경
                 </button>
@@ -3881,23 +3917,89 @@ export default function App() {
                   </div>
                   <h3 className="text-base font-black text-slate-800 whitespace-nowrap">하루 리셋 시간</h3>
                 </div>
-                <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">이 시간이 되면 모든 루틴의 완료 상태가 초기화됩니다.</p>
+                <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">이 시간이 되면 모든 루틴의 완료 상태가 초기화되며, 그 전까지의 기록은 전날로 합산됩니다.</p>
               </div>
-              <div className="flex gap-2">
-                <input 
-                  type="time" 
-                  defaultValue={userData.resetTime}
-                  id="resetTimeInput"
-                  className="flex-grow text-lg font-black p-3 bg-slate-50 border border-slate-100 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm"
-                />
+              
+              <div className="relative">
+                {/* [코멘트] 하루 리셋 시간 선택 버튼 크기 줄임 / p-2.5: 안쪽여백, text-base: 글자크기, rounded-xl: 모서리곡률 */}
                 <button 
-                  onClick={() => {
-                    const input = document.getElementById('resetTimeInput') as HTMLInputElement;
-                    if (input) updateResetTime(input.value);
-                  }}
-                  className="bg-indigo-600 text-white px-5 rounded-[10px] font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+                  onClick={() => setIsResetTimeDropdownOpen(!isResetTimeDropdownOpen)}
+                  className="w-full flex items-center justify-between p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition-all group"
                 >
-                  변경
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center">
+                      <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                    </div>
+                    <span className="text-base font-black text-slate-800">
+                      오전 {parseInt(userData.resetTime.split(':')[0])}시
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isResetTimeDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                <AnimatePresence>
+                  {isResetTimeDropdownOpen && (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[60]"
+                        onClick={() => setIsResetTimeDropdownOpen(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        className="absolute left-0 right-0 mt-2 bg-white border border-slate-100 rounded-xl shadow-2xl z-[70] overflow-hidden"
+                      >
+                        <div className="p-1.5 space-y-0.5">
+                          {[0, 1, 2, 3, 4].map((hour) => {
+                            const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+                            const isSelected = userData.resetTime === timeStr;
+                            return (
+                              /* [코멘트] 드롭다운 목록 아이템 크기 줄임 / p-2.5: 안쪽여백, text-sm: 글자크기 */
+                              <button
+                                key={hour}
+                                onClick={() => {
+                                  updateResetTime(timeStr);
+                                  setIsResetTimeDropdownOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between p-2.5 rounded-lg transition-all ${
+                                  isSelected 
+                                    ? 'bg-indigo-600 text-white shadow-md' 
+                                    : 'hover:bg-slate-50 text-slate-600'
+                                }`}
+                              >
+                                <span className="font-black text-sm">오전 {hour}시</span>
+                                {isSelected && <Check className="w-4 h-4 text-white" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Settings className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-base font-black text-slate-800 whitespace-nowrap">타이머 자동 시작</h3>
+                    <p className="text-[12px] font-bold text-slate-400 leading-tight">홈화면에서 루틴 실행 시 타이머가 자동으로 시작됩니다.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setUserData(prev => ({ ...prev, autoStartTimer: !prev.autoStartTimer }))}
+                  className={`w-12 h-6 rounded-full transition-all relative ${userData.autoStartTimer ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoStartTimer ? 'left-7' : 'left-1'}`} />
                 </button>
               </div>
             </div>
