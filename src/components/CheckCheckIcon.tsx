@@ -6,8 +6,8 @@ interface PixelArtProps {
 }
 
 /**
- * 체크체크박스 진화 단계별 18x18 레트로 도트 아이콘 컴포넌트
- * 각 아이콘은 18x18 그리드로 구성된 SVG입니다.
+ * 체크체크박스 진화 단계별 19x19 레트로 도트 아이콘 컴포넌트
+ * 각 아이콘은 19x19 그리드로 구성된 SVG입니다.
  */
 export const CheckCheckIcon: React.FC<PixelArtProps> = ({ iconId, size = 32 }) => {
   // 도트 그리기 유틸리티
@@ -55,155 +55,352 @@ export const CheckCheckIcon: React.FC<PixelArtProps> = ({ iconId, size = 32 }) =
       ],
       colors: { H: '#F8FAFC', h: '#CBD5E1' }
     },
-    chick_in_shell: {
-      pixels: [
+     broken_egg: {
+ pixels: [
         "                  ",
         "       hhhh       ",
         "     hhHHHHhh     ",
-        "    hHHyyyyHHh    ",
-        "   hHHyyyyyyHHh   ",
-        "  hHHyyEyyEyyHHh  ",
-        "  hHHyyyyyyyBHHh  ",
-        " hHHhhhhhhhhhhHHh ",
-        " hHHhHHHHHHHHhHHh ",
-        " hHHhHHHHHHHHhHHh ",
-        " hHHhHHHHHHHHhHHh ",
-        "  hHHhHHHHHHhHHh  ",
-        "  hHHhHHHHHHhHHh  ",
-        "   hHHhHHHHhHHh   ",
-        "    hHHhhhhHHh    ",
+        "    hHHHHHHHHh    ",
+        "   hHhHHHHHHHHh   ",
+        "  hHHhHHHHHHHHHh  ",
+        "  hHHHhhHHHHHHHh  ",
+        " hHHHHhHHhhHHHHHh ",
+        " hHHHhHHHHHhHHHHh ",
+        " hHHhHHHHHHHHHHHh ",
+        " hHHHhHHHHHHHHHHh ",
+        "  hHHHHHHHHHHHHh  ",
+        "  hHHHHHHHHHHHHh  ",
+        "   hHHHHHHHHHHh   ",
+        "    hHHHHHHHHh    ",
+        "     hhHHHHhh     ",
+        "       hhhh       ",
+        "                  "
+      ],
+      colors: { H: '#F8FAFC', h: '#CBD5E1' }
+    },
+
+       chick_in_shell: {
+      pixels: [
+        "        hhh       ",
+        "      hhHHHhh     ",
+        "     hHHHHHHHh    ",
+        "    hhhhhhhhhh   ",
+        "   hyyyyyyyyyyh   ",
+        "  hyyyyEyyEyyyyh  ",
+        "  hyyyyyByyyyyyh  ",
+        " hhhhyhhhhyhhhhhh ",
+        " hHHHhHHHHhHHhHHh ",
+        " hHHHHHHHHHHHhHHh ",
+        " hHHHHHHHHHHHhHHh ",
+        "  hHHHHHHHHHhHHh  ",
+        "  hHHHHHHHHHhHHh  ",
+        "   hHHHHHHHhHHh   ",
+        "    hHHHHHHHHh    ",
         "     hhHHHHhh     ",
         "       hhhh       ",
         "                  "
       ],
       colors: { H: '#F8FAFC', h: '#CBD5E1', y: '#FDE047', E: '#000000', B: '#F97316' }
     },
-    chick_hat_shell: {
+    
+ chick_hat_shell: {
       pixels: [
         "                  ",
         "       hhhh       ",
         "     hhHHHHhh     ",
         "    hHHHHHHHHh    ",
-        "     hhhhhhhh     ",
-        "     yyyyyyyy     ",
+        "   hHHHHHHHHHHh    ",
+        "   hhhhhhhhhhhh    ",
         "    yyEyyyyEyy    ",
         "    yyyyyyyyyy    ",
         "    yyyyBBByyy    ",
         "    yyyyyyyyyy    ",
         "     yyyyyyyy     ",
-        "     yyyyyyyy     ",
-        "    yyyyyyyyyy    ",
-        "     yy    yy     ",
-        "     yy    yy     ",
-        "    yyy    yyy    ",
-        "                  ",
-        "                  "
-      ],
-      colors: { H: '#F8FAFC', h: '#CBD5E1', y: '#FDE047', E: '#000000', B: '#F97316' }
-    },
-    chick: {
-      pixels: [
-        "                  ",
-        "       yyyy       ",
-        "     yyYYYYyy     ",
-        "    yYYYYYYYYy    ",
-        "   yYYEyyyyEYYy   ",
-        "   yYYYYYYYYYYy   ",
-        "   yYYYYBBBYYYy   ",
-        "   yYYYYYYYYYYy   ",
-        "    yYYYYYYYYy    ",
         "    yyyyyyyyyy    ",
         "   yyyyyyyyyyyy   ",
         "  yyyyyyyyyyyyyy  ",
         "   yyyyyyyyyyyy   ",
-        "   yyyyyyyyyyyy   ",
         "     yyyyyyyy     ",
-        "     yy    yy     ",
         "    yyy    yyy    ",
         "                  "
-
+      ],
+      colors: { H: '#F8FAFC', h: '#CBD5E1', y: '#FDE047', E: '#000000', B: '#F97316' }
+    },
+    yellow_chick: {
+      pixels: [
+        "                  ",
+        "       YYYY       ",
+        "     YYYYYYYY     ",
+        "    YYYYYYYYYY    ",
+        "   YYYEYYYYEYYY   ",
+        "   YYYYYYYYYYYY   ",
+        "   YYYYYBBBYYYY   ",
+        "   YYYYYYYYYYYY   ",
+        "    YYYYYYYYYY    ",
+        "    YYYYYYYYYY    ",
+        "   YYYYYYYYYYYY   ",
+        "  YYYYYYYYYYYYYY  ",
+        "  YYYYYYYYYYYYYYY ",
+        "    YYYYYYYYYYY   ",
+        "     YYYYYYYYY    ",
+        "     YYYYYYYYY    ",
+        "      yy    yy    ",
+        "     yyy    yyy   ",
+        "                  "
       ],
       colors: { Y: '#FDE047', y: '#FACC15', E: '#000000', B: '#F97316' }
     },
     orange_chick: {
       pixels: [
         "                  ",
-        "                  ",
-        "       oooo       ",
-        "     ooOOOOoo     ",
-        "    oOOOOOOOOo    ",
-        "   oOOEooooEOOo   ",
-        "   oOOOOOOOOOOo   ",
-        "   oOOOOBBBOOOo   ",
-        "   oOOOOOOOOOOo   ",
-        "    oOOOOOOOOo    ",
-        "    oooooooooo    ",
-        "   oooooooooooo   ",
-        "  oooooooooooooo  ",
-        "   oooooooooooo   ",
-        "     oo    oo     ",
-        "     oo    oo     ",
-        "    ooo    ooo    ",
+        "       YYYY       ",
+        "     YYYYYYYY     ",
+        "    YYYYYYYYYY    ",
+        "   YYYEYYYYEYYY   ",
+        "   YYYYYYYYYYYY   ",
+        "   YYYYYBBBYYYY   ",
+        "   YYYYYYYYYYYY   ",
+        "    YYYYYYYYYY    ",
+        "    YYYYYYYYYY    ",
+        "   YYYYYYYYYYYY   ",
+        "  YYYYYYYYYYYYYY  ",
+        "  YYYYYYYYYYYYYYY ",
+        "    YYYYYYYYYYY   ",
+        "     YYYYYYYYY    ",
+        "     YYYYYYYYY    ",
+        "      yy    yy    ",
+        "     yyy    yyy   ",
         "                  "
       ],
-      colors: { O: '#FB923C', o: '#F97316', E: '#000000', B: '#F97316' }
+      colors: { Y: '#FB923C', y: '#F97316', E: '#000000', B: '#F97316' }
     },
-    orange_chick_comb: {
+
+
+  orange_chick_comb: {
       pixels: [
-        "       rrr        ",
-        "      rRRRr       ",
-        "       oooo       ",
-        "     ooOOOOoo     ",
-        "    oOOOOOOOOo    ",
-        "   oOOEooooEOOo   ",
-        "   oOOOOOOOOOOo   ",
-        "   oOOOOBBBOOOo   ",
-        "   oOOOOOOOOOOo   ",
-        "    oOOOOOOOOo    ",
-        "    oooooooooo    ",
-        "   oooooooooooo   ",
-        "  oooooooooooooo  ",
-        "   oooooooooooo   ",
-        "     oo    oo     ",
-        "     oo    oo     ",
-        "    ooo    ooo    ",
-        "                  "
+        "      ry rrRr    ",
+        "       rRRRr      ",
+        "       YyyY       ",
+        "     YYYYYYYY     ",
+        "    YYYYYYYYYY    ",
+        "   YYYEYYYYEYYY   ",
+        "   YYYYYYYYYYYY   ",
+        "   YYYYYBBBYYYY   ",
+        "   YYYYYYYYYYYY   ",
+        "    YYYYYYYYYY    ",
+        "    YYYYYYYYYY    ",
+        "   YYYYYYYYYYYY   ",
+        "  YYYYYYYYYYYYYY  ",
+        "  YYYYYYYYYYYYYYY ",
+        "    YYYYYYYYYYY   ",
+        "     YYYYYYYYY    ",
+        "     YYYYYYYYY    ",
+        "      yy    yy    ",
+        "     yyy    yyy   "
       ],
-      colors: { O: '#FB923C', o: '#F97316', E: '#000000', B: '#F97316', R: '#EF4444', r: '#DC2626' }
+      colors: { Y: '#FB923C', y: '#F97316', E: '#000000', B: '#F97316', R: '#EF4444', r: '#DC2626' }
     },
-    white_chicken: {
+
+  white_chicken: {
       pixels: [
-        "       rrr        ",
-        "      rRRRr       ",
-        "       ssss       ",
+        "       rrrr       ",
+        "      rRRRRr      ",
+        "       sRRRs      ",
         "     ssWWWWss     ",
         "    sWWWWWWWWs    ",
-        "   sWWEssssEWWs   ",
+        "   sWWEWWWWEWWs   ",
         "   sWWWWWWWWWWs   ",
         "   sWWWWBBWWWWs   ",
         "   sWWWWWWWWWWs   ",
         "    sWWWWWWWWs    ",
-        "    ssssssssss    ",
-        "   ssssssssssss   ",
-        "  ssssssssssssss  ",
-        "   ssssssssssss   ",
-        "     ss    ss     ",
+        "    sWWWWWWWWs    ",
+        "   sWWWWWWWWWWs   ",
+        "  sWWWWWWWWWWWWs  ",
+        "  ssWWWWWWWWWWss  ",
+        "   sWWWWWWWWWWs   ",
+        "     ssssssss     ",
         "     BB    BB     ",
-        "    BBB    BBB    ",
-        "                  "
+        "    BBB    BBB    "
       ],
       colors: { W: '#FFFFFF', s: '#E2E8F0', E: '#000000', B: '#F97316', R: '#EF4444', r: '#DC2626' }
     },
+
+     ribbon_white_chicken: {
+      pixels: [
+        "       rrrr       ",
+        "      rRRRRr      ",
+        "       sRRRs      ",
+        "     ssWWWWss     ",
+        "    sWWWWWWWWs    ",
+        "   sWWEWWWWEWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "   sWWWWBBWWWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "    sWWWWWWWWs    ",
+        "    sWWxxWxxWWWs  ",
+        "   sWWxxWxWxxWs   ",
+        "  sWWWWWWWWWWWWs  ",
+        "  ssWWWWWWWWWWss  ",
+        "   sWWWWWWWWWWs   ",
+        "     ssssssss     ",
+        "     BB    BB     ",
+        "    BBB    BBB    "
+      ],
+      colors: { W: '#FFFFFF', s: '#E2E8F0', E: '#000000', B: '#F97316', R: '#EF4444', r: '#DC2626', x: '#ff33ff'}
+    },
+
+/**
+ * 꽃 흰 닭 여기에 그리기
+ */
+
+
+   flower_white_chicken: {
+      pixels: [
+        "       rrrr       ",
+        "      rRRRRr      ",
+        "       sRRRs      ",
+        "     ssWWWWss     ",
+        "    sWWWWWWWWs    ",
+        "   sWWEWWWWEWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "   sWWWWBBWWWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "    sWWWWWWWWs    ",
+        "    sWWWWWWWWq    ",
+        "   sWWWWWWWWqqq   ",
+        "  sWWWWWWWWqqaqq  ",
+        "  ssWWWWWWWWqqqs  ",
+        "   sWWWWWWWWWqg   ",
+        "     ssssssss  g  ",
+        "     BB    BBg g  ",
+        "    BBB    BBBggg "
+      ],
+      colors: { W: '#FFFFFF', s: '#E2E8F0', E: '#000000', B: '#F97316', R: '#EF4444', r: '#DC2626', q:'#ff66ff', a:'#ff99ff', g:'#336600'}
+    },
+
+  /**
+   * 노란닭 여기에 그리기
+   */
+
+
+  yellow_chicken: {
+      pixels: [
+        "       rrrr       ",
+        "      rRRRRr      ",
+        "       sRRRs      ",
+        "     ssWWWWss     ",
+        "    sWWWWWWWWs    ",
+        "   sWWEWWWWEWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "   sWWWWBBWWWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "    sWWWWWWWWs    ",
+        "    sWWWWWWWWs    ",
+        "   sWWWWWWWWWWs   ",
+        "  sWWWWWWWWWWWWs  ",
+        "  ssWWWWWWWWWWss  ",
+        "   sWWWWWWWWWWs   ",
+        "     ssssssss     ",
+        "     BB    BB     ",
+        "    BBB    BBB    "
+      ],
+      colors: { W: '#FFFF99', s: '#ffcc33', E: '#000000', B: '#F97316', R: '#EF4444', r: '#DC2626' }
+    },
+
+
+/**
+ * 꽃 노란 닭 여기에 그리기
+ */
+
+
+   flower_yellow_chicken: {
+      pixels: [
+        "       rrrr       ",
+        "      rRRRRr      ",
+        "       sRRRs      ",
+        "     ssWWWWss     ",
+        "    sWWWWWWWWs    ",
+        "   sWWEWWWWEWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "   sWWWWBBWWWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "    sWWWWWWWWs    ",
+        "    sWWWWWWWWq    ",
+        "   sWWWWWWWWqqq   ",
+        "  sWWWWWWWWqqaqq  ",
+        "  ssWWWWWWWWqqqs  ",
+        "   sWWWWWWWWWqg   ",
+        "     ssssssss  g  ",
+        "     BB    BBg g  ",
+        "    BBB    BBBggg "
+      ],
+      colors: {W: '#FFFF99', s: '#ffcc33', E: '#000000', B: '#F97316', R: '#EF4444', r: '#DC2626', q:'#ff66ff', a:'#ff99ff', g:'#336600'}
+    },
+    
+
     red_chicken: {
       pixels: [
-        "       yyy        ",
-        "      yYYYYy      ",
         "       rrrr       ",
-        "     rrRRRRrr     ",
-        "    rRRRRRRRRr    ",
+        "      rRRRRr      ",
+        "       sRRRs      ",
+        "     ssWWWWss     ",
+        "    sWWWWWWWWs    ",
+        "   sWWEWWWWEWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "   sWWWWBBWWWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "    sWWWWWWWWs    ",
+        "    sWWWWWWWWs    ",
+        "   sWWWWWWWWWWs   ",
+        "  sWWWWWWWWWWWWs  ",
+        "  ssWWWWWWWWWWss  ",
+        "   sWWWWWWWWWWs   ",
+        "     ssssssss     ",
+        "     BB    BB     ",
+        "    BBB    BBB    "
+      ],
+      colors: { W: '#FF6600', s: '#ff3300', E: '#000000', B: '#330000', R: '#EF4444', r: '#DC2626' }
+    },
+
+
+    /**
+ * 꽃 빨간 닭 여기에 그리기
+ */
+
+    flower_red_chicken: {
+      pixels: [
+        "       rrrr       ",
+        "      rRRRRr      ",
+        "       sRRRs      ",
+        "     ssWWWWss     ",
+        "    sWWWWWWWWs    ",
+        "   sWWEWWWWEWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "   sWWWWBBWWWWs   ",
+        "   sWWWWWWWWWWs   ",
+        "    sWWWWWWWWs    ",
+        "    sWWWWWWWWq    ",
+        "   sWWWWWWWWqqq   ",
+        "  sWWWWWWWWqqaqq  ",
+        "  ssWWWWWWWWqqqs  ",
+        "   sWWWWWWWWWqg   ",
+        "     ssssssss  g  ",
+        "     BB    BBg g  ",
+        "    BBB    BBBggg "
+      ],
+      colors: { W: '#FF6600', s: '#ff3300',  E: '#000000',  B: '#330000', R: '#EF4444', r: '#DC2626', q:'#ff66ff', a:'#ff99ff', g:'#336600'}
+    },
+    
+    phoenix: {
+      pixels: [
+        "    G        G    ",
+        "     G  rrr  G    ",
+        "      GrRRRg      ",
+        "     rrRRRRRrr    ",
+        "    rRRRRRRRRRr   ",
         "   rRRErrrrERRr   ",
         "   rRRRRRRRRRRr   ",
-        "   rRRRRBBBRRRr   ",
+        "   rRRRRGGGRRRr   ",
         "   rRRRRRRRRRRr   ",
         "    rRRRRRRRRr    ",
         "    rrrrrrrrrr    ",
@@ -211,13 +408,15 @@ export const CheckCheckIcon: React.FC<PixelArtProps> = ({ iconId, size = 32 }) =
         "  rrrrrrrrrrrrrr  ",
         "   rrrrrrrrrrrr   ",
         "     rr    rr     ",
-        "     YY    YY     ",
-        "    YYY    YYY    ",
+        "    GG      GG    ",
+        "   GGG      GGG   ",
         "                  "
       ],
-      colors: { R: '#EF4444', r: '#DC2626', E: '#000000', B: '#FDE047', Y: '#FDE047' }
+      colors: { R: '#EF4444', r: '#DC2626', E: '#000000', G: '#FDE047', g: '#FACC15' }
     },
-    phoenix: {
+
+    
+    crown_phoenix: {
       pixels: [
         "    G        G    ",
         "     G  rrr  G    ",

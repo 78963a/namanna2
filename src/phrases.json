@@ -50,15 +50,23 @@
   "checkCheckSettings": {
     "intervalMinutes": 1,
     "evolutionStages": [
-      { "minClicks": 0, "iconId": "egg", "label": "알" },
-      { "minClicks": 1, "iconId": "chick_in_shell", "label": "알껍질 병아리" },
-      { "minClicks": 2, "iconId": "chick_hat_shell", "label": "껍질모자 병아리" },
-      { "minClicks": 3, "iconId": "chick", "label": "병아리" },
-      { "minClicks": 5, "iconId": "orange_chick", "label": "주황 병아리" },
-      { "minClicks": 7, "iconId": "orange_chick_comb", "label": "벼슬 주황 병아리" },
-      { "minClicks": 9, "iconId": "white_chicken", "label": "흰 닭" },
-      { "minClicks": 11, "iconId": "red_chicken", "label": "빨간 닭" },
-      { "minClicks": 13, "iconId": "phoenix", "label": "피닉스" }
+      { "minClicks": 0, "iconId": "egg", "label": "알" }, 
+      { "minClicks": 1, "iconId": "broken_egg", "label": "깨진 알" }, 
+      { "minClicks": 2, "iconId": "chick_in_shell", "label": "알껍질 병아리" },
+      { "minClicks": 3, "iconId": "chick_hat_shell", "label": "껍질모자 병아리" }, 
+      { "minClicks": 4, "iconId": "yellow_chick", "label": "노란 병아리" },
+      { "minClicks": 5, "iconId": "orange_chick", "label": "주황 병아리" },           
+      { "minClicks": 6, "iconId": "orange_chick_comb", "label": "벼슬 주황 병아리" },
+      { "minClicks": 7, "iconId": "white_chicken", "label": "흰 닭" },
+      { "minClicks": 8, "iconId": "ribbon_white_chicken", "label": "리본 흰 닭" },
+      { "minClicks": 9, "iconId": "flower_white_chicken", "label": "꽃 흰 닭" },
+      { "minClicks": 10, "iconId": "yellow_chicken", "label": "노란 닭" },
+      { "minClicks": 11, "iconId": "flower_yellow_chicken", "label": "꽃 노란 닭" },
+      { "minClicks": 12, "iconId": "red_chicken", "label": "빨간 닭" },
+      { "minClicks": 13, "iconId": "flower_red_chicken", "label": "꽃 빨간 닭" },
+      { "minClicks": 14, "iconId": "phoenix", "label": "피닉스" },
+      { "minClicks": 15, "iconId": "crown_phoenix", "label": "왕관 피닉스" }
+
     ]
   }
 }
