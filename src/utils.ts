@@ -48,6 +48,9 @@ export const isChunkScheduledToday = (chunk: RoutineChunk, date: Date, userData:
  * @returns {boolean} True if scheduled, false otherwise
  */
 export const isTaskScheduledToday = (task: Task, chunk: RoutineChunk, date: Date, userData: UserData): boolean => {
+  const dateStr = date.toISOString().split('T')[0];
+  if (userData.forcedActiveTasks?.[dateStr]?.[task.id]) return true;
+
   if (!isChunkScheduledToday(chunk, date, userData)) return false;
   if (!task.scheduledDays) return true;
   return task.scheduledDays.includes(date.getDay());

@@ -133,6 +133,7 @@ export interface UserData {
   dailyResetHour?: number; // 0-4
   autoStartTimer?: boolean;
   userName?: string;
+  forcedActiveTasks?: { [date: string]: { [taskId: string]: boolean } };
 }
 
 /**
@@ -203,6 +204,7 @@ export interface ExecutionViewProps {
   setSelectedChunkId: (id: string | null) => void;
   handleCheckCheckClick: () => void;
   isCheckCheckAvailable: boolean;
+  setConfirmModal: (modal: any) => void;
 }
 
 export interface AddRoutineGroupViewProps {

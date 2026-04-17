@@ -11,7 +11,8 @@ import {
   BrickWall,
   Check,
   CheckCheck,
-  CircleMinus
+  CircleMinus,
+  X
 } from 'lucide-react';
 import { Task, TaskType, TaskStatus } from '../../types';
 import { calculateTaskDuration } from '../../utils';
@@ -26,6 +27,8 @@ interface RoutineTitleLineProps {
   onDoFirst?: (id: string) => void;
   isLocked?: boolean;
   activeTaskId?: string;
+  isScheduledToday?: boolean;
+  onActivate?: (id: string) => void;
 }
 
 /**
@@ -44,7 +47,9 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   onRestart,
   onDoFirst,
   isLocked,
-  activeTaskId
+  activeTaskId,
+  isScheduledToday = true,
+  onActivate
 }) => {
   /**
    * Formats a duration in seconds into a compact time string (m:ss).
@@ -65,8 +70,16 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   // Determine the appropriate status icon and color based on the task's current state
   let iconColor = "text-slate-200";
   let statusIcon = <Circle className={`w-5 h-5 ${iconColor}`} />;
-  
-  if (task.status === TaskStatus.PERFECT) {
+
+  if (!isScheduledToday) {
+    iconColor = "text-slate-200";
+    statusIcon = (
+      <div className="relative w-5 h-5 flex items-center justify-center">
+        <Circle className={`absolute inset-0 w-full h-full ${iconColor}`} />
+        <X className="w-3 h-3 text-slate-400" strokeWidth={4} />
+      </div>
+    );
+  } else if (task.status === TaskStatus.PERFECT) {
     iconColor = "text-indigo-600";
     statusIcon = (
       <div className="relative w-5 h-5 flex items-center justify-center">
@@ -104,7 +117,10 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   // "Start/Resume" button logic
   const showStartResume = onDoFirst && 
     task.id !== activeTaskId && 
-    !isLocked;
+    !isLocked &&
+    isScheduledToday;
+
+  const showActivate = onActivate && !isScheduledToday;
 
   let startResumeLabel = '';
   if (task.isPaused || isCompleted) {
@@ -116,7 +132,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   const targetDuration = task.targetDuration || task.duration || 0;
 
   return (
-    <div className={`flex items-center gap-3 text-sm w-full ${task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT ? 'text-slate-400' : 'text-slate-700'} ${isLocked ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`flex items-center gap-3 text-sm w-full ${!isScheduledToday ? 'opacity-50' : (task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT ? 'text-slate-400' : 'text-slate-700')} ${isLocked ? 'opacity-40 pointer-events-none' : ''}`}>
       <div className="flex items-center gap-2 flex-shrink-0">
         {statusIcon}
         <span className="font-bold w-4 text-center">{index + 1}.</span>
@@ -158,6 +174,18 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
       </div>
 
       <div className="flex items-center gap-2 ml-auto justify-end">
+        {showActivate && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onActivate(task.id);
+            }}
+            className="flex-shrink-0 px-2 py-1 bg-amber-50 text-amber-600 rounded-md text-[10px] font-black hover:bg-amber-100 transition-all"
+          >
+            활성화하기
+          </button>
+        )}
+
         {showStartResume && (
           <button
             onClick={(e) => {

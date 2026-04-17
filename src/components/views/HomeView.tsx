@@ -258,19 +258,26 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
               {isExpanded && (
                 <div className="divide-y divide-slate-50 border-t border-slate-50 pb-[15px]">
-                  {scheduledTasks.sort((a, b) => {
+                  {chunk.tasks.map(t => ({
+                    task: t,
+                    isScheduled: isTaskScheduledToday(t, chunk, effectiveDate, userData)
+                  }))
+                  .sort((a, b) => {
+                    if (a.isScheduled && !b.isScheduled) return -1;
+                    if (!a.isScheduled && b.isScheduled) return 1;
+
                     const getPriority = (t: Task) => {
                       if (t.givenUp) return 4;
                       if (t.completed) return 3;
                       if (t.laterTimestamp) return 2;
                       return 1;
                     };
-                    const pA = getPriority(a);
-                    const pB = getPriority(b);
+                    const pA = getPriority(a.task);
+                    const pB = getPriority(b.task);
                     if (pA !== pB) return pA - pB;
-                    if (pA === 2 && a.laterTimestamp && b.laterTimestamp) return a.laterTimestamp - b.laterTimestamp;
+                    if (pA === 2 && a.task.laterTimestamp && b.task.laterTimestamp) return a.task.laterTimestamp - b.task.laterTimestamp;
                     return 0;
-                  }).map((task) => (
+                  }).map(({ task, isScheduled }) => (
                     <div
                       key={task.id}
                       className={`group flex items-center gap-3 py-1 px-[15px] transition-all ${
@@ -286,6 +293,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         index={chunk.tasks.findIndex(t => t.id === task.id)} 
                         currentTime={currentTime}
                         chunkTasks={chunk.tasks}
+                        isScheduledToday={isScheduled}
                       />
                     </div>
                   ))}

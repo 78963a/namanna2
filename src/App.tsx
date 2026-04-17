@@ -186,13 +186,35 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   setIsSettingsOpen,
   setSelectedChunkId,
   handleCheckCheckClick,
-  isCheckCheckAvailable
+  isCheckCheckAvailable,
+  setConfirmModal
 }) => {
   const chunk = userData.routineChunks.find(c => c.id === selectedChunkId);
   if (!chunk) return null;
 
   const tasks = chunk.tasks;
   const scheduledTasks = tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
+  
+  const handleActivateTaskInternal = (taskId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: '루틴 활성화',
+      message: '오늘은 쉬는 요일입니다. 활성화하시겠습니까?',
+      onConfirm: () => {
+        setUserData(prev => ({
+          ...prev,
+          forcedActiveTasks: {
+            ...prev.forcedActiveTasks,
+            [todayStr]: {
+              ...(prev.forcedActiveTasks?.[todayStr] || {}),
+              [taskId]: true
+            }
+          }
+        }));
+        setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
   
   // 체크체크박스 아이콘 결정 로직
   const checkCheckIconId = (() => {
@@ -373,6 +395,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
             selectedPhrase: phrase
           };
         } else {
+          // Entry should exist by this stage due to syncHistory or execution start, 
+          // but safety fallback
           newGroupHistory.push({
             date: todayStr,
             groupId: selectedChunkId,
@@ -397,6 +421,21 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     setActiveTab('home');
     setAnimationStage('none');
   };
+
+  // 11. 사용자가 문구를 선택하지 않고 나가는 경우를 대비한 자동 저장 로직
+  // (루틴이 완료되었을 때 phrases.json의 COMPLETED 메시지 중 하나를 랜덤으로 할당)
+  useEffect(() => {
+    if (isCompleted && animationStage === 'none' && selectedChunkId) {
+      // 이 시점에 도달했다는 것은 사용자가 완료 화면에서 그냥 뒤로가기 등을 눌러 나갔다는 의미
+      const history = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === selectedChunkId);
+      if (history && !history.selectedPhrase) {
+        const messages = phrases.routine_messages.COMPLETED;
+        const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+        // particles(조사)는 RoutineTitle에서 처리하므로 템플릿 그대로 저장
+        handleFinalSave(randomMsg);
+      }
+    }
+  }, [selectedChunkId, animationStage, isCompleted]);
 
   if (isCompleted && animationStage !== 'none') {
     // 루틴그룹완료화면 (Routine Group Completion Screen)
@@ -545,8 +584,16 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
               <div className="space-y-3">
                 {phrases.routine_messages.COMPLETION_SELECTION_TEMPLATES.map((template, idx) => {
                   let storedPhrase = template;
+                  
+                  // stats for resolution
+                  const currentHistory = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
+                  const startTimeStr = currentHistory?.firstTaskStartTime || '--:--';
+                  const endTimeStr = currentTime.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
+                  const totalDurationSec = currentHistory?.totalDuration || 0;
+                  const durationStr = formatDurationPrecise(totalDurationSec);
+
                   // Resolve particles but keep the placeholder for RoutineTitle to style
-                  const resolveParticles = (msg: string, tag: 'title' | 'purpose', value: string) => {
+                  const resolveParticles = (msg: string, tag: string, value: string) => {
                     const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는)`, 'g');
                     return msg.replace(regex, (_, p1) => {
                       return `{{${tag}}}` + getJosa(value, p1 as any);
@@ -555,6 +602,13 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
                   storedPhrase = resolveParticles(storedPhrase, 'title', chunk.name);
                   storedPhrase = resolveParticles(storedPhrase, 'purpose', chunk.purpose || '목표');
+                  storedPhrase = resolveParticles(storedPhrase, 'userName', userData.userName || '나');
+
+                  // Replace non-particle placeholders
+                  storedPhrase = storedPhrase.replace(/\{\{userName\}\}/g, userData.userName || '나');
+                  storedPhrase = storedPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
+                  storedPhrase = storedPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);
+                  storedPhrase = storedPhrase.replace(/\{\{duration\}\}/g, durationStr);
 
                   // For the UI display in buttons, replace everything
                   let displayPhrase = storedPhrase;
@@ -860,9 +914,25 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           )}
 
           {/* 나머지루틴목록 (Remaining Routines List) */}
-          {sortedTasks.filter(t => t.id !== activeTask?.id).length > 0 && (
+          {chunk.tasks.filter(t => t.id !== activeTask?.id).length > 0 && (
             <div className="space-y-3">
-              {sortedTasks.filter(t => t.id !== activeTask?.id).map((task) => (
+              {[...chunk.tasks]
+                .filter(t => t.id !== activeTask?.id)
+                .sort((a, b) => {
+                  const isScheduledA = isTaskScheduledToday(a, chunk, effectiveDate, userData);
+                  const isScheduledB = isTaskScheduledToday(b, chunk, effectiveDate, userData);
+                  if (isScheduledA && !isScheduledB) return -1;
+                  if (!isScheduledA && isScheduledB) return 1;
+                  
+                  const getPriority = (t: Task) => {
+                    if (t.givenUp) return 4;
+                    if (t.completed) return 3;
+                    if (t.laterTimestamp) return 2;
+                    return 1;
+                  };
+                  return getPriority(a) - getPriority(b);
+                })
+                .map((task) => (
                 <motion.div
                   layout
                   initial={{ opacity: 0 }}
@@ -887,8 +957,10 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     chunkTasks={chunk.tasks}
                     onRestart={onRestart}
                     onDoFirst={togglePauseTask}
-                    isLocked={!isTriggerComplete && task.id !== scheduledTasks[0]?.id}
+                    isLocked={!isTriggerComplete && task.id !== (scheduledTasks.length > 0 ? scheduledTasks[0].id : null)}
                     activeTaskId={activeTask?.id}
+                    isScheduledToday={isTaskScheduledToday(task, chunk, effectiveDate, userData)}
+                    onActivate={handleActivateTaskInternal}
                   />
                 </motion.div>
               ))}
@@ -4377,6 +4449,7 @@ export default function App() {
                 setSelectedChunkId={setSelectedChunkId}
                 handleCheckCheckClick={handleCheckCheckClick}
                 isCheckCheckAvailable={isCheckCheckAvailable}
+                setConfirmModal={setConfirmModal}
               />
             </motion.div>
           ) : activeTab === 'add' ? (

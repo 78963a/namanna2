@@ -12,7 +12,8 @@
   "routine_messages": {
     "COMPLETION_SELECTION_TEMPLATES": [
       "나는 {{title}}을 완료한 {{purpose}}이다",
-      "{{title}}을 완료하다니, 정말 훌륭해!"
+      "{{title}}을 완료하다니, 정말 훌륭해!",
+      "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
     ],
     "INACTIVE": [
       "{{purpose}}이/가 되려면 때로는 {{title}}을/를 쉬어가야하지"
