@@ -18,12 +18,35 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // 여기도 ./ 를 제거하여 유연하게 경로를 잡도록 합니다
           navigator.serviceWorker.register('service-worker.js').then((registration) => {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
-          }, (err) => {
+            
+            // 업데이트가 업데이트 되었을 때 즉시 페이지를 새로고침하는 옵션을 고려하거나
+            // 사용자에게 알림을 줄 수 있는 기반을 마련합니다.
+            registration.onupdatefound = () => {
+              const installingWorker = registration.installing;
+              if (installingWorker) {
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === 'installed') {
+                    if (navigator.serviceWorker.controller) {
+                      console.log('New version available. Refreshing might be needed.');
+                    }
+                  }
+                };
+              }
+            };
+          }).catch((err) => {
             console.log('ServiceWorker registration failed: ', err);
           });
+        });
+        
+        // 서비스 워커가 업데이트되면 페이지를 자동으로 새로고침하여 최신 상태를 유지하게 합니다.
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            window.location.reload();
+            refreshing = true;
+          }
         });
       }
     </script>
