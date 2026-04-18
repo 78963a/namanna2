@@ -77,7 +77,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
           </div>
           <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
               <span>
-                {challengeDays}일째 도전중, {successDays}일째 성공중 ({completionPercentage}%)
+                {challengeDays}일째 도전중, {successDays}일째 성공중 ({completionPercentage}%) 4.18.
                </span>
                {/* --- [합산시간 스타일 수정 가능 구역] --- */}
                <span style={{ 
