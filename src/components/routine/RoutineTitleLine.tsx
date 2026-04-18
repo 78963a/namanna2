@@ -97,7 +97,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
         <Check className={`w-3 h-3 ${iconColor}`} strokeWidth={3} />
       </div>
     );
-  } else if (task.givenUp || task.status === TaskStatus.SKIP) {
+  } else if (task.status === TaskStatus.SKIP) {
     iconColor = "text-[#CC9900]";
     statusIcon = <CircleMinus className={`w-5 h-5 ${iconColor}`} />;
   } else if (task.laterTimestamp) {
@@ -111,10 +111,11 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
     statusIcon = <CircleDot className={`w-5 h-5 ${iconColor}`} />;
   }
 
-  const isCompleted = task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT;
-  const isGivenUp = task.givenUp || task.status === TaskStatus.SKIP;
+  const isActuallyCompleted = task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT;
+  const isSkip = task.status === TaskStatus.SKIP;
+  const isDone = isActuallyCompleted || isSkip;
   
-  const showRestart = onRestart && isCompleted;
+  const showRestart = onRestart && isActuallyCompleted;
   
   // "Start/Resume" button logic
   const showStartResume = onDoFirst && 
@@ -125,7 +126,9 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   const showActivate = onActivate && !isScheduledToday;
 
   let startResumeLabel = '';
-  if (task.isPaused || isCompleted) {
+  if (task.laterTimestamp || isSkip || (!task.startTime && !task.isPaused && !isActuallyCompleted)) {
+    startResumeLabel = '시작하기';
+  } else if (task.isPaused || isActuallyCompleted) {
     startResumeLabel = '이어하기';
   } else {
     startResumeLabel = '시작하기';
@@ -235,9 +238,9 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
             {statusIcon}
             <span className="font-bold w-4 text-center">{index + 1}.</span>
           </div>
-          <div className="flex items-center gap-2 min-w-0 flex-grow">
+          <div className={`flex items-center gap-2 min-w-0 flex-grow`}>
             <span 
-              className={`font-bold truncate ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}
+              className={`font-bold truncate ${isDone ? 'line-through text-slate-400' : 'text-slate-700'}`}
               style={{ fontFamily: phrases.settings.base_style.fontFamily ? `'${phrases.settings.base_style.fontFamily}', sans-serif` : 'inherit' }}
             >
               {index === 0 && "⚡"}{task.text}
@@ -263,7 +266,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
 
       {/* Desktop Layout or Home Mobile (Horizontal Layout) */}
       <div className={`${inExecution ? 'hidden sm:flex' : 'flex'} flex-col w-full text-sm`}>
-        <div className={`flex items-center gap-3 w-full ${task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT ? 'text-slate-400' : 'text-slate-700'}`}>
+        <div className={`flex items-center gap-3 w-full ${isDone ? 'text-slate-400' : 'text-slate-700'}`}>
           <div className="flex items-center gap-2 flex-shrink-0">
             {statusIcon}
             <span className="font-bold w-4 text-center">{index + 1}.</span>
@@ -271,7 +274,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
           
           <div className="flex items-center gap-2 min-w-0 flex-grow">
             <span 
-              className={`font-bold truncate max-w-[200px] ${task.completed ? 'line-through' : ''}`}
+              className={`font-bold truncate max-w-[200px] ${isDone ? 'line-through' : ''}`}
               style={{ fontFamily: phrases.settings.base_style.fontFamily ? `'${phrases.settings.base_style.fontFamily}', sans-serif` : 'inherit' }}
             >
               {index === 0 && "⚡"}{task.text}

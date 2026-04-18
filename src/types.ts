@@ -30,7 +30,6 @@ export interface Task {
   startTime?: string; // HH:mm:ss
   endTime?: string;   // HH:mm:ss
   duration?: number;  // seconds
-  givenUp?: boolean;
   laterTimestamp?: number;
   isPaused?: boolean;
   accumulatedDuration?: number; // seconds
@@ -132,7 +131,8 @@ export interface UserData {
   routineGroupHistory?: RoutineGroupHistoryEntry[];
   taskHistory?: TaskHistoryEntry[];
   dailyResetHour?: number; // 0-4
-  autoStartTimer?: boolean;
+  firstRoutineAutoStart?: boolean;
+  nextRoutineAutoStart?: boolean;
   userName?: string;
   forcedActiveTasks?: { [date: string]: { [taskId: string]: boolean } };
 }
@@ -196,7 +196,7 @@ export interface ExecutionViewProps {
   toggleTask: (taskId: string, closingData?: { note?: string, satisfaction?: number }) => void;
   togglePauseTask: (taskId: string) => void;
   laterTask: (taskId: string) => void;
-  giveUpTask: (taskId: string) => void;
+  skipTask: (taskId: string) => void;
   startTask: (taskId: string, resetTimer?: boolean) => void;
   onRestart: (taskId: string, resetTimer?: boolean) => void;
   resetChunk: (chunkId: string) => void;

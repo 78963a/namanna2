@@ -179,7 +179,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   toggleTask,
   togglePauseTask,
   laterTask,
-  giveUpTask,
+  skipTask,
   startTask,
   onRestart,
   resetChunk,
@@ -247,32 +247,48 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   })();
 
   // 9-2-1. '현재 실행중인 루틴' 우선순위 로직
-  // 1. 현재 실행 중인 루틴 (startTime 있고, 일시정지 아님, 완료/포기 아님)
-  let activeTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+  // 1. 현재 실행 중인 루틴 (startTime 있고, 일시정지 아님, 완료 아님, 스킵 아님)
+  let activeTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed && t.status !== TaskStatus.SKIP);
   
-  // 2. 일시정지 루틴 중 가장 순서가 빠른 루틴
+  // 2. 일시정지 루틴 중 가장 순서가 빠른 루틴 (단, '나중에' 제외, 스킵 제외)
   if (!activeTask) {
-    activeTask = scheduledTasks.find(t => t.isPaused && !t.completed && !t.givenUp);
+    activeTask = scheduledTasks.find(t => t.isPaused && !t.completed && !t.laterTimestamp && t.status !== TaskStatus.SKIP);
   }
   
-  // 3. 미실행 루틴 중 가장 순서가 빠른 루틴
+  // 3. 미실행 루틴 중 가장 순서가 빠른 루틴 (단, '나중에' 제외, 스킵 제외)
   if (!activeTask) {
-    activeTask = scheduledTasks.find(t => !t.startTime && !t.completed && !t.givenUp);
+    activeTask = scheduledTasks.find(t => !t.startTime && !t.completed && !t.laterTimestamp && t.status !== TaskStatus.SKIP);
   }
   
-  // 4. 나중에 루틴 중 가장 순서가 빠른 루틴
-  if (!activeTask) {
-    activeTask = scheduledTasks.find(t => t.laterTimestamp && !t.completed && !t.givenUp);
-  }
+  // '나중에' 루틴은 더 이상 자동으로 현재 루틴이 되지 않음 (사용자가 클릭해야 함)
 
-  const isNotStarted = tasks.every(t => !t.startTime && !t.completed && !t.givenUp);
+  const isNotStarted = tasks.every(t => !t.startTime && !t.completed);
 
   const [isCompleted, setIsCompleted] = useState(false);
   const [animationStage, setAnimationStage] = useState<'none' | 'whiteout' | 'rising' | 'title' | 'fireworks' | 'final'>('none');
   const [visibleTasksCount, setVisibleTasksCount] = useState(0);
   const [shakingTaskId, setShakingTaskId] = useState<string | null>(null);
 
-  const allTasksDone = scheduledTasks.length > 0 && scheduledTasks.every(t => t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
+  const activeTaskRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (activeTask?.id) {
+      // Short delay to allow animations/layout to stabilize
+      const timer = setTimeout(() => {
+        if (activeTaskRef.current) {
+          const headerHeight = 64; // Menu icon row height + padding
+          const elementPosition = activeTaskRef.current.getBoundingClientRect().top + window.pageYOffset;
+          window.scrollTo({
+            top: elementPosition - headerHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTask?.id]);
+
+  const allTasksDone = scheduledTasks.length > 0 && scheduledTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
   const wasDoneOnMount = useRef(allTasksDone);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -592,6 +608,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   const endTimeStr = currentTime.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
                   const totalDurationSec = currentHistory?.totalDuration || 0;
                   const durationStr = formatDurationPrecise(totalDurationSec);
+                  const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
+                  const totalTargetDurationStr = `${totalTargetMinutes}분`;
 
                   // Resolve particles but keep the placeholder for RoutineTitle to style
                   const resolveParticles = (msg: string, tag: string, value: string) => {
@@ -614,6 +632,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   displayPhrase = displayPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
                   displayPhrase = displayPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);
                   displayPhrase = displayPhrase.replace(/\{\{duration\}\}/g, durationStr);
+                  displayPhrase = displayPhrase.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationStr);
                   displayPhrase = displayPhrase.replace(/\{\{title\}\}/g, chunk.name);
                   displayPhrase = displayPhrase.replace(/\{\{purpose\}\}/g, chunk.purpose || '목표');
 
@@ -704,6 +723,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           {activeTask && (
             <motion.div
               layout
+              ref={activeTaskRef}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -862,7 +882,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                       LATER
                     </button>
                     <button 
-                      onClick={() => giveUpTask(activeTask.id)}
+                      onClick={() => skipTask(activeTask.id)}
                       disabled={activeTask.id === scheduledTasks[0]?.id}
                       className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
                         activeTask.id === scheduledTasks[0]?.id
@@ -932,7 +952,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   if (!isScheduledA && isScheduledB) return 1;
                   
                   const getPriority = (t: Task) => {
-                    if (t.givenUp) return 4;
+                    if (t.status === TaskStatus.SKIP) return 4;
                     if (t.completed) return 3;
                     if (t.laterTimestamp) return 2;
                     return 1;
@@ -950,11 +970,21 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   }}
                   key={task.id}
                   className={`flex items-center gap-4 p-4 rounded-[10px] border transition-all ${
+
+ /* /bg-: 배경색 (예: bg-blue-100)
+border-: 테두리 색상 (예: border-slate-200)
+border-transparent: 테두리를 투명하게(없앰) 처리--- */
+
+                    /* --- [실행화면 개별루틴 박스 스타일 수정 구역] --- */
+                    /* 1. 완료(Completed) 또는 완벽(Perfect) 상태 */
                     task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT
                       ? 'bg-slate-50/50 border-transparent' 
-                      : task.givenUp || task.status === TaskStatus.SKIP
-                        ? 'bg-rose-50/20'
+                    /* 2. 포기(Given Up) 또는 스킵(Skip) 상태 */
+                      : task.status === TaskStatus.SKIP
+                        ? 'bg-rose-50/20 border-transparent'
+                    /* 3. 그 외 기본 상태 (미실행, 진행 중 등) */
                         : 'bg-white border-slate-100 hover:border-indigo-200'
+                    /* ----------------------------------------------- */
                   }`}
                 >
                   <RoutineTitleLine 
@@ -977,7 +1007,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
         </AnimatePresence>
       </div>
 
-      {chunk.tasks.some(t => t.startTime || t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.laterTimestamp) && (
+      {(chunk.tasks.some(t => t.startTime !== undefined || t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.laterTimestamp || t.accumulatedDuration !== undefined)) && (
         <div className="flex justify-center py-4">
           <button 
             onClick={() => resetChunk(chunk.id)}
@@ -1438,6 +1468,27 @@ const ChecklistModal = ({
   setConfirmModal: (modal: any) => void
 }) => {
   const [newItemText, setNewItemText] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      const originalBodyStyle = window.getComputedStyle(document.body).overflow;
+      const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalBodyStyle;
+        document.documentElement.style.overflow = originalHtmlStyle;
+      };
+    }
+  }, [isOpen]);
+
+  // 자동 스크롤 하단 고정
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [checklist.length]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -1476,23 +1527,23 @@ const ChecklistModal = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[180] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[180] flex items-center justify-center p-4 overflow-y-auto">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
           />
           <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-md bg-white rounded-[10px] shadow-2xl overflow-hidden flex flex-col"
-            style={{ minHeight: '500px', maxHeight: '80vh' }}
+            className="relative w-full max-w-md bg-white rounded-[10px] shadow-2xl overflow-hidden flex flex-col h-[600px]"
+            style={{ maxHeight: '90vh' }}
           >
-            <div className="p-6 space-y-6 flex flex-col h-full">
-              <div className="flex items-center justify-between flex-shrink-0">
+            <div className="p-6 flex flex-col flex-1 min-h-0">
+              <div className="flex items-center justify-between mb-6 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center">
                     <CheckCircle2 className="w-6 h-6 text-indigo-600" />
@@ -1507,7 +1558,7 @@ const ChecklistModal = ({
                 </button>
               </div>
 
-              <div className="flex gap-2 flex-shrink-0">
+              <div className="flex gap-2 mb-6 flex-shrink-0">
                 <input 
                   type="text"
                   value={newItemText}
@@ -1524,7 +1575,11 @@ const ChecklistModal = ({
                 </button>
               </div>
 
-              <div className="flex-grow overflow-y-auto pr-2 -mr-2 space-y-2 min-h-0">
+              <div 
+                ref={scrollRef}
+                className="flex-grow overflow-y-auto pr-2 -mr-2 space-y-2 min-h-0" 
+                style={{ overscrollBehavior: 'contain' }}
+              >
                 {checklist.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 py-10">
                     <PlusCircle className="w-8 h-8 opacity-20" />
@@ -1877,17 +1932,31 @@ const RoutineEditModal = ({
   groupScheduledDays,
   label
 }: any) => {
+  useEffect(() => {
+    if (isOpen) {
+      const originalBodyStyle = window.getComputedStyle(document.body).overflow;
+      const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalBodyStyle;
+        document.documentElement.style.overflow = originalHtmlStyle;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-white rounded-[25px] w-full max-w-sm shadow-2xl overflow-hidden"
+        className="bg-white rounded-[25px] w-full max-w-sm shadow-2xl overflow-hidden flex flex-col"
+        style={{ maxHeight: '90vh' }}
       >
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1 min-h-0">
           <TaskInputSection 
             label={label}
             task={task}
@@ -1904,9 +1973,10 @@ const RoutineEditModal = ({
   );
 };
 
-// 새로운 루틴 그룹 만들기 제목 글꼴 설정
+// 새로운 루틴 그룹 만들기 제목 글꼴 및 배경색 설정
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-  <label className="block text-lg font-black text-slate-700 uppercase tracking-wider ml-1 mb-4 mt-6">
+  /* Section Title Style: 배경색(bg-sky-100)이나 글자색(text-slate-700)을 여기서 직접 수정할 수 있습니다. */
+  <label className="inline-block px-2 py-0.5 bg-sky-100/70 rounded-md text-lg font-black text-slate-700 uppercase tracking-wider ml-1 mb-4 mt-6">
     {children}
   </label>
 );
@@ -2324,74 +2394,86 @@ const RoutineGroupFormView: React.FC<{
           </div>
 
           {/* Start Situation or Time Setting */}
-          <div className="space-y-3">
+          <div className="space-y-0">
             <SectionTitle>4. 시작 상황 또는 시각 설정</SectionTitle>
-            <div className="bg-white border border-slate-200 rounded-[10px] p-3 space-y-4 shadow-none">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-[10px] w-fit">
-                  <button
-                    onClick={() => {
-                      setStartType('anytime');
-                      setIsAlarmEnabled(false);
-                    }}
-                    className={`px-3 py-1.5 rounded-[10px] text-[10px] font-black transition-all ${startType === 'anytime' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
-                  >
-                    아무때나
-                  </button>
-                  <button
-                    onClick={() => {
-                      setStartType('situation');
-                      setIsAlarmEnabled(false);
-                    }}
-                    className={`px-3 py-1.5 rounded-[10px] text-[10px] font-black transition-all ${startType === 'situation' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
-                  >
-                    상황
-                  </button>
-                  <button
-                    onClick={() => {
-                      setStartType('time');
-                    }}
-                    className={`px-3 py-1.5 rounded-[10px] text-[10px] font-black transition-all ${startType === 'time' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
-                  >
-                    시각
-                  </button>
-                </div>
+            
+            <div className="relative">
+              {/* Index-style Tabs */}
+              <div className="flex items-end gap-1 px-0 relative z-10">
+                {[
+                  { id: 'anytime', label: '아무때나' },
+                  { id: 'situation', label: '상황' },
+                  { id: 'time', label: '시각' }
+                ].map((tab) => {
+                  const isActive = startType === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setStartType(tab.id as any);
+                        if (tab.id !== 'time') setIsAlarmEnabled(false);
+                      }}
+                      className={`px-4 py-2 rounded-t-[10px] text-sm font-black transition-all border-x border-t ${
+                        isActive 
+                          ? 'bg-white border-slate-200 text-slate-700 -mb-px' 
+                          : 'bg-slate-100/50 border-transparent text-slate-400 hover:bg-slate-100'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
 
-                <div className="min-h-[42px] flex flex-col justify-center">
+              {/* Connected Content Area */}
+              <div className="bg-white border border-slate-200 rounded-[12px] rounded-tl-none px-4 py-4 min-h-[85px] flex flex-col justify-center">
+                <div className="animate-in fade-in duration-300">
                   {startType === 'anytime' && (
-                    <p className="text-[10px] font-bold text-slate-400 ml-2 animate-in fade-in duration-300">
-                      별도의 조건 없이 언제든 시작할 수 있습니다.
-                    </p>
+                    <div className="flex items-center justify-start">
+                      <p className="text-sm font-black text-slate-700 ml-1">
+                        아무때나 시작합니다
+                      </p>
+                    </div>
                   )}
 
                   {startType === 'situation' && (
-                    <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <div className="flex items-center justify-start w-full px-0">
                       <input 
                         type="text"
                         value={situation}
                         onChange={(e) => setSituation(e.target.value)}
-                        placeholder="예: 외출했다 돌아왔을 때"
-                        className="w-full bg-slate-50 border border-slate-100 rounded-[10px] px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        placeholder="상황을 입력하세요 (예: 나갔다와서)"
+                        className="w-full bg-slate-50 border border-slate-100 rounded-[10px] px-4 py-2 text-sm font-black text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all focus:bg-white"
                       />
                     </div>
                   )}
 
                   {startType === 'time' && (
-                    <div className="flex items-center gap-4 transition-all opacity-100 animate-in fade-in slide-in-from-top-1 duration-300">
-                      <input 
-                        type="time" 
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="text-lg font-black bg-transparent border-none focus:ring-0 p-0 text-slate-900"
-                      />
-                      <div className="h-6 w-[1px] bg-slate-200" />
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">알람</span>
+                    <div className="flex items-center justify-start gap-5">
+                      {/* Time Input: Single row layout returned */}
+                      <div className="flex items-center focus-within:ring-0 transition-all">
+                        <input 
+                          type="time" 
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="text-lg font-black bg-transparent border-none focus:ring-0 p-0 text-slate-700 tabular-nums"
+                          style={{ width: '130px' }} 
+                        />
+                      </div>
+
+                      {/* Alarm Toggle */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] font-black text-slate-700">
+                          {isAlarmEnabled ? '알람 ON' : '알람 OFF'}
+                        </span>
                         <button 
+                          type="button"
                           onClick={() => setIsAlarmEnabled(!isAlarmEnabled)}
-                          className={`w-10 h-5 rounded-full transition-all relative ${isAlarmEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          className="w-10 h-5 rounded-full transition-all relative border-0 p-0 cursor-pointer shadow-none overflow-hidden"
+                          style={{ backgroundColor: isAlarmEnabled ? 'rgb(79 70 229)' : 'rgb(203 213 225)' }}
                         >
-                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${isAlarmEnabled ? 'left-5.5' : 'left-0.5'}`} />
+                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${isAlarmEnabled ? 'left-5.5' : 'left-0.5'}`} />
                         </button>
                       </div>
                     </div>
@@ -2547,7 +2629,8 @@ export default function App() {
         lastResetDate: null,
         dailyCheckCheckCounts: {},
         autoReorderGroups: false,
-        autoStartTimer: false,
+        firstRoutineAutoStart: false,
+        nextRoutineAutoStart: false,
         userName: '나'
       };
     }
@@ -2582,6 +2665,9 @@ export default function App() {
     if (parsed.dailyCheckIn === undefined) parsed.dailyCheckIn = {};
     
     if (parsed.autoReorderGroups === undefined) parsed.autoReorderGroups = false;
+    
+    if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
+    if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
     
     if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
     if (parsed.routineGroupHistory === undefined) parsed.routineGroupHistory = [];
@@ -2735,7 +2821,6 @@ export default function App() {
           tasks: chunk.tasks.map(t => ({ 
             ...t, 
             completed: false,
-            givenUp: false,
             laterTimestamp: undefined,
             startTime: undefined,
             endTime: undefined,
@@ -2786,7 +2871,7 @@ export default function App() {
 
   useEffect(() => {
     const totalCompleted = userData.routineChunks.reduce((acc, chunk) => 
-      acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData) && (t.completed || t.givenUp || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT)).length, 0
+      acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData) && (t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT)).length, 0
     );
     const totalScheduledTasksCount = userData.routineChunks.reduce((acc, chunk) => 
       acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData)).length, 0
@@ -2865,7 +2950,7 @@ export default function App() {
         let statusStr = '미실행';
         if (task.status === TaskStatus.PERFECT) statusStr = '완벽';
         else if (task.status === TaskStatus.COMPLETED || task.completed) statusStr = '완료';
-        else if (task.status === TaskStatus.SKIP || task.givenUp) statusStr = '스킵';
+        else if (task.status === TaskStatus.SKIP) statusStr = '스킵';
         else if (task.isPaused) statusStr = '일시정지';
         else if (task.startTime) statusStr = '실행중';
 
@@ -2895,10 +2980,10 @@ export default function App() {
           lastEndTime = task.endTime;
         }
         totalDuration += taskDuration;
-        if (!task.completed && !task.givenUp && task.status !== TaskStatus.SKIP && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.PERFECT) {
+        if (!task.completed && task.status !== TaskStatus.SKIP && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.PERFECT) {
           allFinished = false;
         }
-        if (task.startTime || task.completed || task.givenUp || task.status !== TaskStatus.NOT_STARTED) {
+        if (task.startTime || task.completed || task.status !== TaskStatus.NOT_STARTED) {
           anyStarted = true;
         }
       });
@@ -3017,7 +3102,7 @@ export default function App() {
 
     // Find best task to start
     const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
-    const isFinished = (t: Task) => t.completed || t.givenUp || t.status === TaskStatus.PERFECT || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.SKIP;
+    const isFinished = (t: Task) => t.completed || t.status === TaskStatus.PERFECT || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.SKIP;
     
     // 1. Active task (already running)
     let targetTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !isFinished(t));
@@ -3042,7 +3127,7 @@ export default function App() {
     setActiveTab('execution');
 
     // Only start if it's not already active (to avoid resetting startTime)
-    if (userData.autoStartTimer && targetTask && (!targetTask.startTime || targetTask.isPaused || targetTask.laterTimestamp)) {
+    if (userData.firstRoutineAutoStart && targetTask && (!targetTask.startTime || targetTask.isPaused || targetTask.laterTimestamp)) {
       const shouldReset = !!targetTask.laterTimestamp || !targetTask.isPaused;
       startTask(targetTask.id, shouldReset);
     }
@@ -3109,7 +3194,7 @@ export default function App() {
     }));
   };
 
-  const giveUpTask = (id: string) => {
+  const skipTask = (id: string) => {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
@@ -3124,24 +3209,27 @@ export default function App() {
             if (t.id === id) {
               return { 
                 ...t, 
-                givenUp: true, 
                 status: TaskStatus.SKIP,
                 endTime: nowStr, 
-                duration: 0 
+                duration: 0,
+                accumulatedDuration: 0,
+                startTime: undefined,
+                isPaused: false
               };
             }
             return t;
           });
           const nextTask = updatedTasks.find(t => 
             !t.completed && 
-            !t.givenUp && 
+            t.status !== TaskStatus.SKIP && 
+            !t.laterTimestamp &&
             isTaskScheduledToday(t, chunk, effectiveDate, prev)
           );
 
           if (nextTask) {
             return {
               ...chunk,
-              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
+              tasks: updatedTasks.map(t => (t.id === nextTask.id && prev.nextRoutineAutoStart) ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
             };
           }
 
@@ -3172,9 +3260,8 @@ export default function App() {
                 ...t, 
                 laterTimestamp: Date.now(), 
                 completed: false, 
-                givenUp: false,
                 isPaused: true,
-                accumulatedDuration: calculateTaskDuration(t, now),
+                accumulatedDuration: undefined,
                 startTime: undefined
               };
             }
@@ -3184,14 +3271,14 @@ export default function App() {
           // Find next task to start
           const nextTask = updatedTasks.find(t => 
             !t.completed && 
-            !t.givenUp && 
+            !t.laterTimestamp &&
             isTaskScheduledToday(t, chunk, effectiveDate, prev)
           );
 
           if (nextTask) {
             return {
               ...chunk,
-              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
+              tasks: updatedTasks.map(t => (t.id === nextTask.id && prev.nextRoutineAutoStart) ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
             };
           }
 
@@ -3209,6 +3296,7 @@ export default function App() {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
+      const autoStart = prev.nextRoutineAutoStart;
       const next = {
         ...prev,
         routineChunks: prev.routineChunks.map(chunk => {
@@ -3218,10 +3306,9 @@ export default function App() {
               return {
                 ...task,
                 completed: false,
-                givenUp: false,
                 laterTimestamp: undefined,
-                isPaused: false,
-                startTime: nowStr,
+                isPaused: !autoStart,
+                startTime: autoStart ? nowStr : undefined,
                 endTime: undefined,
                 duration: undefined,
                 accumulatedDuration: resetTimer ? 0 : (task.accumulatedDuration || 0)
@@ -3229,7 +3316,7 @@ export default function App() {
             }
             
             // If this is an active task (not the target one), pause it
-            const isActive = task.startTime && !task.isPaused && !task.completed && !task.givenUp;
+            const isActive = task.startTime && !task.isPaused && !task.completed;
             if (isActive) {
               return {
                 ...task,
@@ -3251,7 +3338,7 @@ export default function App() {
 
   const globalActiveTask = useMemo(() => {
     for (const chunk of userData.routineChunks) {
-      const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+      const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed);
       if (active) return { task: active, chunkId: chunk.id };
     }
     return null;
@@ -3262,10 +3349,11 @@ export default function App() {
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     
     setUserData(prev => {
+      const autoStart = prev.nextRoutineAutoStart;
       // If there's a different active task, pause it
       let activeTaskId: string | null = null;
       for (const chunk of prev.routineChunks) {
-        const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && !t.givenUp);
+        const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed);
         if (active && active.id !== taskId) {
           activeTaskId = active.id;
           break;
@@ -3281,10 +3369,9 @@ export default function App() {
               return {
                 ...task,
                 completed: false,
-                givenUp: false,
                 laterTimestamp: undefined,
-                isPaused: false,
-                startTime: nowStr,
+                isPaused: !autoStart,
+                startTime: autoStart ? nowStr : undefined,
                 endTime: undefined,
                 duration: undefined,
                 accumulatedDuration: resetTimer ? 0 : (task.accumulatedDuration || 0)
@@ -3325,20 +3412,21 @@ export default function App() {
             ...chunk,
             tasks: chunk.tasks.map(t => {
               if (t.id === id) {
-                if (t.isPaused || !t.startTime || t.completed || t.givenUp) {
-                  // Resuming or Starting: set new startTime and clear completion status
+                if (t.isPaused || !t.startTime || t.completed || t.status === TaskStatus.SKIP) {
+                  // Resuming, Starting, or Reviving from SKIP: set new startTime and status
+                  const autoStart = prev.nextRoutineAutoStart;
                   return { 
                     ...t, 
-                    isPaused: false, 
-                    startTime: nowStr,
+                    isPaused: !autoStart, 
+                    startTime: autoStart ? nowStr : undefined,
                     completed: false,
-                    givenUp: false,
                     laterTimestamp: undefined,
-                    status: TaskStatus.NOT_STARTED,
+                    status: TaskStatus.IN_PROGRESS,
                     endTime: undefined,
                     duration: undefined,
                     closingNote: undefined,
-                    satisfaction: undefined
+                    satisfaction: undefined,
+                    accumulatedDuration: t.duration ?? t.accumulatedDuration ?? 0
                   };
                 } else {
                   // Pausing: calculate accumulated duration
@@ -3354,7 +3442,7 @@ export default function App() {
               // If we are resuming the target task, pause all other active tasks
               // BUT if we are pausing the target task, do NOT touch other tasks
               if (isTargetResuming) {
-                const isActive = t.startTime && !t.isPaused && !t.completed && !t.givenUp;
+                const isActive = t.startTime && !t.isPaused && !t.completed;
                 if (isActive) {
                   return {
                     ...t,
@@ -3399,7 +3487,6 @@ export default function App() {
                 tasks: c.tasks.map(t => ({
                   ...t,
                   completed: false,
-                  givenUp: false,
                   laterTimestamp: undefined,
                   startTime: undefined,
                   endTime: undefined,
@@ -3473,7 +3560,7 @@ export default function App() {
         if (chunk.id === targetChunkId) {
           const updatedTasks = chunk.tasks.map(t => {
             if (t.id === id) {
-              const updated = { ...t, completed: isBecomingCompleted, givenUp: false };
+              const updated = { ...t, completed: isBecomingCompleted };
               if (isBecomingCompleted) {
                 updated.endTime = nowStr;
                 const totalSeconds = calculateTaskDuration(t, now);
@@ -3509,12 +3596,12 @@ export default function App() {
           if (isBecomingCompleted) {
             const nextTask = updatedTasks.find(t => 
               !t.completed && 
-              !t.givenUp && 
+              !t.laterTimestamp &&
               isTaskScheduledToday(t, chunk, effectiveDate, prev)
             );
             
             // Check if all tasks in this chunk are now completed
-            const allCompleted = updatedTasks.every(t => t.completed || t.givenUp);
+            const allCompleted = updatedTasks.every(t => t.completed);
             let newCompletionDates = chunk.completionDates || [];
             if (allCompleted && !newCompletionDates.includes(todayStr)) {
               newCompletionDates = [...newCompletionDates, todayStr];
@@ -3522,13 +3609,13 @@ export default function App() {
               newCompletionDates = newCompletionDates.filter(d => d !== todayStr);
             }
 
-            if (nextTask) {
-              return {
-                ...chunk,
-                completionDates: newCompletionDates,
-                tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
-              };
-            }
+          if (nextTask) {
+            return {
+              ...chunk,
+              completionDates: newCompletionDates,
+              tasks: updatedTasks.map(t => (t.id === nextTask.id && prev.nextRoutineAutoStart) ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
+            };
+          }
             return {
               ...chunk,
               completionDates: newCompletionDates,
@@ -3741,18 +3828,40 @@ export default function App() {
     if (!isChunkScheduledToday(chunk, effectiveDate, userData)) return '불활성';
     const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
     if (scheduledTasks.length === 0) return '불활성';
+
     const allFinished = scheduledTasks.every(t => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
-    if (allFinished) return '전체완료';
-    const anyStarted = scheduledTasks.some(t => t.startTime || t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP || t.laterTimestamp);
-    if (!anyStarted) return '미실행';
-    return '일부완료';
+    
+    if (allFinished) {
+      const hasPass = scheduledTasks.some(t => t.status === TaskStatus.SKIP);
+      return hasPass ? '완료' : '완벽';
+    }
+
+    const totalCurrentDuration = scheduledTasks.reduce((acc, t) => acc + calculateTaskDuration(t, currentTime), 0);
+
+    // Identify if any task is explicitly started/in-progress
+    const anyStarted = scheduledTasks.some(t => 
+      (t.startTime && !t.isPaused) || // Running
+      (t.isPaused && (t.accumulatedDuration || 0) > 0) || // Paused (and has some time)
+      (t.isPaused && !t.laterTimestamp && t.startTime === undefined && (t.accumulatedDuration || 0) >= 0 && scheduledTasks.indexOf(t) === 0 && chunk.tasks.some(task => task.id === t.id)) || // Special check for first task start
+      (t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP) || // Already have finished tasks
+      calculateTaskDuration(t, currentTime) >= 1 // More than 1 second accumulated
+    );
+
+    // If accumulatedDuration is set, it means it was started and paused.
+    const anyAccumulated = scheduledTasks.some(t => (t.accumulatedDuration || 0) >= 1);
+
+    if (anyStarted || anyAccumulated || totalCurrentDuration >= 1) return '실행중';
+
+    return '미실행';
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case '불활성': return <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-[10px]">불활성</span>;
       case '미실행': return <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-[10px]">미실행</span>;
-      case '일부완료': return <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-[10px]">일부완료</span>;
+      case '실행중': return <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-[10px]">실행중</span>;
+      case '완료': return <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-[10px]">완료</span>;
+      case '완벽': return <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-[10px]">완벽</span>;
       case '전체완료': return <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-[10px]">전체완료</span>;
       default: return null;
     }
@@ -3858,8 +3967,8 @@ export default function App() {
   const updateWakeUpTime = (time: string) => {
     setConfirmModal({
       isOpen: true,
-      title: '기상 시간 변경',
-      message: `기상 목표 시간을 ${time}으로 변경하시겠습니까?`,
+      title: '기상 시각 변경',
+      message: `기상 목표 시각을 ${time}으로 변경하시겠습니까?`,
       onConfirm: () => {
           setUserData(prev => {
             const hasCheckedInToday = prev.lastCheckInDate === todayStr;
@@ -3887,8 +3996,8 @@ export default function App() {
   const updateResetTime = (time: string) => {
     setConfirmModal({
       isOpen: true,
-      title: '리셋 시간 변경',
-      message: `하루 리셋 시간을 ${time}으로 변경하시겠습니까?`,
+      title: '리셋 시각 변경',
+      message: `하루 리셋 시각을 ${time}으로 변경하시겠습니까?`,
       onConfirm: () => {
         const h = parseInt(time.split(':')[0]);
         setUserData(prev => ({ ...prev, resetTime: time, dailyResetHour: h }));
@@ -3981,10 +4090,10 @@ export default function App() {
                 <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Settings className="w-5 h-5 text-indigo-600" />
                 </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">기상 목표 시간</h3>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">기상 목표 시각</h3>
               </div>
               <div className="flex gap-2">
-                {/* [코멘트] 기상 목표 시간 입력창 및 버튼 크기 줄임 / text-base: 글자크기, p-2: 안쪽여백, px-4: 가로여백, rounded-xl: 모서리곡률 */}
+                {/* [코멘트] 기상 목표 시각 입력창 및 버튼 크기 줄임 / text-base: 글자크기, p-2: 안쪽여백, px-4: 가로여백, rounded-xl: 모서리곡률 */}
                 <input 
                   type="time" 
                   defaultValue={userData.targetWakeUpTime}
@@ -4009,13 +4118,13 @@ export default function App() {
                   <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Settings className="w-5 h-5 text-indigo-600" />
                   </div>
-                  <h3 className="text-base font-black text-slate-800 whitespace-nowrap">하루 리셋 시간</h3>
+                  <h3 className="text-base font-black text-slate-800 whitespace-nowrap">하루 리셋 시각</h3>
                 </div>
                 <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">이 시간이 되면 모든 루틴의 완료 상태가 초기화되며, 그 전까지의 기록은 전날로 합산됩니다.</p>
               </div>
               
               <div className="relative">
-                {/* [코멘트] 하루 리셋 시간 선택 버튼 크기 줄임 / p-2.5: 안쪽여백, text-base: 글자크기, rounded-xl: 모서리곡률 */}
+                {/* [코멘트] 하루 리셋 시각 선택 버튼 크기 줄임 / p-2.5: 안쪽여백, text-base: 글자크기, rounded-xl: 모서리곡률 */}
                 <button 
                   onClick={() => setIsResetTimeDropdownOpen(!isResetTimeDropdownOpen)}
                   className="w-full flex items-center justify-between p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition-all group"
@@ -4078,23 +4187,42 @@ export default function App() {
               </div>
             </div>
 
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Settings className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-base font-black text-slate-800 whitespace-nowrap">타이머 자동 시작</h3>
-                    <p className="text-[12px] font-bold text-slate-400 leading-tight">홈화면에서 루틴 실행 시 타이머가 자동으로 시작됩니다.</p>
-                  </div>
+            <div className="p-[20px] bg-white rounded-[15px] space-y-[20px] shadow-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Settings className="w-5 h-5 text-indigo-600" />
                 </div>
-                <button 
-                  onClick={() => setUserData(prev => ({ ...prev, autoStartTimer: !prev.autoStartTimer }))}
-                  className={`w-12 h-6 rounded-full transition-all relative ${userData.autoStartTimer ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoStartTimer ? 'left-7' : 'left-1'}`} />
-                </button>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">타이머 자동 시작</h3>
+              </div>
+              
+              <div className="space-y-[15px] pl-[10px] border-l-2 border-slate-100 ml-[15px]">
+                {/* 첫 루틴 자동 시작 */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <h4 className="text-sm font-black text-slate-700">첫 루틴 자동 시작</h4>
+                    <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴 그룹을 시작함과 동시에 타이머가 자동으로 돌아갑니다.</p>
+                  </div>
+                  <button 
+                    onClick={() => setUserData(prev => ({ ...prev, firstRoutineAutoStart: !prev.firstRoutineAutoStart }))}
+                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.firstRoutineAutoStart ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.firstRoutineAutoStart ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
+
+                {/* 다음 루틴 자동 시작 */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <h4 className="text-sm font-black text-slate-700">다음 루틴 자동 시작</h4>
+                    <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴을 완료하면 다음 루틴이 자동으로 시작됩니다.</p>
+                  </div>
+                  <button 
+                    onClick={() => setUserData(prev => ({ ...prev, nextRoutineAutoStart: !prev.nextRoutineAutoStart }))}
+                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.nextRoutineAutoStart ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.nextRoutineAutoStart ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -4441,7 +4569,7 @@ export default function App() {
                 toggleTask={toggleTask}
                 togglePauseTask={togglePauseTask}
                 laterTask={laterTask}
-                giveUpTask={giveUpTask}
+                skipTask={skipTask}
                 startTask={startTask}
                 onRestart={onRestart}
                 resetChunk={resetChunk}

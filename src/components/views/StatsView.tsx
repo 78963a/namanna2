@@ -262,7 +262,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
         // Calculate achievement rate for this day
         const tasksOnThisDay = group.tasks.filter(t => t.scheduledDays?.includes(new Date(date).getDay()) ?? true);
         const taskEntries = (userData.taskHistory || []).filter(h => h.groupId === selectedGroupId && h.date === date);
-        const completedCount = taskEntries.filter(h => h.status === '완벽' || h.status === '완료').length;
+        const completedCount = taskEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵').length;
         const rate = tasksOnThisDay.length > 0 ? (completedCount / tasksOnThisDay.length) * 100 : 0;
 
         return {
@@ -281,10 +281,13 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const taskStats = group.tasks.map(task => {
       const getStatsForPeriod = (days: string[]) => {
         const entries = (userData.taskHistory || []).filter(h => h.taskId === task.id && days.includes(h.date));
-        const completedEntries = entries.filter(h => h.status === '완벽' || h.status === '완료');
         
-        const rate = entries.length > 0 ? (completedEntries.length / entries.length) * 100 : 0;
-        const durations = completedEntries.map(e => e.duration);
+        // Skip is included in rate but excluded from duration
+        const attainmentEntries = entries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵');
+        const durationEntries = entries.filter(h => h.status === '완벽' || h.status === '완료');
+        
+        const rate = entries.length > 0 ? (attainmentEntries.length / entries.length) * 100 : 0;
+        const durations = durationEntries.map(e => e.duration);
         
         const avg = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
         const min = durations.length > 0 ? Math.min(...durations) : 0;

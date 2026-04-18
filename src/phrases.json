@@ -11,6 +11,7 @@
     "days_style": { "color": "#64748b", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
     "start_info_style": { "color": "#6366f1", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
     "duration_style": { "color": "#10b981", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+    "totalTargetDuration_style": { "color": "#10b981", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
     "userName_style": { "color": "#f59e0b", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
     "startTime_style": { "color": "#8b5cf6", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
     "endTime_style": { "color": "#ec4899", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
@@ -24,6 +25,7 @@
       "days_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
       "start_info_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
       "duration_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+      "totalTargetDuration_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
       "userName_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
       "startTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
       "endTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" }
@@ -36,13 +38,14 @@
     "COMPLETION_SELECTION_TEMPLATES": [
       "나는 {{title}}을 완료한 {{purpose}}이다",
       "{{title}}을 완료하다니, 정말 훌륭해!",
+      "{{title}}을/를 모두 완수했습니다!",
       "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
     ],
     "INACTIVE": [
       "{{purpose}}이/가 되려면 때로는 {{title}}을/를 쉬어가야하지"
     ],
     "NOT_STARTED": [
-      "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}}에 실천하기로 했다"
+      "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다"
     ],
     "IN_PROGRESS": [
       "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}}에 실천하기로 했다",

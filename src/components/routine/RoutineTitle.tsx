@@ -62,8 +62,12 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || 0), 0);
       const totalMinutes = Math.floor(totalSeconds / 60);
       const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
+
+      const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
+      const totalTargetDurationText = `${totalTargetMinutes}분`;
       
       message = message.replace(/\{\{duration\}\}/g, getStyledHtml('duration', durationText));
+      message = message.replace(/\{\{totalTargetDuration\}\}/g, getStyledHtml('totalTargetDuration', totalTargetDurationText));
       message = message.replace(/\{\{userName\}\}/g, getStyledHtml('userName', userName || '나'));
       message = message.replace(/\{\{startTime\}\}/g, getStyledHtml('startTime', startTime || '--:--'));
       message = message.replace(/\{\{endTime\}\}/g, getStyledHtml('endTime', endTime || '--:--'));
@@ -125,6 +129,10 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
     const durationHtml = getStyledHtml('duration', durationText);
 
+    const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
+    const totalTargetDurationText = `${totalTargetMinutes}분`;
+    const totalTargetDurationHtml = getStyledHtml('totalTargetDuration', totalTargetDurationText);
+
     // --- [메시지 치환 로직] ---
 
     message = replaceWithJosa(message, 'title', chunk.name, titleHtml);
@@ -137,6 +145,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     message = message.replace(/\{\{days\}\}/g, daysHtml);
     message = message.replace(/\{\{start_info\}\}/g, startInfoHtml);
     message = message.replace(/\{\{duration\}\}/g, durationHtml);
+    message = message.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationHtml);
     message = message.replace(/\{\{userName\}\}/g, getStyledHtml('userName', userName || '나'));
     message = message.replace(/\{\{startTime\}\}/g, getStyledHtml('startTime', startTime || '--:--'));
     message = message.replace(/\{\{endTime\}\}/g, getStyledHtml('endTime', endTime || '--:--'));

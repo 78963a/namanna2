@@ -159,33 +159,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
             const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
             const completedTasks = scheduledTasks.filter(t => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
             const startedTasks = scheduledTasks.filter(t => t.startTime || t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
-            const isFullyCompleted = status === '전체완료';
+            const isFullyCompleted = status === '전체완료' || status === '완료' || status === '완벽';
             const isExpanded = expandedGroups[chunk.id];
             const isInactive = status === '불활성';
 
-            let displayStatus = '미실행';
+            const displayStatus = status;
             let statusColor = 'bg-slate-100 text-slate-500';
             
             if (isInactive) {
-              displayStatus = '비활성';
               statusColor = 'bg-slate-100 text-slate-400';
-            } else if (scheduledTasks.length > 0) {
-              if (startedTasks.length === 0) {
-                displayStatus = '미실행';
-                statusColor = 'bg-slate-100 text-slate-500';
-              } else if (isFullyCompleted) {
-                const hasPass = scheduledTasks.some(t => t.status === TaskStatus.SKIP || t.givenUp);
-                if (!hasPass) {
-                  displayStatus = '완벽';
-                  statusColor = 'bg-emerald-100 text-emerald-600';
-                } else {
-                  displayStatus = '완료';
-                  statusColor = 'bg-indigo-100 text-indigo-600';
-                }
-              } else {
-                displayStatus = '실행중';
-                statusColor = 'bg-amber-100 text-amber-600';
-              }
+            } else if (displayStatus === '미실행') {
+              statusColor = 'bg-slate-100 text-slate-500';
+            } else if (displayStatus === '완벽') {
+              statusColor = 'bg-emerald-100 text-emerald-600';
+            } else if (displayStatus === '완료') {
+              statusColor = 'bg-indigo-100 text-indigo-600';
+            } else if (displayStatus === '실행중') {
+              statusColor = 'bg-amber-100 text-amber-600';
             }
           
             // [코멘트] 루틴그룹 박스 배경색 설정 (상태에 따라 연한 배경색 적용)
@@ -276,7 +266,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     if (!a.isScheduled && b.isScheduled) return 1;
 
                     const getPriority = (t: Task) => {
-                      if (t.givenUp) return 4;
+                      if (t.status === TaskStatus.SKIP) return 4;
                       if (t.completed) return 3;
                       if (t.laterTimestamp) return 2;
                       return 1;
@@ -292,9 +282,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       className={`group flex items-center gap-3 py-1 px-[15px] transition-all ${
                         task.completed 
                           ? 'bg-slate-50/50' 
-                          : task.givenUp
-                            ? 'bg-rose-50/20'
-                            : ''
+                          : ''
                       }`}
                     >
                       <RoutineTitleLine 

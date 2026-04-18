@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Calendar } from 'lucide-react';
-import { UserData } from '../../types';
+import { UserData, TaskStatus } from '../../types';
 import { isTaskScheduledToday, calculateTaskDuration } from '../../utils';
 
 interface HeaderBoxProps {
@@ -28,7 +28,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
   currentTime
 }) => {
   const totalCompleted = userData.routineChunks.reduce((acc, chunk) => 
-    acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && t.completed).length, 0
+    acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && (t.completed || t.status === TaskStatus.SKIP)).length, 0
   );
   const totalScheduledTasksCount = userData.routineChunks.reduce((acc, chunk) => 
     acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData)).length, 0
@@ -42,7 +42,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
     const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
     const chunkDuration = scheduledTasks.reduce((taskAcc, task) => {
       // 완료된 루틴은 기록된 duration을 사용, 진행 중이거나 일시정지된 루틴은 실시간 계산
-      if (task.completed || task.givenUp) {
+      if (task.completed) {
         return taskAcc + (task.duration || 0);
       }
       return taskAcc + calculateTaskDuration(task, currentTime);
@@ -77,7 +77,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
           </div>
           <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
               <span>
-                {challengeDays}일째 도전중, {successDays}일째 성공중 ({completionPercentage}%) 4.18.
+                {challengeDays}일째 도전중응, {successDays}일째 성공중 ({completionPercentage}%)
                </span>
                {/* --- [합산시간 스타일 수정 가능 구역] --- */}
                <span style={{ 
