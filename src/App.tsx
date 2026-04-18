@@ -106,6 +106,7 @@ import { StatsView } from './components/views/StatsView';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { CelebrationModal } from './components/common/CelebrationModal';
 import { RoutineTitleLine } from './components/routine/RoutineTitleLine';
+import { RoutineTitle } from './components/routine/RoutineTitle';
 // import { TaskInputSection } from './components/routine/TaskInputSection';
 // import { SortableTaskItem } from './components/routine/SortableTaskItem';
 // import { SortableChunkItem } from './components/routine/SortableChunkItem';
@@ -211,6 +212,20 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
             }
           }
         }));
+        setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
+  const handleRestartTaskInternal = (taskId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: '다시 시작하시겠습니까?',
+      message: '타이머가 0부터 다시 시작됩니다. 다시 시작하시겠습니까?',
+      confirmLabel: '다시하기',
+      cancelLabel: '취소',
+      onConfirm: () => {
+        onRestart(taskId);
         setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
       }
     });
@@ -417,25 +432,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     }
     
     // Reset states and go home
+    setIsCompleted(false);
     setSelectedChunkId(null);
     setActiveTab('home');
     setAnimationStage('none');
   };
-
-  // 11. 사용자가 문구를 선택하지 않고 나가는 경우를 대비한 자동 저장 로직
-  // (루틴이 완료되었을 때 phrases.json의 COMPLETED 메시지 중 하나를 랜덤으로 할당)
-  useEffect(() => {
-    if (isCompleted && animationStage === 'none' && selectedChunkId) {
-      // 이 시점에 도달했다는 것은 사용자가 완료 화면에서 그냥 뒤로가기 등을 눌러 나갔다는 의미
-      const history = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === selectedChunkId);
-      if (history && !history.selectedPhrase) {
-        const messages = phrases.routine_messages.COMPLETED;
-        const randomMsg = messages[Math.floor(Math.random() * messages.length)];
-        // particles(조사)는 RoutineTitle에서 처리하므로 템플릿 그대로 저장
-        handleFinalSave(randomMsg);
-      }
-    }
-  }, [selectedChunkId, animationStage, isCompleted]);
 
   if (isCompleted && animationStage !== 'none') {
     // 루틴그룹완료화면 (Routine Group Completion Screen)
@@ -604,14 +605,15 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   storedPhrase = resolveParticles(storedPhrase, 'purpose', chunk.purpose || '목표');
                   storedPhrase = resolveParticles(storedPhrase, 'userName', userData.userName || '나');
 
-                  // Replace non-particle placeholders
-                  storedPhrase = storedPhrase.replace(/\{\{userName\}\}/g, userData.userName || '나');
-                  storedPhrase = storedPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
-                  storedPhrase = storedPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);
-                  storedPhrase = storedPhrase.replace(/\{\{duration\}\}/g, durationStr);
-
+                  // We preserve placeholders for startTime, endTime, userName, duration
+                  // so that RoutineTitle can style them based on phrases.json settings.
+                  
                   // For the UI display in buttons, replace everything
                   let displayPhrase = storedPhrase;
+                  displayPhrase = displayPhrase.replace(/\{\{userName\}\}/g, userData.userName || '나');
+                  displayPhrase = displayPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
+                  displayPhrase = displayPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);
+                  displayPhrase = displayPhrase.replace(/\{\{duration\}\}/g, durationStr);
                   displayPhrase = displayPhrase.replace(/\{\{title\}\}/g, chunk.name);
                   displayPhrase = displayPhrase.replace(/\{\{purpose\}\}/g, chunk.purpose || '목표');
 
@@ -653,17 +655,22 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
         
         <div className="p-4 relative z-10">
           {/* Top Row: Title (Left) and Reset Button (Right) */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 w-full overflow-hidden">
-              <h2 className="text-base font-black text-white tracking-tight leading-relaxed whitespace-nowrap overflow-hidden text-ellipsis">
-                {/* 실행화면의 루틴그룹 제목 스타일 설정 (글자 색, 크기, 글꼴 등) */}
-                  <span style={{
-                  color: '#ffffff',
-                 fontSize: '1rem',
-                 fontFamily: '"Malgun Gothic", "Apple SD Gothic Neo", "Nanum Gothic", "Dotum", sans-serif'
-                  }}>
-                  {chunk.purpose}{getJosa(chunk.purpose || '', '이/가')} 되기 위한 {chunk.name}
-                  </span>                <button 
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-grow">
+              <h2 className="text-base font-black text-white tracking-tight leading-relaxed">
+                {(() => {
+                  const entry = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
+                  return (
+                    <RoutineTitle 
+                      chunk={chunk} 
+                      isExecutionTitle={true}
+                      userName={userData.userName}
+                      startTime={entry?.firstTaskStartTime}
+                      endTime={entry?.completedAt}
+                    />
+                  );
+                })()}
+                <button 
                   onClick={() => {
                     setSettingsSubView({ type: 'detail', chunkId: chunk.id });
                     setIsSettingsOpen(true);
@@ -955,12 +962,13 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     index={chunk.tasks.findIndex(t => t.id === task.id)} 
                     currentTime={currentTime}
                     chunkTasks={chunk.tasks}
-                    onRestart={onRestart}
+                    onRestart={handleRestartTaskInternal}
                     onDoFirst={togglePauseTask}
                     isLocked={!isTriggerComplete && task.id !== (scheduledTasks.length > 0 ? scheduledTasks[0].id : null)}
                     activeTaskId={activeTask?.id}
                     isScheduledToday={isTaskScheduledToday(task, chunk, effectiveDate, userData)}
                     onActivate={handleActivateTaskInternal}
+                    chunkScheduledDays={chunk.scheduledDays}
                   />
                 </motion.div>
               ))}
@@ -1319,41 +1327,6 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
       )}
     </div>
   );
-};
-
-const RoutineTitle = ({ 
-  chunk, 
-  isCompleted,
-  nameClassName = "text-slate-900"
-}: { 
-  chunk: RoutineChunk, 
-  isCompleted: boolean,
-  nameClassName?: string
-}) => {
-  const hasPurpose = chunk.purpose && chunk.purpose.trim() !== '';
-  
-  if (isCompleted) {
-    return (
-      <span className="inline leading-relaxed text-black">
-        나는 <span className="text-blue-600 font-black">{chunk.name}</span>을 완료한 {hasPurpose ? <span className="text-blue-600 font-black">{chunk.purpose}</span> : ""}이다!
-      </span>
-    );
-  } else {
-    const titleNameStyle = `block text-xl font-black mt-2 mb-2 ${nameClassName}`;
-    if (hasPurpose) {
-      return (
-        <span className="block">
-          {chunk.purpose}를 위한 <span className={titleNameStyle}>{chunk.name}</span>
-        </span>
-      );
-    } else {
-      return (
-        <span className="block">
-          <span className={titleNameStyle}>{chunk.name}</span>
-        </span>
-      );
-    }
-  }
 };
 
 // --- Helper Components ---
@@ -1960,10 +1933,14 @@ const RoutineGroupFormView: React.FC<{
     title: string;
     message: string;
     onConfirm: () => void;
+    confirmLabel?: string;
+    cancelLabel?: string;
   }>({
     isOpen: false,
     title: '',
     message: '',
+    confirmLabel: '확인',
+    cancelLabel: '취소',
     onConfirm: () => {}
   });
   
@@ -2090,6 +2067,7 @@ const RoutineGroupFormView: React.FC<{
           isOpen: true,
           title: '루틴 삭제',
           message: '이 루틴을 삭제하시겠습니까?',
+          confirmLabel: '삭제',
           onConfirm: () => {
             setRoutineList(routineList.filter((_, i) => i !== idx));
             setEditingRoutineIndex(null);
@@ -2242,13 +2220,13 @@ const RoutineGroupFormView: React.FC<{
                     onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
                     className="flex-1 py-3 rounded-[15px] font-black text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
                   >
-                    취소
+                    {confirmModal.cancelLabel || '취소'}
                   </button>
                   <button 
                     onClick={confirmModal.onConfirm}
                     className="flex-1 py-3 rounded-[15px] font-black text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-100"
                   >
-                    삭제
+                    {confirmModal.confirmLabel || '확인'}
                   </button>
                 </div>
               </div>
@@ -2462,6 +2440,7 @@ const RoutineGroupFormView: React.FC<{
                                 isOpen: true,
                                 title: '루틴 삭제',
                                 message: '이 루틴을 삭제하시겠습니까?',
+                                confirmLabel: '삭제',
                                 onConfirm: () => {
                                   setRoutineList(routineList.filter((_, i) => i !== idx));
                                   setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -2695,10 +2674,14 @@ export default function App() {
     title: string;
     message: string;
     onConfirm: () => void;
+    confirmLabel?: string;
+    cancelLabel?: string;
   }>({
     isOpen: false,
     title: '',
     message: '',
+    confirmLabel: '확인',
+    cancelLabel: '취소',
     onConfirm: () => {}
   });
 
@@ -2929,18 +2912,25 @@ export default function App() {
       const existingEntry = newGroupHistory.find(h => h.date === today && h.groupId === chunk.id);
       const satisfaction = existingEntry?.satisfaction;
       const closingNote = existingEntry?.closingNote;
+      const selectedPhrase = existingEntry?.selectedPhrase;
+
+      // Preserve earliest start time
+      const finalFirstStartTime = [firstStartTime, existingEntry?.firstTaskStartTime]
+        .filter(Boolean)
+        .sort()[0] || null;
 
       const groupEntryIdx = newGroupHistory.findIndex(h => h.date === today && h.groupId === chunk.id);
       const groupEntry: RoutineGroupHistoryEntry = {
         date: today,
         groupId: chunk.id,
         isActive,
-        firstTaskStartTime: firstStartTime,
+        firstTaskStartTime: finalFirstStartTime,
         completionStatus,
         completedAt: lastEndTime,
         totalDuration,
         satisfaction,
-        closingNote
+        closingNote,
+        selectedPhrase
       };
 
       if (groupEntryIdx >= 0) {
@@ -3142,13 +3132,16 @@ export default function App() {
             }
             return t;
           });
-          const sortedTasks = [...updatedTasks].sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
-          const nextTask = sortedTasks.find(t => !t.completed && !t.givenUp && !t.startTime);
+          const nextTask = updatedTasks.find(t => 
+            !t.completed && 
+            !t.givenUp && 
+            isTaskScheduledToday(t, chunk, effectiveDate, prev)
+          );
 
           if (nextTask) {
             return {
               ...chunk,
-              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr } : t)
+              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
             };
           }
 
@@ -3189,25 +3182,16 @@ export default function App() {
           });
           
           // Find next task to start
-          const sortedTasks = [...updatedTasks].sort((a, b) => {
-            const getPriority = (t: Task) => {
-              if (t.givenUp) return 4;
-              if (t.completed) return 3;
-              if (t.laterTimestamp) return 2;
-              return 1;
-            };
-            const pA = getPriority(a);
-            const pB = getPriority(b);
-            if (pA !== pB) return pA - pB;
-            if (pA === 2) return (b.laterTimestamp || 0) - (a.laterTimestamp || 0);
-            return 0;
-          });
+          const nextTask = updatedTasks.find(t => 
+            !t.completed && 
+            !t.givenUp && 
+            isTaskScheduledToday(t, chunk, effectiveDate, prev)
+          );
 
-          const nextTask = sortedTasks.find(t => !t.completed && !t.givenUp && !t.startTime);
           if (nextTask) {
             return {
               ...chunk,
-              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr, isPaused: false } : t)
+              tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
             };
           }
 
@@ -3433,7 +3417,7 @@ export default function App() {
           // Clear review from history for this day
           const newGroupHistory = (prev.routineGroupHistory || []).map(h => 
             (h.groupId === chunkId && h.date === todayStr) 
-              ? { ...h, closingNote: undefined, satisfaction: undefined } 
+              ? { ...h, closingNote: undefined, satisfaction: undefined, firstTaskStartTime: null, completedAt: null, selectedPhrase: undefined } 
               : h
           );
 
@@ -3523,11 +3507,14 @@ export default function App() {
 
           // If we just completed a task, start the next one
           if (isBecomingCompleted) {
-            const sortedTasks = [...updatedTasks].sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
-            const nextTask = sortedTasks.find(t => !t.completed);
+            const nextTask = updatedTasks.find(t => 
+              !t.completed && 
+              !t.givenUp && 
+              isTaskScheduledToday(t, chunk, effectiveDate, prev)
+            );
             
             // Check if all tasks in this chunk are now completed
-            const allCompleted = updatedTasks.every(t => t.completed);
+            const allCompleted = updatedTasks.every(t => t.completed || t.givenUp);
             let newCompletionDates = chunk.completionDates || [];
             if (allCompleted && !newCompletionDates.includes(todayStr)) {
               newCompletionDates = [...newCompletionDates, todayStr];
@@ -3539,7 +3526,7 @@ export default function App() {
               return {
                 ...chunk,
                 completionDates: newCompletionDates,
-                tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr } : t)
+                tasks: updatedTasks.map(t => t.id === nextTask.id ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
               };
             }
             return {
@@ -3724,10 +3711,24 @@ export default function App() {
       routineChunks: prev.routineChunks.map(chunk => {
         if (chunk.id === chunkId) {
           const inactiveDates = chunk.inactiveDates || [];
-          if (inactiveDates.includes(todayStr)) {
-            return { ...chunk, inactiveDates: inactiveDates.filter(d => d !== todayStr) };
+          const forcedActiveDates = chunk.forcedActiveDates || [];
+          const day = effectiveDate.getDay();
+          const isScheduledNormally = chunk.scheduledDays.includes(day);
+
+          if (isScheduledNormally) {
+            // Normally active: toggle exclusion from inactiveDates
+            if (inactiveDates.includes(todayStr)) {
+              return { ...chunk, inactiveDates: inactiveDates.filter(d => d !== todayStr) };
+            } else {
+              return { ...chunk, inactiveDates: [...inactiveDates, todayStr], forcedActiveDates: forcedActiveDates.filter(d => d !== todayStr) };
+            }
           } else {
-            return { ...chunk, inactiveDates: [...inactiveDates, todayStr] };
+            // Normally inactive: toggle inclusion in forcedActiveDates
+            if (forcedActiveDates.includes(todayStr)) {
+              return { ...chunk, forcedActiveDates: forcedActiveDates.filter(d => d !== todayStr) };
+            } else {
+              return { ...chunk, forcedActiveDates: [...forcedActiveDates, todayStr], inactiveDates: inactiveDates.filter(d => d !== todayStr) };
+            }
           }
         }
         return chunk;
@@ -4583,13 +4584,13 @@ export default function App() {
                     onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
                     className="flex-1 py-3 rounded-[10px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
                   >
-                    취소
+                    {confirmModal.cancelLabel || '취소'}
                   </button>
                   <button 
                     onClick={confirmModal.onConfirm}
                     className="flex-1 py-3 rounded-[10px] font-bold text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-100"
                   >
-                    확인
+                    {confirmModal.confirmLabel || '확인'}
                   </button>
                 </div>
               </div>

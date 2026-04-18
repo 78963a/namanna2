@@ -29,6 +29,7 @@ interface RoutineTitleLineProps {
   activeTaskId?: string;
   isScheduledToday?: boolean;
   onActivate?: (id: string) => void;
+  chunkScheduledDays?: number[];
 }
 
 /**
@@ -49,7 +50,8 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   isLocked,
   activeTaskId,
   isScheduledToday = true,
-  onActivate
+  onActivate,
+  chunkScheduledDays = [0, 1, 2, 3, 4, 5, 6]
 }) => {
   /**
    * Formats a duration in seconds into a compact time string (m:ss).
@@ -131,84 +133,165 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
 
   const targetDuration = task.targetDuration || task.duration || 0;
 
-  return (
-    <div className={`flex items-center gap-3 text-sm w-full ${!isScheduledToday ? 'opacity-50' : (task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT ? 'text-slate-400' : 'text-slate-700')} ${isLocked ? 'opacity-40 pointer-events-none' : ''}`}>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {statusIcon}
-        <span className="font-bold w-4 text-center">{index + 1}.</span>
-      </div>
-      
-      <div className="flex items-center gap-2 min-w-0 flex-grow">
-        <span 
-          className={`font-bold truncate max-w-[120px] sm:max-w-[200px] ${task.completed ? 'line-through' : ''}`}
-          style={{ fontFamily: phrases.settings.base_style.fontFamily ? `'${phrases.settings.base_style.fontFamily}', sans-serif` : 'inherit' }}
-        >
-          {index === 0 && "⚡"}{task.text}
-        </span>
-        
-        {task.checklist && task.checklist.length > 0 && (
-          <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter flex-shrink-0">
-            <CheckCircle2 className="w-2 h-2" />
-            <span>체크리스트</span>
-          </div>
-        )}
+  const currentTaskSchedule = task.scheduledDays || [0, 1, 2, 3, 4, 5, 6];
+  const isScheduleDifferent = JSON.stringify([...currentTaskSchedule].sort()) !== JSON.stringify([...chunkScheduledDays].sort());
 
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-[10px] font-black text-[8px] uppercase tracking-widest">
-              {task.taskType === TaskType.TIME_INDEPENDENT ? (
-                <Clock className="w-2.5 h-2.5 text-sky-400" />
-              ) : task.taskType === TaskType.TIME_ACCUMULATED ? (
-                <BrickWall className="w-2.5 h-2.5 text-pink-400" />
-              ) : (
-                <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
-              )}
-              {task.completed ? (
-                <span>{formatTime(task.duration || 0)} / {targetDuration}분</span>
-              ) : task.startTime ? (
-                <span>{formatTime(calculateCurrentDuration(task))} / {targetDuration}분</span>
-              ) : (
-                <span>{targetDuration}분</span>
-              )}
+  const days = ['월', '화', '수', '목', '금', '토', '일'];
+  // Sunday is 0 in JS Date, but we list Mon-Sun. 
+  // Map index 0->월(1), 1->화(2), 2->수(3), 3->목(4), 4->금(5), 5->토(6), 6->일(0)
+  const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+
+  const inExecution = !!onDoFirst;
+
+  const ScheduleRow = () => (
+    <div className="flex items-center gap-1 mt-1 ml-[52px]">
+      {dayOrder.map((dayNum, i) => {
+        const isScheduled = currentTaskSchedule.includes(dayNum);
+        return (
+          <div 
+            key={dayNum}
+            className="relative flex items-center justify-center w-[18px] h-[18px]"
+          >
+            <div className={`w-full h-full rounded-full border flex items-center justify-center ${isScheduled ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-slate-50'}`}>
+              <span className={`text-[9px] font-bold ${isScheduled ? 'text-indigo-600' : 'text-slate-400'}`}>
+                {days[i]}
+              </span>
             </div>
+            {!isScheduled && (
+              <X className="absolute w-2.5 h-2.5 text-slate-400/60" strokeWidth={3} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const TimeBadge = () => (
+    <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-[10px] font-black text-[8px] uppercase tracking-widest">
+      {task.taskType === TaskType.TIME_INDEPENDENT ? (
+        <Clock className="w-2.5 h-2.5 text-sky-400" />
+      ) : task.taskType === TaskType.TIME_ACCUMULATED ? (
+        <BrickWall className="w-2.5 h-2.5 text-pink-400" />
+      ) : (
+        <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
+      )}
+      {task.completed ? (
+        <span>{formatTime(task.duration || 0)} / {targetDuration}분</span>
+      ) : task.startTime ? (
+        <span>{formatTime(calculateCurrentDuration(task))} / {targetDuration}분</span>
+      ) : (
+        <span>{targetDuration}분</span>
+      )}
+    </div>
+  );
+
+  const ActionButtons = () => (
+    <div className="flex items-center gap-2 ml-auto justify-end">
+      {showActivate && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onActivate(task.id);
+          }}
+          className="flex-shrink-0 px-2 py-1 bg-amber-50 text-amber-600 rounded-md text-[10px] font-black hover:bg-amber-100 transition-all"
+        >
+          활성화하기
+        </button>
+      )}
+
+      {showStartResume && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDoFirst(task.id);
+          }}
+          className="flex-shrink-0 px-2 py-1 bg-sky-50 text-sky-600 rounded-md text-[10px] font-black hover:bg-sky-100 transition-all"
+        >
+          {startResumeLabel}
+        </button>
+      )}
+
+      {showRestart && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRestart(task.id);
+          }}
+          className="flex-shrink-0 px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-black hover:bg-indigo-100 transition-all"
+        >
+          다시하기
+        </button>
+      )}
+    </div>
+  );
+
+  return (
+    <div className={`flex flex-col w-full ${!isScheduledToday ? 'opacity-50' : ''} ${isLocked ? 'opacity-40 pointer-events-none' : ''}`}>
+      {/* Mobile Layout - Only apply vertical break in execution view */}
+      <div className={`sm:hidden flex flex-col w-full text-sm ${!inExecution ? 'hidden' : ''}`}>
+        {/* Row 1: Status, Number, Title */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {statusIcon}
+            <span className="font-bold w-4 text-center">{index + 1}.</span>
+          </div>
+          <div className="flex items-center gap-2 min-w-0 flex-grow">
+            <span 
+              className={`font-bold truncate ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}
+              style={{ fontFamily: phrases.settings.base_style.fontFamily ? `'${phrases.settings.base_style.fontFamily}', sans-serif` : 'inherit' }}
+            >
+              {index === 0 && "⚡"}{task.text}
+            </span>
+            {task.checklist && task.checklist.length > 0 && (
+              <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter flex-shrink-0">
+                <CheckCircle2 className="w-2 h-2" />
+                <span>체크리스트</span>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Row 2: Time (Left), Buttons (Right) */}
+        <div className="flex items-center mt-1 ml-[52px]">
+          <TimeBadge />
+          <ActionButtons />
+        </div>
+
+        {/* Optional Row 3: Schedule (if different and in execution view) */}
+        {inExecution && isScheduleDifferent && <ScheduleRow />}
       </div>
 
-      <div className="flex items-center gap-2 ml-auto justify-end">
-        {showActivate && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onActivate(task.id);
-            }}
-            className="flex-shrink-0 px-2 py-1 bg-amber-50 text-amber-600 rounded-md text-[10px] font-black hover:bg-amber-100 transition-all"
-          >
-            활성화하기
-          </button>
-        )}
+      {/* Desktop Layout or Home Mobile (Horizontal Layout) */}
+      <div className={`${inExecution ? 'hidden sm:flex' : 'flex'} flex-col w-full text-sm`}>
+        <div className={`flex items-center gap-3 w-full ${task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT ? 'text-slate-400' : 'text-slate-700'}`}>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {statusIcon}
+            <span className="font-bold w-4 text-center">{index + 1}.</span>
+          </div>
+          
+          <div className="flex items-center gap-2 min-w-0 flex-grow">
+            <span 
+              className={`font-bold truncate max-w-[200px] ${task.completed ? 'line-through' : ''}`}
+              style={{ fontFamily: phrases.settings.base_style.fontFamily ? `'${phrases.settings.base_style.fontFamily}', sans-serif` : 'inherit' }}
+            >
+              {index === 0 && "⚡"}{task.text}
+            </span>
+            
+            {task.checklist && task.checklist.length > 0 && (
+              <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter flex-shrink-0">
+                <CheckCircle2 className="w-2 h-2" />
+                <span>체크리스트</span>
+              </div>
+            )}
 
-        {showStartResume && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDoFirst(task.id);
-            }}
-            className="flex-shrink-0 px-2 py-1 bg-sky-50 text-sky-600 rounded-md text-[10px] font-black hover:bg-sky-100 transition-all"
-          >
-            {startResumeLabel}
-          </button>
-        )}
+            <TimeBadge />
+          </div>
 
-        {showRestart && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onRestart(task.id);
-            }}
-            className="flex-shrink-0 px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-black hover:bg-indigo-100 transition-all"
-          >
-            다시하기
-          </button>
-        )}
+          <ActionButtons />
+        </div>
+
+        {/* Optional Row 2: Schedule (if different and in execution view) */}
+        {inExecution && isScheduleDifferent && <ScheduleRow />}
       </div>
     </div>
   );

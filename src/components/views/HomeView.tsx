@@ -243,7 +243,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <h3 className="text-sm font-bold text-slate-800 leading-relaxed">
                     {(() => {
                       const entry = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
-                      return <RoutineTitle chunk={chunk} status={displayStatus} selectedPhrase={entry?.selectedPhrase} />;
+                      return (
+                        <RoutineTitle 
+                          chunk={chunk} 
+                          status={displayStatus} 
+                          selectedPhrase={entry?.selectedPhrase} 
+                          userName={userData.userName}
+                          startTime={entry?.firstTaskStartTime}
+                          endTime={entry?.completedAt}
+                        />
+                      );
                     })()}
                   </h3>
                 </div>

@@ -34,6 +34,8 @@ export const minutesToTime = (minutes: number): string => {
  * @returns {boolean} True if scheduled, false otherwise
  */
 export const isChunkScheduledToday = (chunk: RoutineChunk, date: Date, userData: UserData): boolean => {
+  const dateStr = formatDate(date);
+  if (chunk.forcedActiveDates?.includes(dateStr)) return true;
   const day = date.getDay(); // 0 (Sun) to 6 (Sat)
   return chunk.scheduledDays.includes(day);
 };
@@ -48,8 +50,22 @@ export const isChunkScheduledToday = (chunk: RoutineChunk, date: Date, userData:
  * @returns {boolean} True if scheduled, false otherwise
  */
 export const isTaskScheduledToday = (task: Task, chunk: RoutineChunk, date: Date, userData: UserData): boolean => {
-  const dateStr = date.toISOString().split('T')[0];
+  const dateStr = formatDate(date);
   if (userData.forcedActiveTasks?.[dateStr]?.[task.id]) return true;
+
+  if (chunk.forcedActiveDates?.includes(dateStr)) {
+    // If the chunk is forced active, the task is active unless it has its own scheduledDays
+    // and those days are specifically set and don't include today.
+    // However, if task.scheduledDays matches chunk.scheduledDays, it should show up.
+    if (!task.scheduledDays) return true;
+    
+    // If task has specific days, we only show it if it's one of those days
+    // OR if its days are identical to the chunk's days (meaning it's just following the group).
+    const isSameSchedule = JSON.stringify([...task.scheduledDays].sort()) === JSON.stringify([...chunk.scheduledDays].sort());
+    if (isSameSchedule) return true;
+
+    return task.scheduledDays.includes(date.getDay());
+  }
 
   if (!isChunkScheduledToday(chunk, date, userData)) return false;
   if (!task.scheduledDays) return true;

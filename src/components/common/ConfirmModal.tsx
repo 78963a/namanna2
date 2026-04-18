@@ -8,6 +8,8 @@ interface ConfirmModalProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmLabel?: string;
+  cancelLabel?: string;
 }
 
 /**
@@ -22,6 +24,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   message,
   onConfirm,
   onCancel,
+  confirmLabel = "확인",
+  cancelLabel = "취소"
 }) => {
   return (
     <AnimatePresence>
@@ -53,13 +57,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                   onClick={onCancel}
                   className="flex-1 py-3 rounded-[10px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
                 >
-                  취소
+                  {cancelLabel}
                 </button>
                 <button 
                   onClick={onConfirm}
                   className="flex-1 py-3 rounded-[10px] font-bold text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-100"
                 >
-                  확인
+                  {confirmLabel}
                 </button>
               </div>
             </div>

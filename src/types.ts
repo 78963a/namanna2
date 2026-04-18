@@ -54,6 +54,7 @@ export interface RoutineChunk {
   purpose?: string;
   completionDates?: string[];
   inactiveDates?: string[];
+  forcedActiveDates?: string[];
   scheduleType: 'days';
   scheduledDays: number[]; // 0-6
   isAlarmEnabled?: boolean;

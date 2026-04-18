@@ -36,6 +36,11 @@ export const StatsView: React.FC<StatsViewProps> = ({
   const [calendarYear, setCalendarYear] = useState(currentTime.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(currentTime.getMonth());
 
+  const [activeTab, setActiveTab] = useState<'wake-up' | 'achievement'>('achievement');
+  const [isWakeUpExpanded, setIsWakeUpExpanded] = useState(false);
+  const [isAchievementExpanded, setIsAchievementExpanded] = useState(false);
+  const [isDetailExpanded, setIsDetailExpanded] = useState(false);
+
   // Scroll to top when entering detailed view
   useEffect(() => {
     if (selectedGroupId) {
@@ -102,6 +107,16 @@ export const StatsView: React.FC<StatsViewProps> = ({
     return days;
   }, [currentTime]);
 
+  const last40Days = useMemo(() => {
+    const days = [];
+    for (let i = 39; i >= 0; i--) {
+      const d = new Date(currentTime);
+      d.setDate(d.getDate() - i);
+      days.push(formatDate(d));
+    }
+    return days;
+  }, [currentTime]);
+
   // --- Wake-up Stats ---
   const wakeUpStats = useMemo(() => {
     const history = userData.wakeUpTimeHistory || [];
@@ -130,16 +145,19 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
     const stats7 = getAvgForPeriod(last7Days);
     const stats30 = getAvgForPeriod(last30Days);
+    const stats40 = getAvgForPeriod(last40Days);
 
     // Sort history with today at the top
     const sortedHistory7 = [...stats7.history].reverse();
+    const sortedHistory40 = [...stats40.history].reverse();
 
     return {
       avgTime7: stats7.avgTime,
       avgTime30: stats30.avgTime,
-      history: sortedHistory7
+      history7: sortedHistory7,
+      history40: sortedHistory40
     };
-  }, [userData.wakeUpTimeHistory, userData.targetWakeUpTime, last7Days, last30Days]);
+  }, [userData.wakeUpTimeHistory, userData.targetWakeUpTime, last7Days, last30Days, last40Days]);
 
   // --- Achievement Stats ---
   const achievementStats = useMemo(() => {
@@ -176,53 +194,59 @@ export const StatsView: React.FC<StatsViewProps> = ({
       };
     });
 
-    const dailyHistory7 = last7Days.map(date => {
-      const rate = (userData.dailyCompletionRate?.[date]) || 0;
-      const dayTaskHistory = (userData.taskHistory || []).filter(h => h.date === date && h.isActive);
-      const dayGroupHistory = (userData.routineGroupHistory || []).filter(h => h.date === date && h.isActive);
+    const getDailyHistoryForPeriod = (days: string[]) => {
+      return days.map(date => {
+        const rate = (userData.dailyCompletionRate?.[date]) || 0;
+        const dayTaskHistory = (userData.taskHistory || []).filter(h => h.date === date && h.isActive);
+        const dayGroupHistory = (userData.routineGroupHistory || []).filter(h => h.date === date && h.isActive);
 
-      let perfect = 0;
-      let completed = 0;
-      let skipped = 0;
-      let failed = 0;
+        let perfect = 0;
+        let completed = 0;
+        let skipped = 0;
+        let failed = 0;
 
-      dayTaskHistory.forEach(h => {
-        if (h.status === '완벽') perfect++;
-        else if (h.status === '완료') completed++;
-        else if (h.status === '스킵') skipped++;
-        else failed++;
-      });
+        dayTaskHistory.forEach(h => {
+          if (h.status === '완벽') perfect++;
+          else if (h.status === '완료') completed++;
+          else if (h.status === '스킵') skipped++;
+          else failed++;
+        });
 
-      const firstStarts = dayGroupHistory
-        .filter(h => h.firstTaskStartTime)
-        .map(h => timeToMinutes(h.firstTaskStartTime!));
-      const completions = dayGroupHistory
-        .filter(h => h.completedAt)
-        .map(h => timeToMinutes(h.completedAt!));
-      const durations = dayGroupHistory.map(h => h.totalDuration || 0);
+        const firstStarts = dayGroupHistory
+          .filter(h => h.firstTaskStartTime)
+          .map(h => timeToMinutes(h.firstTaskStartTime!));
+        const completions = dayGroupHistory
+          .filter(h => h.completedAt)
+          .map(h => timeToMinutes(h.completedAt!));
+        const durations = dayGroupHistory.map(h => h.totalDuration || 0);
 
-      const minStart = firstStarts.length > 0 ? Math.min(...firstStarts) : null;
-      const maxEnd = completions.length > 0 ? Math.max(...completions) : null;
-      const sumDurationSeconds = durations.reduce((a, b) => a + b, 0);
+        const minStart = firstStarts.length > 0 ? Math.min(...firstStarts) : null;
+        const maxEnd = completions.length > 0 ? Math.max(...completions) : null;
+        const sumDurationSeconds = durations.reduce((a, b) => a + b, 0);
 
-      return {
-        date,
-        rate: Math.floor(rate) + '%',
-        totalActive: dayTaskHistory.length,
-        breakdown: `(${failed}/${skipped}/${completed}/${perfect})`,
-        startTime: minStart !== null ? minutesToTime(minStart) : '--:--',
-        endTime: maxEnd !== null ? minutesToTime(maxEnd) : '--:--',
-        duration: sumDurationSeconds > 0 ? Math.floor(sumDurationSeconds / 60) + '분' : '0분'
-      };
-    }).reverse();
+        return {
+          date,
+          rate: Math.floor(rate) + '%',
+          totalActive: dayTaskHistory.length,
+          breakdown: `(${failed}/${skipped}/${completed}/${perfect})`,
+          startTime: minStart !== null ? minutesToTime(minStart) : '--:--',
+          endTime: maxEnd !== null ? minutesToTime(maxEnd) : '--:--',
+          duration: sumDurationSeconds > 0 ? Math.floor(sumDurationSeconds / 60) + '분' : '0분'
+        };
+      }).reverse();
+    };
+
+    const dailyHistory7 = getDailyHistoryForPeriod(last7Days);
+    const dailyHistory40 = getDailyHistoryForPeriod(last40Days);
 
     return {
       avgTotalRate7: Math.floor(avgRate7).toString(),
       avgTotalRate30: Math.floor(avgRate30).toString(),
       groups: groupStats,
-      dailyHistory: dailyHistory7
+      dailyHistory7,
+      dailyHistory40
     };
-  }, [userData.routineChunks, userData.routineGroupHistory, userData.taskHistory, userData.dailyCompletionRate, last7Days, last30Days]);
+  }, [userData.routineChunks, userData.routineGroupHistory, userData.taskHistory, userData.dailyCompletionRate, last7Days, last30Days, last40Days]);
 
   // --- Detail View Data ---
   const detailData = useMemo(() => {
@@ -230,26 +254,29 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const group = userData.routineChunks.find(g => g.id === selectedGroupId);
     if (!group) return null;
 
-    // Sort history with today at the top
-    const sortedLast7Days = [...last7Days].reverse();
+    const getHistoryForPeriod = (days: string[]) => {
+      const sortedDays = [...days].reverse();
+      return sortedDays.map(date => {
+        const entry = (userData.routineGroupHistory || []).find(h => h.groupId === selectedGroupId && h.date === date);
+        
+        // Calculate achievement rate for this day
+        const tasksOnThisDay = group.tasks.filter(t => t.scheduledDays?.includes(new Date(date).getDay()) ?? true);
+        const taskEntries = (userData.taskHistory || []).filter(h => h.groupId === selectedGroupId && h.date === date);
+        const completedCount = taskEntries.filter(h => h.status === '완벽' || h.status === '완료').length;
+        const rate = tasksOnThisDay.length > 0 ? (completedCount / tasksOnThisDay.length) * 100 : 0;
 
-    const groupHistory = sortedLast7Days.map(date => {
-      const entry = (userData.routineGroupHistory || []).find(h => h.groupId === selectedGroupId && h.date === date);
-      
-      // Calculate achievement rate for this day
-      const tasksOnThisDay = group.tasks.filter(t => t.scheduledDays?.includes(new Date(date).getDay()) ?? true);
-      const taskEntries = (userData.taskHistory || []).filter(h => h.groupId === selectedGroupId && h.date === date);
-      const completedCount = taskEntries.filter(h => h.status === '완벽' || h.status === '완료').length;
-      const rate = tasksOnThisDay.length > 0 ? (completedCount / tasksOnThisDay.length) * 100 : 0;
+        return {
+          date,
+          startTime: entry?.firstTaskStartTime || '미실행',
+          duration: entry ? formatDurationPrecise(entry.totalDuration) : '0초',
+          endTime: entry?.completedAt || '미완료',
+          rate: Math.floor(rate) + '%'
+        };
+      });
+    };
 
-      return {
-        date,
-        startTime: entry?.firstTaskStartTime || '미실행',
-        duration: entry ? formatDurationPrecise(entry.totalDuration) : '0초',
-        endTime: entry?.completedAt || '미완료',
-        rate: Math.floor(rate) + '%'
-      };
-    });
+    const history7 = getHistoryForPeriod(last7Days);
+    const history40 = getHistoryForPeriod(last40Days);
 
     const taskStats = group.tasks.map(task => {
       const getStatsForPeriod = (days: string[]) => {
@@ -282,268 +309,422 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
     return {
       name: group.name,
-      history: groupHistory,
+      history7: history7,
+      history40: history40,
       tasks: taskStats
     };
-  }, [selectedGroupId, userData, last7Days, last30Days]);
+  }, [selectedGroupId, userData, last7Days, last30Days, last40Days]);
 
   if (selectedGroupId && detailData) {
     return (
-      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setSelectedGroupId(null)}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Folder Tab Containers */}
+        <div className="flex px-4 items-end relative z-20">
+          <button
+            onClick={() => {
+              setActiveTab('wake-up');
+              setSelectedGroupId(null);
+            }}
+            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+              activeTab === 'wake-up' 
+                ? 'bg-white text-indigo-600 border-slate-100 -mb-[1px] pt-4' 
+                : 'bg-slate-50 text-slate-400 border-transparent'
+            }`}
           >
-            <ChevronLeft className="w-6 h-6 text-slate-600" />
+            <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
+            기상 시각 통계
+            {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
           </button>
-          <h2 className="text-xl font-black text-slate-900">{detailData.name} 상세 통계</h2>
+
+          <button
+            onClick={() => {
+              setActiveTab('achievement');
+              setSelectedGroupId(null);
+            }}
+            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+              activeTab === 'achievement' 
+                ? 'bg-white text-violet-600 border-slate-100 -mb-[1px] pt-4' 
+                : 'bg-slate-50 text-slate-400 border-transparent'
+            }`}
+          >
+            <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
+            달성률 통계
+            {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+          </button>
         </div>
 
-        {/* 7-Day History Table 루틴그룹별 최근 7일간 통계*/}
-        <section className="bg-white rounded-[15px] shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-4 bg-slate-50 border-b border-slate-100">
-            <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
-              <History className="w-4 h-4 text-indigo-500" />
-              최근 7일 기록
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                  <th className="px-4 py-3">날짜</th>
-                  <th className="px-4 py-3">시작</th>
-                  <th className="px-4 py-3">소요시간</th>
-                  <th className="px-4 py-3">완료</th>
-                  <th className="px-4 py-3">달성률</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {detailData.history.map((row, i) => (
-                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 font-bold text-slate-500">{row.date.split('-').slice(1).join('/')}</td>
-                    <td className="px-4 py-3 font-black text-slate-700">{row.startTime}</td>
-                    <td className="px-4 py-3 font-bold text-indigo-600">{row.duration}</td>
-                    <td className="px-4 py-3 font-black text-slate-700">{row.endTime}</td>
-                    <td className="px-4 py-3 font-black text-emerald-600">{row.rate}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* Individual Task Stats */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest ml-1">개별 루틴 통계</h3>
-          {detailData.tasks.map((task, i) => (
-            <div key={i} className="bg-white p-5 rounded-[15px] shadow-sm border border-slate-100 space-y-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                <h4 className="font-black text-slate-800">{task.name}</h4>
-                <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-[10px] font-black text-[8px] uppercase tracking-widest ml-1">
-                  {task.type === TaskType.TIME_INDEPENDENT ? (
-                    <Clock className="w-2.5 h-2.5 text-sky-400" />
-                  ) : task.type === TaskType.TIME_ACCUMULATED ? (
-                    <BrickWall className="w-2.5 h-2.5 text-pink-400" />
-                  ) : (
-                    <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
-                  )}
-                  <span>{task.targetDuration}분</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="grid grid-cols-4 gap-2 text-[10px] bg-slate-50 p-2 rounded-[10px]">
-                  <div className="font-black text-slate-400">30일</div>
-                  <div className="text-emerald-600 font-black">달성: {task.last30.rate}</div>
-                  <div className="text-slate-600 font-bold col-span-2">
-                    평균: {task.last30.avg} (최단: {task.last30.min} / 최장: {task.last30.max})
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-2 text-[10px] bg-indigo-50/50 p-2 rounded-[10px]">
-                  <div className="font-black text-indigo-400">7일</div>
-                  <div className="text-emerald-600 font-black">달성: {task.last7.rate}</div>
-                  <div className="text-slate-600 font-bold col-span-2">
-                    평균: {task.last7.avg} (최단: {task.last7.min} / 최장: {task.last7.max})
-                  </div>
-                </div>
-              </div>
+        {/* Main Folder Content Body */}
+        <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 p-4 md:p-6">
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setSelectedGroupId(null)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6 text-slate-600" />
+              </button>
+              <h2 className="text-xl font-black text-slate-900">{detailData.name} 상세 통계</h2>
             </div>
-          ))}
+
+            {/* 7-Day History Table 루틴그룹별 최근 7일간 통계*/}
+            <section className="bg-white rounded-[15px] shadow-sm border border-slate-100 overflow-hidden">
+              <div className="p-3 bg-slate-50 border-b border-slate-100">
+                <h3 className="text-xs font-black text-slate-700 flex items-center gap-2">
+                  <History className="w-4 h-4 text-indigo-500" />
+                  최근 {isDetailExpanded ? '40' : '7'}일 기록
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[11px]">
+                  <thead>
+                    <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
+                      <th className="px-2 py-2">날짜</th>
+                      <th className="px-2 py-2 text-center">시작</th>
+                      <th className="px-2 py-2 text-center">소요</th>
+                      <th className="px-2 py-2 text-center">완료</th>
+                      <th className="px-2 py-2 text-right">달성률</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(isDetailExpanded ? detailData.history40 : detailData.history7).map((row, i) => (
+                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-2 py-2 font-bold text-slate-500 tracking-tighter whitespace-nowrap">{row.date.split('-').slice(1).join('/')}</td>
+                        <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime}</td>
+                        <td className="px-2 py-2 text-center font-bold text-indigo-600 tracking-tighter">{row.duration}</td>
+                        <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime}</td>
+                        <td className="px-2 py-2 text-right font-black text-emerald-600 tracking-tighter">{row.rate}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-3 border-t border-slate-50">
+                <button 
+                  onClick={() => setIsDetailExpanded(!isDetailExpanded)}
+                  className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-400 hover:text-indigo-600 transition-colors py-2"
+                >
+                  <div className="flex flex-col items-center">
+                    <span>{isDetailExpanded ? '접기' : '최근 40일 기록 확인'}</span>
+                    {!isDetailExpanded && <div className="mt-1 border-b-2 border-r-2 border-slate-300 w-1.5 h-1.5 rotate-45" />}
+                    {isDetailExpanded && <div className="mb-1 border-t-2 border-l-2 border-indigo-500 w-1.5 h-1.5 rotate-45" />}
+                  </div>
+                </button>
+              </div>
+            </section>
+
+            {/* Individual Task Stats */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-black text-slate-800 pl-1">개별 루틴 통계</h2>
+              {detailData.tasks.map((task, i) => (
+                <div key={i} className="bg-white p-5 rounded-[15px] shadow-sm border border-slate-100 space-y-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                    <h4 className="font-black text-slate-800">{task.name}</h4>
+                    <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-[10px] font-black text-[8px] uppercase tracking-widest ml-1">
+                      {task.type === TaskType.TIME_INDEPENDENT ? (
+                        <Clock className="w-2.5 h-2.5 text-sky-400" />
+                      ) : task.type === TaskType.TIME_ACCUMULATED ? (
+                        <BrickWall className="w-2.5 h-2.5 text-pink-400" />
+                      ) : (
+                        <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
+                      )}
+                      <span>{task.targetDuration}분</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] bg-slate-50 p-2 rounded-[10px]">
+                      <div className="font-black text-slate-400 whitespace-nowrap">30일</div>
+                      <div className="text-emerald-600 font-black whitespace-nowrap">달성: {task.last30.rate}</div>
+                      <div className="text-slate-600 font-bold whitespace-nowrap">
+                        평균: {task.last30.avg} (최단: {task.last30.min} / 최장: {task.last30.max})
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] bg-indigo-50/50 p-2 rounded-[10px]">
+                      <div className="font-black text-indigo-400 whitespace-nowrap">7일</div>
+                      <div className="text-emerald-600 font-black whitespace-nowrap">달성: {task.last7.rate}</div>
+                      <div className="text-slate-600 font-bold whitespace-nowrap">
+                        평균: {task.last7.avg} (최단: {task.last7.min} / 최장: {task.last7.max})
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* 기상시각통계박스 */}
-      {/* 여백 조정 포인트: px-3 (기존 px-6에서 절반으로 축소) */}
-      <section className="bg-white px-3 py-6 rounded-[20px] shadow-sm border border-slate-100 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2.5 rounded-[12px]">
-            <Clock className="w-5 h-5 text-indigo-600" />
-          </div>
-          <h2 className="text-lg font-black text-slate-800">기상 시각 통계</h2>
-        </div>
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Folder Tab Containers */}
+      <div className="flex px-4 items-end relative z-20">
+        {/* Left Tab: 기상 시각 통계 */}
+        <button
+          onClick={() => setActiveTab('wake-up')}
+          className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+            activeTab === 'wake-up' 
+              ? 'bg-white text-indigo-600 border-slate-100 -mb-[1px] pt-4' 
+              : 'bg-slate-50 text-slate-400 border-transparent'
+          }`}
+        >
+          <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
+          기상 시각 통계
+          {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+        </button>
 
-        <div className="grid grid-cols-2 gap-4 py-4">
-          <div className="text-center space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균</p>
-            <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{wakeUpStats.avgTime7}</h3>
-          </div>
-          <div className="text-center space-y-1 border-l border-slate-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균</p>
-            <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{wakeUpStats.avgTime30}</h3>
-          </div>
-        </div>
+        {/* Right Tab: 달성률 통계 */}
+        <button
+          onClick={() => setActiveTab('achievement')}
+          className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+            activeTab === 'achievement' 
+              ? 'bg-white text-violet-600 border-slate-100 -mb-[1px] pt-4' 
+              : 'bg-slate-50 text-slate-400 border-transparent'
+          }`}
+        >
+          <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
+          달성률 통계
+          {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+        </button>
+      </div>
 
-        <div className="bg-white rounded-[15px] border border-slate-100 overflow-hidden">
-          <div className="p-4 bg-slate-50 border-b border-slate-100">
-            <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
-              <History className="w-4 h-4 text-indigo-500" />
-              최근 7일 기록
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                  {/* 여백 조정 포인트: px-2 py-2 (기존 px-4 py-3에서 축소) */}
-                  <th className="px-2 py-2">날짜</th>
-                  <th className="px-2 py-2">기상 시각</th>
-                  <th className="px-2 py-2 text-right">상태</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {wakeUpStats.history.map((h, i) => (
-                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-2 py-2 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
-                    <td className="px-2 py-2 font-black text-slate-700">{h.time || '--:--'}</td>
-                    <td className="px-2 py-2 text-right">
-                      <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black ${
-                        h.status === '달성' ? 'bg-emerald-100 text-emerald-600' : 
-                        h.status === '지각' ? 'bg-rose-100 text-rose-600' : 
-                        'bg-slate-200 text-slate-400'
-                      }`}>
-                        {h.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* 달성율통계박스 */}
-      {/* 여백 조정 포인트: px-3 (기존 px-6에서 절반으로 축소) */}
-      <section className="bg-white px-3 py-6 rounded-[20px] shadow-sm border border-slate-100 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="bg-violet-50 p-2.5 rounded-[12px]">
-            <Target className="w-5 h-5 text-violet-600" />
-          </div>
-          <h2 className="text-lg font-black text-slate-800">달성률 통계</h2>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 py-4">
-          <div className="text-center space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균 달성률</p>
-            <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate7}%</h3>
-          </div>
-          <div className="text-center space-y-1 border-l border-slate-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균 달성률</p>
-            <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate30}%</h3>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-[15px] border border-slate-100 overflow-hidden">
-          <div className="p-4 bg-slate-50 border-b border-slate-100">
-            <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
-              <History className="w-4 h-4 text-violet-500" />
-              최근 7일 기록
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[12px]">
-              <thead>
-                <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                  {/* 여백 조정 포인트: px-2 py-2 (기존 px-4 py-3에서 축소) 및 컬럼 간격 조정 */}
-                  <th className="px-2 py-2">날짜</th>
-                  <th className="px-2 py-2">달성률</th>
-                  <th className="px-2 py-2 whitespace-nowrap">
-                    루틴<br className="md:hidden" />(실패/스킵/완료/완벽)
-                  </th>
-                  <th className="px-2 py-2 text-center">시작 ~ 종료</th>
-                  <th className="px-2 py-2 text-right">합계</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {achievementStats.dailyHistory.map((h, i) => (
-                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-2 py-2 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
-                    <td className="px-2 py-2 font-black text-violet-600">{h.rate}</td>
-                    <td className="px-2 py-2 font-bold text-slate-700 whitespace-nowrap">
-                      {h.totalActive}{h.breakdown}
-                    </td>
-                    <td className="px-2 py-2 text-center font-black text-slate-700">
-                      {/* 모바일 대응 시작시각/~/종료시각 줄바꿈 */}
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-0 md:gap-1 tracking-tighter">
-                        <span>{h.startTime}</span>
-                        <span className="text-[8px] text-slate-300 md:text-xs">~</span>
-                        <span>{h.endTime}</span>
-                      </div>
-                    </td>
-                    <td className="px-2 py-2 text-right font-black text-indigo-600">{h.duration}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">루틴 그룹별 통계</p>
-          <div className="grid gap-3">
-            {achievementStats.groups.map((group, i) => (
-              <button
-                key={i}
-                onClick={() => setSelectedGroupId(group.id)}
-                className="group bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-md transition-all text-left space-y-3"
+      {/* Main Folder Content Body */}
+      <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10">
+        <div className="p-1 md:p-3">
+          <AnimatePresence mode="wait">
+            {activeTab === 'wake-up' ? (
+              <motion.div
+                key="wake-up-tab"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6 py-6"
               >
-                <div className="flex justify-between items-start">
-                  <h4 className="text-base font-black text-slate-800 group-hover:text-indigo-600 transition-colors">{group.name}</h4>
-                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-400 transition-all" />
+                {/* 기상시각통계박스 */}
+                <div className="px-3 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-indigo-50 p-2.5 rounded-[12px]">
+                      <Clock className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <h2 className="text-lg font-black text-slate-800">기상 시각 통계</h2>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 py-4">
+                    <div className="text-center space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균</p>
+                      <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{wakeUpStats.avgTime7}</h3>
+                    </div>
+                    <div className="text-center space-y-1 border-l border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균</p>
+                      <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{wakeUpStats.avgTime30}</h3>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-[15px] border border-slate-100 overflow-hidden">
+                    <div className="p-4 bg-slate-50 border-b border-slate-100">
+                      <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
+                        <History className="w-4 h-4 text-indigo-500" />
+                        최근 {isWakeUpExpanded ? '40' : '7'}일 기록
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
+                            <th className="px-2 py-2">날짜</th>
+                            <th className="px-2 py-2">기상 시각</th>
+                            <th className="px-2 py-2 text-right">상태</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(isWakeUpExpanded ? wakeUpStats.history40 : wakeUpStats.history7).map((h, i) => (
+                            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-2 py-2 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
+                              <td className="px-2 py-2 font-black text-slate-700">{h.time || '--:--'}</td>
+                              <td className="px-2 py-2 text-right">
+                                <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black ${
+                                  h.status === '달성' ? 'bg-emerald-100 text-emerald-600' : 
+                                  h.status === '지각' ? 'bg-rose-100 text-rose-600' : 
+                                  'bg-slate-200 text-slate-400'
+                                }`}>
+                                  {h.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="p-3 border-t border-slate-50">
+                      <button 
+                        onClick={() => setIsWakeUpExpanded(!isWakeUpExpanded)}
+                        className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-400 hover:text-indigo-600 transition-colors py-2"
+                      >
+                        <div className="flex flex-col items-center">
+                          <span>{isWakeUpExpanded ? '접기' : '최근 40일 기록 확인'}</span>
+                          {!isWakeUpExpanded && <div className="mt-1 border-b-2 border-r-2 border-slate-300 w-1.5 h-1.5 rotate-45" />}
+                          {isWakeUpExpanded && <div className="mb-1 border-t-2 border-l-2 border-indigo-500 w-1.5 h-1.5 rotate-45" />}
+                        </div>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="space-y-0.5">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 시작 시각</p>
-                    <p className="text-xs font-black text-slate-700">{group.avgStartTime}</p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="achievement-tab"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6 py-6"
+              >
+                {/* 달성율통계박스 */}
+                <div className="px-3 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-violet-50 p-2.5 rounded-[12px]">
+                      <Target className="w-5 h-5 text-violet-600" />
+                    </div>
+                    <h2 className="text-lg font-black text-slate-800">달성률 통계</h2>
                   </div>
-                  <div className="space-y-0.5">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 완료 시각</p>
-                    <p className="text-xs font-black text-slate-700">{group.avgEndTime}</p>
+
+                  <div className="grid grid-cols-2 gap-4 py-4">
+                    <div className="text-center space-y-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균 달성률</p>
+                      <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate7}%</h3>
+                    </div>
+                    <div className="text-center space-y-1 border-l border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균 달성률</p>
+                      <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate30}%</h3>
+                    </div>
                   </div>
-                  <div className="space-y-0.5">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 소요 시간</p>
-                    <p className="text-xs font-black text-slate-700">{group.avgDuration}</p>
+
+                  <div className="bg-white rounded-[15px] border border-slate-100 overflow-hidden">
+                    <div className="p-4 bg-slate-50 border-b border-slate-100">
+                      <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
+                        <History className="w-4 h-4 text-violet-500" />
+                        최근 {isAchievementExpanded ? '40' : '7'}일 기록
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-[12px]">
+                        <thead>
+                          <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
+                            <th className="px-2 py-2">날짜</th>
+                            <th className="px-2 py-2">달성률</th>
+                            <th className="px-2 py-2 md:whitespace-nowrap">
+                              루틴<span className="hidden md:inline">(실패/스킵/완료/완벽)</span>
+                              <br className="md:hidden" />
+                              <span className="md:hidden">(실패/스킵</span>
+                              <br className="md:hidden" />
+                              <span className="md:hidden">/완료/완벽)</span>
+                            </th>
+                            <th className="px-2 py-2 text-center">
+                              <span className="hidden md:inline">시작 ~ 종료</span>
+                              <span className="md:hidden">시작</span>
+                              <br className="md:hidden" />
+                              <span className="md:hidden">~</span>
+                              <br className="md:hidden" />
+                              <span className="md:hidden">종료</span>
+                            </th>
+                            <th className="px-2 py-2 text-right">합계</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(isAchievementExpanded ? achievementStats.dailyHistory40 : achievementStats.dailyHistory7).map((h, i) => (
+                            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-2 py-2 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
+                              <td className="px-2 py-2 font-black text-violet-600">{h.rate}</td>
+                              <td className="px-2 py-2 font-bold text-slate-700 whitespace-nowrap">
+                                {h.totalActive}{h.breakdown}
+                              </td>
+                              <td className="px-2 py-2 text-center font-black text-slate-700">
+                                <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-0 md:gap-1 tracking-tighter">
+                                  <span>{h.startTime}</span>
+                                  <span className="text-[8px] text-slate-300 md:text-xs">~</span>
+                                  <span>{h.endTime}</span>
+                                </div>
+                              </td>
+                              <td className="px-2 py-2 text-right font-black text-indigo-600">{h.duration}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="p-3 border-t border-slate-50">
+                      <button 
+                        onClick={() => setIsAchievementExpanded(!isAchievementExpanded)}
+                        className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-400 hover:text-indigo-600 transition-colors py-2"
+                      >
+                        <div className="flex flex-col items-center">
+                          <span>{isAchievementExpanded ? '접기' : '최근 40일 기록 확인'}</span>
+                          {!isAchievementExpanded && <div className="mt-1 border-b-2 border-r-2 border-slate-300 w-1.5 h-1.5 rotate-45" />}
+                          {isAchievementExpanded && <div className="mb-1 border-t-2 border-l-2 border-indigo-500 w-1.5 h-1.5 rotate-45" />}
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                  <div className="space-y-0.5">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">달성률</p>
-                    <p className="text-xs font-black text-emerald-600">{group.rate}%</p>
+
+
+
+
+
+
+                  <div className="space-y-4">
+
+                  <div className="flex items-center gap-3">
+                    <div className="bg-violet-50 p-2.5 rounded-[12px]">
+                      <Target className="w-5 h-5 text-violet-600" />
+                    </div>
+                    <h2 className="text-lg font-black text-slate-800">루틴 그룹별 통계</h2>
+                  </div>
+
+
+                    <div className="grid gap-3">
+                      {achievementStats.groups.map((group, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedGroupId(group.id)}
+                          className="group bg-white p-5 rounded-[20px] border border-slate-100 shadow-sm hover:border-indigo-200 hover:shadow-md transition-all text-left space-y-3"
+                        >
+                          <div className="flex justify-between items-start">
+                            <h4 className="text-base font-black text-slate-800 group-hover:text-indigo-600 transition-colors">{group.name}</h4>
+                            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-400 transition-all" />
+                          </div>
+                          <div className="grid grid-cols-4 gap-2">
+                            <div className="space-y-0.5">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 시작 시각</p>
+                              <p className="text-xs font-black text-slate-700">{group.avgStartTime}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 완료 시각</p>
+                              <p className="text-xs font-black text-slate-700">{group.avgEndTime}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 소요 시간</p>
+                              <p className="text-xs font-black text-slate-700">{group.avgDuration}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">달성률</p>
+                              <p className="text-xs font-black text-emerald-600">{group.rate}%</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </button>
-            ))}
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </section>
+      </div>
     </div>
   );
 };

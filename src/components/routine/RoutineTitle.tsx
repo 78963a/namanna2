@@ -8,28 +8,66 @@ interface RoutineTitleProps {
   status?: string;
   nameClassName?: string;
   selectedPhrase?: string;
+  userName?: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  isExecutionTitle?: boolean;
 }
 
 export const RoutineTitle: React.FC<RoutineTitleProps> = ({ 
   chunk, 
   status = '미실행',
   nameClassName = "text-slate-900",
-  selectedPhrase
+  selectedPhrase,
+  userName,
+  startTime,
+  endTime,
+  isExecutionTitle = false
 }) => {
   const processedMessage = useMemo(() => {
-    if (selectedPhrase) {
-      const titleStyle = phrases.settings.title_style;
-      const purposeStyle = phrases.settings.purpose_style;
+    const context = isExecutionTitle ? (phrases.settings as any).execution_settings : phrases.settings;
+    
+    const getStyledHtml = (key: string, value: string) => {
+      const style = (context as any)[`${key}_style`];
+      if (!style) return value;
+      return `<span style="color: ${style.color || 'inherit'}; font-size: ${style.fontSize || 'inherit'}; font-weight: ${style.fontWeight || 'normal'}; font-family: '${style.fontFamily || 'inherit'}', sans-serif;">${value}</span>`;
+    };
 
-      const titleHtml = `<span style="color: ${titleStyle.color}; font-size: ${titleStyle.fontSize}; font-weight: ${titleStyle.fontWeight}; font-family: '${titleStyle.fontFamily || 'inherit'}', sans-serif;">${chunk.name}</span>`;
-      const purposeHtml = `<span style="color: ${purposeStyle.color}; font-size: ${purposeStyle.fontSize}; font-weight: ${purposeStyle.fontWeight}; font-family: '${purposeStyle.fontFamily || 'inherit'}', sans-serif;">${chunk.purpose || '목표'}</span>`;
+    const replaceWithJosa = (msg: string, tag: 'title' | 'purpose' | 'userName', value: string, html: string) => {
+      const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|이/가)`, 'g');
+      return msg.replace(regex, (_, p1) => {
+        return html + getJosa(value, p1 as any);
+      });
+    };
 
-      let message = selectedPhrase;
+    const titleHtml = getStyledHtml('title', chunk.name);
+    const purposeHtml = getStyledHtml('purpose', chunk.purpose || '목표');
+
+    let baseMessage = selectedPhrase;
+    if (!baseMessage && isExecutionTitle) {
+      baseMessage = phrases.routine_messages.EXECUTION_TITLE;
+    }
+
+    if (baseMessage) {
+      let message = baseMessage;
+      
+      message = replaceWithJosa(message, 'title', chunk.name, titleHtml);
+      message = replaceWithJosa(message, 'purpose', chunk.purpose || '목표', purposeHtml);
+      message = replaceWithJosa(message, 'userName', userName || '나', getStyledHtml('userName', userName || '나'));
+
       message = message.replace(/\{\{title\}\}/g, titleHtml);
       message = message.replace(/\{\{purpose\}\}/g, purposeHtml);
-      // Even though ExecutionView already replaced placeholders, we do it again just in case or for future proofing if we store templates
-      // Actually handleFinalSave stores the already processed phrase (with names, but maybe not styles).
-      // Wait, if handleFinalSave stores "나는 아침 루틴을 완료한 멋진 사람이다", then we don't need to replace anything.
+      
+      // Handle remaining potential placeholders
+      const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || 0), 0);
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
+      
+      message = message.replace(/\{\{duration\}\}/g, getStyledHtml('duration', durationText));
+      message = message.replace(/\{\{userName\}\}/g, getStyledHtml('userName', userName || '나'));
+      message = message.replace(/\{\{startTime\}\}/g, getStyledHtml('startTime', startTime || '--:--'));
+      message = message.replace(/\{\{endTime\}\}/g, getStyledHtml('endTime', endTime || '--:--'));
+      
       return message;
     }
 
@@ -37,7 +75,9 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       '비활성': 'INACTIVE',
       '미실행': 'NOT_STARTED',
       '실행중': 'IN_PROGRESS',
+      '미완료': 'IN_PROGRESS',
       '완료': 'COMPLETED',
+      '전체완료': 'COMPLETED',
       '완벽': 'PERFECT'
     };
 
@@ -55,18 +95,20 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     const index = Math.abs(hash) % messages.length;
     let message = messages[index];
 
-    const titleStyle = phrases.settings.title_style;
-    const purposeStyle = phrases.settings.purpose_style;
-
-    const titleHtml = `<span style="color: ${titleStyle.color}; font-size: ${titleStyle.fontSize}; font-weight: ${titleStyle.fontWeight}; font-family: '${titleStyle.fontFamily || 'inherit'}', sans-serif;">${chunk.name}</span>`;
-    const purposeHtml = `<span style="color: ${purposeStyle.color}; font-size: ${purposeStyle.fontSize}; font-weight: ${purposeStyle.fontWeight}; font-family: '${purposeStyle.fontFamily || 'inherit'}', sans-serif;">${chunk.purpose || '목표'}</span>`;
-
     // --- [사용자 정의 변수 추출] ---
     
     // 1. 요일 정보 (days)
-    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-    const daysText = chunk.scheduledDays.map(d => dayNames[d]).join(', ') + '요일';
-    const daysHtml = `<span style="color: #64748b; font-weight: bold;">${daysText}</span>`;
+    const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+    const sortedDays = [...chunk.scheduledDays].sort((a, b) => {
+      const orderA = a === 0 ? 6 : a - 1;
+      const orderB = b === 0 ? 6 : b - 1;
+      return orderA - orderB;
+    });
+    const daysText = sortedDays.map(d => {
+      const idx = d === 0 ? 6 : d - 1;
+      return dayNames[idx];
+    }).join(', ') + '요일';
+    const daysHtml = getStyledHtml('days', daysText);
 
     // 2. 시작 상황/시간 정보 (start_info)
     let startInfoText = '아무때나';
@@ -75,26 +117,19 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     } else if (chunk.startType === 'situation' && chunk.situation) {
       startInfoText = chunk.situation;
     }
-    const startInfoHtml = `<span style="color: #6366f1; font-weight: bold;">${startInfoText}</span>`;
+    const startInfoHtml = getStyledHtml('start_info', startInfoText);
 
     // 3. 소요 시간 정보 (duration)
     const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || 0), 0);
     const totalMinutes = Math.floor(totalSeconds / 60);
     const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
-    const durationHtml = `<span style="color: #10b981; font-weight: bold;">${durationText}</span>`;
+    const durationHtml = getStyledHtml('duration', durationText);
 
     // --- [메시지 치환 로직] ---
 
-    // Handle particles: {{title}}이/가, {{purpose}}을/를 etc.
-    const replaceWithJosa = (msg: string, tag: 'title' | 'purpose', value: string, html: string) => {
-      const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는)`, 'g');
-      return msg.replace(regex, (_, p1) => {
-        return html + getJosa(value, p1 as any);
-      });
-    };
-
     message = replaceWithJosa(message, 'title', chunk.name, titleHtml);
     message = replaceWithJosa(message, 'purpose', chunk.purpose || '목표', purposeHtml);
+    message = replaceWithJosa(message, 'userName', userName || '나', getStyledHtml('userName', userName || '나'));
 
     // Handle remaining placeholders
     message = message.replace(/\{\{title\}\}/g, titleHtml);
@@ -102,11 +137,15 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     message = message.replace(/\{\{days\}\}/g, daysHtml);
     message = message.replace(/\{\{start_info\}\}/g, startInfoHtml);
     message = message.replace(/\{\{duration\}\}/g, durationHtml);
+    message = message.replace(/\{\{userName\}\}/g, getStyledHtml('userName', userName || '나'));
+    message = message.replace(/\{\{startTime\}\}/g, getStyledHtml('startTime', startTime || '--:--'));
+    message = message.replace(/\{\{endTime\}\}/g, getStyledHtml('endTime', endTime || '--:--'));
 
     return message;
-  }, [chunk.id, chunk.name, chunk.purpose, status]);
+  }, [chunk.id, chunk.name, chunk.purpose, chunk.scheduledDays, chunk.startType, chunk.startTime, chunk.situation, chunk.tasks, status, selectedPhrase, userName, startTime, endTime, isExecutionTitle]);
 
-  const baseStyle = (phrases.settings as any).base_style;
+  const context = isExecutionTitle ? (phrases.settings as any).execution_settings : phrases.settings;
+  const baseStyle = (context as any).base_style;
 
   return (
     <span 

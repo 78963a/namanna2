@@ -7,9 +7,32 @@
       "fontWeight":"bold"
     },
     "purpose_style": { "color": "#000099", "fontSize": "1.7rem", "fontWeight": "bold", "fontFamily": "Font1" },
-    "title_style": { "color": "#660000", "fontSize": "2rem", "fontWeight": "bold", "fontFamily": "궁서" }
+    "title_style": { "color": "#660000", "fontSize": "2rem", "fontWeight": "bold", "fontFamily": "궁서" },
+    "days_style": { "color": "#64748b", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+    "start_info_style": { "color": "#6366f1", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+    "duration_style": { "color": "#10b981", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+    "userName_style": { "color": "#f59e0b", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+    "startTime_style": { "color": "#8b5cf6", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+    "endTime_style": { "color": "#ec4899", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+ 
+ 
+ 
+    "execution_settings": {
+      "base_style": { "color": "#ffffff", "fontSize": "1rem", "fontFamily": "Font1", "fontWeight": "bold" },
+      "purpose_style": { "color": "#ffffff", "fontSize": "1.5rem", "fontWeight": "bold", "fontFamily": "Font1" },
+      "title_style": { "color": "#ffffff", "fontSize": "1.8rem", "fontWeight": "bold", "fontFamily": "궁서" },
+      "days_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+      "start_info_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+      "duration_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+      "userName_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+      "startTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+      "endTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" }
+    }
   },
   "routine_messages": {
+    "EXECUTION_TITLE": "{{purpose}}이/가 되기 위한 {{title}}",
+
+
     "COMPLETION_SELECTION_TEMPLATES": [
       "나는 {{title}}을 완료한 {{purpose}}이다",
       "{{title}}을 완료하다니, 정말 훌륭해!",
@@ -19,10 +42,7 @@
       "{{purpose}}이/가 되려면 때로는 {{title}}을/를 쉬어가야하지"
     ],
     "NOT_STARTED": [
-      "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}}에 실천하기로 했다",
-      "나는 오늘도 {{purpose}}이/가 되기 위해 {{title}}을/를 할거야",
-      "{{title}}하여 {{purpose}}이/가 되자",
-      "성실한 나는 {{purpose}}을/를 목표로 {{title}}에 매진한다"
+      "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}}에 실천하기로 했다"
     ],
     "IN_PROGRESS": [
       "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}}에 실천하기로 했다",
@@ -48,7 +68,7 @@
     ]
   },
   "checkCheckSettings": {
-    "intervalMinutes": 1,
+    "intervalMinutes": 47,
     "evolutionStages": [
       { "minClicks": 0, "iconId": "egg", "label": "알" }, 
       { "minClicks": 1, "iconId": "broken_egg", "label": "깨진 알" }, 
