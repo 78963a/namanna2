@@ -13,6 +13,14 @@ interface HeaderBoxProps {
   currentTime: Date;
 }
 
+const COLORS = {
+  base: '#e2e8f0',           // 기본 회색 (미지나감) - slate-200
+  past: '#1e293b',           // 지나감 (검은색) - slate-800
+  active: '#fbbf24',         // 접속중, 타이머X (노란색) - amber-400
+  routine: '#f97316',        // 백그라운드, 타이머O (주황색) - orange-500
+  'active-routine': '#ef4444' // 접속중, 타이머O (빨간색) - red-500
+};
+
 /**
  * The header section of the home view, displaying user stats, and current date.
  * 
@@ -25,10 +33,11 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
   formattedDate,
   challengeDays,
   successDays,
-  currentTime
+  currentTime,
+  activityLog
 }) => {
   const totalCompleted = userData.routineChunks.reduce((acc, chunk) => 
-    acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && (t.completed || t.status === TaskStatus.SKIP)).length, 0
+    acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && (t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT)).length, 0
   );
   const totalScheduledTasksCount = userData.routineChunks.reduce((acc, chunk) => 
     acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData)).length, 0
@@ -50,6 +59,28 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
     return acc + chunkDuration;
   }, 0);
   const totalDurationMinutes = Math.floor(totalDurationSeconds / 60);
+
+  const timeBarGradient = useMemo(() => {
+    if (!activityLog || activityLog.length === 0) return '';
+    const stops = [];
+    let start = 0;
+    let currentColor = activityLog[0];
+    
+    const colorList = [COLORS.base, COLORS.past, COLORS.active, COLORS.routine, COLORS['active-routine']];
+
+    for (let i = 1; i <= activityLog.length; i++) {
+      const val = i < activityLog.length ? activityLog[i] : -1;
+      if (val !== currentColor) {
+        const colorCode = colorList[currentColor] || COLORS.base;
+        const startPct = (start / 1440) * 100;
+        const endPct = (i / 1440) * 100;
+        stops.push(`${colorCode} ${startPct}% ${endPct}%`);
+        start = i;
+        currentColor = val;
+      }
+    }
+    return `linear-gradient(to right, ${stops.join(', ')})`;
+  }, [activityLog]);
 
   const last7Days = useMemo(() => {
     const days = [];
@@ -77,16 +108,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
           </div>
           <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
               <span>
-                {challengeDays}일째 도전중응, {successDays}일째 성공중 ({completionPercentage}%)
-               </span>
-               {/* --- [합산시간 스타일 수정 가능 구역] --- */}
-               <span style={{ 
-                 marginLeft: '8px', 
-                 color: '#ff0033', // 합산시간 글꼴 색상
-                 fontSize: '0.875rem', // 합산시간 글꼴 크기
-                 fontWeight: '900' // 합산시간 글꼴 두께
-               }}>
-                 {totalDurationMinutes}분
+                {challengeDays}일째 도전중, {successDays}일째 성공중
                </span>
           </div>
         </div>
@@ -115,6 +137,38 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* 전체달성률바 */}
+      <div className="pt-3 border-t border-slate-50 space-y-2">
+        <div className="flex items-center gap-4">
+          <div className="flex-grow h-2 bg-slate-100 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${completionPercentage}%` }}
+              className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
+            />
+          </div>
+          <div className="text-l font-black text-slate-800 tabular-nums leading-none">
+            {Math.round(completionPercentage)}<span className="text-xs text-slate-400 ml-0.5">% ({totalCompleted}/{totalScheduledTasksCount})</span> 
+          </div>
+        </div>
+      </div>
+
+      {/* TimeBar 컴포넌트 */}
+      <div className="pt-2 space-y-2">
+        <div className="flex items-center gap-4">
+          <div 
+            className="flex-grow h-2 bg-slate-100 rounded-full overflow-hidden"
+            style={{ backgroundImage: timeBarGradient }}
+          />
+          <div 
+            className="text-[12px] font-black tabular-nums transition-colors whitespace-nowrap"
+            style={{ color: '#ff0033' }}
+          >
+            {totalDurationMinutes}분
+          </div>
         </div>
       </div>
     </section>

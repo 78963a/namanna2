@@ -135,6 +135,7 @@ export interface UserData {
   nextRoutineAutoStart?: boolean;
   userName?: string;
   forcedActiveTasks?: { [date: string]: { [taskId: string]: boolean } };
+  dailyActivityLog?: { [date: string]: number[] };
 }
 
 /**
@@ -155,6 +156,7 @@ export interface HeaderBoxProps {
   successDays: number;
   currentTime: Date;
   effectiveDate: Date;
+  activityLog: number[];
 }
 
 export interface HomeViewProps {

@@ -58,6 +58,15 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// TimeBar 색상 정의
+const ACTIVITY_COLORS = {
+  base: '#e2e8f0',           // 기본 회색 (미지나감) - slate-200
+  past: '#1e293b',           // 지나감 (검은색) - slate-800
+  active: '#fbbf24',         // 접속중, 타이머X (노란색) - amber-400
+  routine: '#f97316',        // 백그라운드, 타이머O (주황색) - orange-500
+  'active-routine': '#ef4444' // 접속중, 타이머O (빨간색) - red-500
+};
+
 // Internal Types & Constants
 import { 
   TaskType, 
@@ -706,12 +715,12 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           <div className="flex items-center gap-4">
             <div className="flex-grow h-2 bg-white/10 rounded-full overflow-hidden">
               <motion.div 
-                animate={{ width: `${scheduledTasks.length > 0 ? (scheduledTasks.filter(t => t.completed).length / scheduledTasks.length) * 100 : 0}%` }}
+                animate={{ width: `${scheduledTasks.length > 0 ? (scheduledTasks.filter(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT).length / scheduledTasks.length) * 100 : 0}%` }}
                 className="h-full bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full"
               />
             </div>
             <div className="text-xl font-black text-white tabular-nums leading-none">
-              {scheduledTasks.length > 0 ? Math.round((scheduledTasks.filter(t => t.completed).length / scheduledTasks.length) * 100) : 0}<span className="text-xs text-white/40 ml-0.5">%</span>
+              {scheduledTasks.length > 0 ? Math.round((scheduledTasks.filter(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT).length / scheduledTasks.length) * 100) : 0}<span className="text-xs text-white/40 ml-0.5">%</span>
             </div>
           </div>
         </div>
@@ -764,7 +773,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   <div 
                     onClick={() => {
                       if (activeTask.isPaused || !activeTask.startTime) {
-                        togglePauseTask(activeTask.id);
+                        togglePauseTask(activeTask.id, true);
                       }
                     }}
                     className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden cursor-pointer ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200`}
@@ -859,7 +868,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   {/* Action Buttons */}
                   <div className="grid grid-cols-3 gap-3">
                     <button 
-                      onClick={() => togglePauseTask(activeTask.id)}
+                      onClick={() => togglePauseTask(activeTask.id, true)}
                       className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
                         activeTask.isPaused || !activeTask.startTime
                           ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
@@ -2071,7 +2080,7 @@ const RoutineGroupFormView: React.FC<{
         if (added.length > 0) nextDays = [...nextDays, ...added];
         // Remove newly deactivated group days
         if (removed.length > 0) nextDays = nextDays.filter(d => !removed.includes(d));
-        return [...new Set(nextDays)].sort();
+        return { ...t, scheduledDays: [...new Set(nextDays)].sort() };
       }));
 
       // 3. Current Input: Same logic as routine list
@@ -2599,6 +2608,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
   const [selectedChunkId, setSelectedChunkId] = useState<string | null>(null);
   const [showCheckInCelebration, setShowCheckInCelebration] = useState(false);
+  const [isForeground, setIsForeground] = useState(true);
+  const [activityLog, setActivityLog] = useState<Record<string, number[]>>(() => {
+    const saved = localStorage.getItem('routine_activity_log');
+    return saved ? JSON.parse(saved) : {};
+  });
   const [userData, setUserData] = useState<UserData>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     const today = formatDate(new Date());
@@ -2645,6 +2659,9 @@ export default function App() {
       
       const taskHistory = localStorage.getItem('TaskHistory');
       if (taskHistory) parsed.taskHistory = JSON.parse(taskHistory);
+      
+      const savedActivityLog = localStorage.getItem('routine_activity_log');
+      if (savedActivityLog) parsed.dailyActivityLog = JSON.parse(savedActivityLog);
     } catch (e) {
       console.error('Failed to parse history data', e);
     }
@@ -2809,6 +2826,116 @@ export default function App() {
       window.location.reload();
     }
   };
+
+  const globalActiveTask = useMemo(() => {
+    for (const chunk of userData.routineChunks) {
+      const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && t.status !== TaskStatus.SKIP && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.PERFECT);
+      if (active) return { task: active, chunkId: chunk.id };
+    }
+    return null;
+  }, [userData.routineChunks]);
+
+  // Activity Logging Logic
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsForeground(document.visibilityState === 'visible');
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  useEffect(() => {
+    const logActivity = () => {
+      const now = new Date();
+      const resetHour = userData.dailyResetHour || 0;
+      const dateStr = getEffectiveDate(now, resetHour);
+      
+      // Get minutes since reset
+      const nowTotalMinutes = now.getHours() * 60 + now.getMinutes();
+      const resetTotalMinutes = resetHour * 60;
+      let diffMinutes = nowTotalMinutes - resetTotalMinutes;
+      if (diffMinutes < 0) diffMinutes += 1440;
+      
+      setActivityLog(prev => {
+        const currentDayLog = [...(prev[dateStr] || new Array(1440).fill(0))];
+        
+        // Determine status
+        // 0: future, 1: past, 2: foreground, 3: background+timer, 4: foreground+timer
+        const hasTimer = !!globalActiveTask;
+        let status = 1; // Default to past (active app but maybe inactive view)
+        if (isForeground && hasTimer) status = 4;
+        else if (!isForeground && hasTimer) status = 3;
+        else if (isForeground && !hasTimer) status = 2;
+        
+        // Update with priority: 가장 높은 상태값의 색상을 출력
+        if (currentDayLog[diffMinutes] < status) {
+          currentDayLog[diffMinutes] = status;
+        }
+
+        // Fill past minutes with 1 if they are 0 (not recorded but already passed)
+        for (let i = 0; i < diffMinutes; i++) {
+          if (currentDayLog[i] === 0) currentDayLog[i] = 1;
+        }
+
+        const next = { ...prev, [dateStr]: currentDayLog };
+        localStorage.setItem('routine_activity_log', JSON.stringify(next));
+        return next;
+      });
+    };
+
+    const ticker = setInterval(logActivity, 60000);
+    logActivity(); // Initial catch
+    
+    return () => clearInterval(ticker);
+  }, [userData.dailyResetHour, isForeground, !!globalActiveTask, activeTab]);
+
+  useEffect(() => {
+    // Visibility change catch-up
+    if (isForeground) {
+      const lastSyncStr = localStorage.getItem('routine_last_activity_sync');
+      if (lastSyncStr) {
+        const lastSync = parseInt(lastSyncStr);
+        const now = Date.now();
+        const diffMs = now - lastSync;
+        
+        if (diffMs > 60000) {
+          const resetHour = userData.dailyResetHour || 0;
+          let sweepTime = new Date(lastSync + 60000);
+          const nowDate = new Date(now);
+          
+          while (sweepTime <= nowDate) {
+            const dateStr = getEffectiveDate(sweepTime, resetHour);
+            const sweepTotalMinutes = sweepTime.getHours() * 60 + sweepTime.getMinutes();
+            const resetTotalMinutes = resetHour * 60;
+            let diff = sweepTotalMinutes - resetTotalMinutes;
+            if (diff < 0) diff += 1440;
+            
+            // Background assume state 3 if timer was running, or 1
+            // Use current globalActiveTask as a heuristic for what happened during background
+            const status = globalActiveTask ? 3 : 1;
+            
+            setActivityLog(prev => {
+              const currentDayLog = [...(prev[dateStr] || new Array(1440).fill(0))];
+              if (currentDayLog[diff] < status) {
+                currentDayLog[diff] = status;
+              }
+              const next = { ...prev, [dateStr]: currentDayLog };
+              localStorage.setItem('routine_activity_log', JSON.stringify(next));
+              return next;
+            });
+            
+            sweepTime = new Date(sweepTime.getTime() + 60000);
+          }
+        }
+      }
+      localStorage.setItem('routine_last_activity_sync', Date.now().toString());
+    }
+  }, [isForeground, userData.dailyResetHour, !!globalActiveTask]);
+
+  // Pass log to HeaderBox via userData effectively or as direct prop
+  const currentDayActivityLog = useMemo(() => {
+    return activityLog[todayStr] || new Array(1440).fill(0);
+  }, [activityLog, todayStr]);
 
   // Reset tasks when todayStr changes
   useEffect(() => {
@@ -3219,6 +3346,7 @@ export default function App() {
             }
             return t;
           });
+
           const nextTask = updatedTasks.find(t => 
             !t.completed && 
             t.status !== TaskStatus.SKIP && 
@@ -3229,7 +3357,11 @@ export default function App() {
           if (nextTask) {
             return {
               ...chunk,
-              tasks: updatedTasks.map(t => (t.id === nextTask.id && prev.nextRoutineAutoStart) ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
+              tasks: updatedTasks.map(t => 
+                (t.id === nextTask.id && prev.nextRoutineAutoStart) 
+                  ? { ...t, status: TaskStatus.IN_PROGRESS, startTime: nowStr, isPaused: false, laterTimestamp: undefined } 
+                  : t
+              )
             };
           }
 
@@ -3306,6 +3438,7 @@ export default function App() {
               return {
                 ...task,
                 completed: false,
+                status: TaskStatus.IN_PROGRESS,
                 laterTimestamp: undefined,
                 isPaused: !autoStart,
                 startTime: autoStart ? nowStr : undefined,
@@ -3316,7 +3449,7 @@ export default function App() {
             }
             
             // If this is an active task (not the target one), pause it
-            const isActive = task.startTime && !task.isPaused && !task.completed;
+            const isActive = task.startTime && !task.isPaused && !task.completed && task.status !== TaskStatus.SKIP && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.PERFECT;
             if (isActive) {
               return {
                 ...task,
@@ -3336,14 +3469,6 @@ export default function App() {
     });
   };
 
-  const globalActiveTask = useMemo(() => {
-    for (const chunk of userData.routineChunks) {
-      const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed);
-      if (active) return { task: active, chunkId: chunk.id };
-    }
-    return null;
-  }, [userData.routineChunks]);
-
   const onRestart = (taskId: string, resetTimer: boolean = true) => {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
@@ -3353,7 +3478,7 @@ export default function App() {
       // If there's a different active task, pause it
       let activeTaskId: string | null = null;
       for (const chunk of prev.routineChunks) {
-        const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed);
+        const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && t.status !== TaskStatus.SKIP && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.PERFECT);
         if (active && active.id !== taskId) {
           activeTaskId = active.id;
           break;
@@ -3398,7 +3523,7 @@ export default function App() {
     });
   };
 
-  const togglePauseTask = (id: string) => {
+  const togglePauseTask = (id: string, forceStart: boolean = false) => {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
@@ -3415,10 +3540,14 @@ export default function App() {
                 if (t.isPaused || !t.startTime || t.completed || t.status === TaskStatus.SKIP) {
                   // Resuming, Starting, or Reviving from SKIP: set new startTime and status
                   const autoStart = prev.nextRoutineAutoStart;
+                  const isAlreadyPaused = t.isPaused;
+                  // If it was already in a paused/ready state, the user is explicitly starting it (forceStart or second click), so ignore autoStart.
+                  const shouldStartNow = isAlreadyPaused || autoStart || forceStart;
+
                   return { 
                     ...t, 
-                    isPaused: !autoStart, 
-                    startTime: autoStart ? nowStr : undefined,
+                    isPaused: !shouldStartNow, 
+                    startTime: shouldStartNow ? nowStr : undefined,
                     completed: false,
                     laterTimestamp: undefined,
                     status: TaskStatus.IN_PROGRESS,
@@ -3442,7 +3571,7 @@ export default function App() {
               // If we are resuming the target task, pause all other active tasks
               // BUT if we are pausing the target task, do NOT touch other tasks
               if (isTargetResuming) {
-                const isActive = t.startTime && !t.isPaused && !t.completed;
+                const isActive = t.startTime && !t.isPaused && !t.completed && t.status !== TaskStatus.SKIP && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.PERFECT;
                 if (isActive) {
                   return {
                     ...t,
@@ -4514,6 +4643,7 @@ export default function App() {
                 successDays={successDays}
                 currentTime={currentTime}
                 effectiveDate={effectiveDate}
+                activityLog={currentDayActivityLog}
               />
               <HomeView 
                 userData={userData}

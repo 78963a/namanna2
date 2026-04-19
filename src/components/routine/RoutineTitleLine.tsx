@@ -180,6 +180,8 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
       )}
       {task.completed ? (
         <span>{formatTime(task.duration || 0)} / {targetDuration}분</span>
+      ) : isSkip ? (
+        <span>0 / {targetDuration}분</span>
       ) : task.startTime ? (
         <span>{formatTime(calculateCurrentDuration(task))} / {targetDuration}분</span>
       ) : (
