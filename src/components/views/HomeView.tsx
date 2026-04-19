@@ -147,13 +147,26 @@ export const HomeView: React.FC<HomeViewProps> = ({
             status: getChunkStatus(chunk)
           }))
           .sort((a, b) => {
-            if (userData.autoReorderGroups) {
-              const aFinished = a.status === '전체완료';
-              const bFinished = b.status === '전체완료';
-              if (aFinished && !bFinished) return 1;
-              if (!aFinished && bFinished) return -1;
-            }
-            return 0;
+            const aInactive = a.status === '불활성';
+            const bInactive = b.status === '불활성';
+            const aCompleted = a.status === '완료' || a.status === '완벽' || a.status === '전체완료';
+            const bCompleted = b.status === '완료' || b.status === '완벽' || b.status === '전체완료';
+
+            const getSortPriority = (completed: boolean, inactive: boolean) => {
+                let priority = 0;
+                if (userData.autoReorderInactiveGroups && inactive) {
+                    priority = 2;
+                } else if (userData.autoReorderCompletedGroups && completed) {
+                    priority = 1;
+                }
+                return priority;
+            };
+
+            const pA = getSortPriority(aCompleted, aInactive);
+            const pB = getSortPriority(bCompleted, bInactive);
+
+            if (pA !== pB) return pA - pB;
+            return 0; // Keep original order within same priority
           })
           .map(({ chunk, status }) => {
             const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));

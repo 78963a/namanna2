@@ -2642,11 +2642,32 @@ export default function App() {
         lastCheckCheckTime: Date.now(),
         lastResetDate: null,
         dailyCheckCheckCounts: {},
-        autoReorderGroups: false,
+        autoReorderInactiveGroups: true,
+        autoReorderCompletedGroups: true,
         firstRoutineAutoStart: false,
         nextRoutineAutoStart: false,
         userName: '나'
       };
+    }
+
+    // Migration for new settings
+    if (parsed.autoReorderInactiveGroups === undefined) {
+      if (parsed.autoReorderGroups !== undefined) {
+        parsed.autoReorderInactiveGroups = parsed.autoReorderGroups;
+      } else {
+        parsed.autoReorderInactiveGroups = true;
+      }
+    }
+    if (parsed.autoReorderCompletedGroups === undefined) {
+      if (parsed.autoReorderGroups !== undefined) {
+        parsed.autoReorderCompletedGroups = parsed.autoReorderGroups;
+      } else {
+        parsed.autoReorderCompletedGroups = true;
+      }
+    }
+    // Cleanup old retired key
+    if (parsed.autoReorderGroups !== undefined) {
+      delete parsed.autoReorderGroups;
     }
 
     // Load separate history keys
@@ -2680,8 +2701,6 @@ export default function App() {
     if (parsed.lastResetDate === undefined) parsed.lastResetDate = null;
     if (parsed.dailyCheckCheckCounts === undefined) parsed.dailyCheckCheckCounts = {};
     if (parsed.dailyCheckIn === undefined) parsed.dailyCheckIn = {};
-    
-    if (parsed.autoReorderGroups === undefined) parsed.autoReorderGroups = false;
     
     if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
     if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
@@ -4316,15 +4335,15 @@ export default function App() {
               </div>
             </div>
 
-            <div className="p-[20px] bg-white rounded-[15px] space-y-[20px] shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
                 <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Settings className="w-5 h-5 text-indigo-600" />
                 </div>
                 <h3 className="text-base font-black text-slate-800 whitespace-nowrap">타이머 자동 시작</h3>
               </div>
               
-              <div className="space-y-[15px] pl-[10px] border-l-2 border-slate-100 ml-[15px]">
+              <div className="space-y-4 pt-1">
                 {/* 첫 루틴 자동 시작 */}
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex flex-col gap-1">
@@ -4356,22 +4375,41 @@ export default function App() {
             </div>
 
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Settings className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-base font-black text-slate-800 whitespace-nowrap">루틴그룹 순서 자동전환</h3>
-                    <p className="text-[12px] font-bold text-slate-400 leading-tight">완료된 그룹은 자동으로 목록 하단으로 이동합니다.</p>
-                  </div>
+              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Settings className="w-5 h-5 text-indigo-600" />
                 </div>
-                <button 
-                  onClick={() => setUserData(prev => ({ ...prev, autoReorderGroups: !prev.autoReorderGroups }))}
-                  className={`w-12 h-6 rounded-full transition-all relative ${userData.autoReorderGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderGroups ? 'left-7' : 'left-1'}`} />
-                </button>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">루틴그룹 순서 자동전환</h3>
+              </div>
+              
+              <div className="space-y-4 pt-1">
+                {/* 완료된 그룹 자동 정렬 */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <h4 className="text-sm font-black text-slate-700">완료된 그룹 자동 정렬</h4>
+                    <p className="text-[11px] font-bold text-slate-400 leading-tight">완료된 그룹은 자동으로 목록 하단으로 이동합니다.</p>
+                  </div>
+                  <button 
+                    onClick={() => setUserData(prev => ({ ...prev, autoReorderCompletedGroups: !prev.autoReorderCompletedGroups }))}
+                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.autoReorderCompletedGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderCompletedGroups ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
+
+                {/* 비활성 그룹 자동 정렬 */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <h4 className="text-sm font-black text-slate-700">비활성 그룹 자동 정렬</h4>
+                    <p className="text-[11px] font-bold text-slate-400 leading-tight">비활성화된 그룹은 자동으로 목록 가장 하단으로 이동합니다.</p>
+                  </div>
+                  <button 
+                    onClick={() => setUserData(prev => ({ ...prev, autoReorderInactiveGroups: !prev.autoReorderInactiveGroups }))}
+                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.autoReorderInactiveGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderInactiveGroups ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
               </div>
             </div>
 

@@ -120,7 +120,8 @@ export interface UserData {
   startDate: string | null;
   dailyCompletionRate: { [date: string]: number };
   resetTime: string; // HH:mm format
-  autoReorderGroups: boolean;
+  autoReorderInactiveGroups: boolean;
+  autoReorderCompletedGroups: boolean;
   lastCheckCheckTime: number; // timestamp
   lastResetDate: string | null;
   dailyCheckCheckCounts: { [date: string]: number };
