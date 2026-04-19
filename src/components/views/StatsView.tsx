@@ -16,7 +16,15 @@ import {
   TrendingUp,
   History,
   Hourglass,
-  BrickWall
+  BrickWall,
+  Circle,
+  Check,
+  CheckCheck,
+  CircleMinus,
+  PauseCircle,
+  ArrowRightCircle,
+  CircleDot,
+  X
 } from 'lucide-react';
 import { UserData, TaskStatus, TaskType } from '../../types';
 import { timeToMinutes, minutesToTime, formatDate, formatDurationPrecise } from '../../utils';
@@ -33,6 +41,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
   deleteReview
 }) => {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [calendarYear, setCalendarYear] = useState(currentTime.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(currentTime.getMonth());
 
@@ -40,15 +49,16 @@ export const StatsView: React.FC<StatsViewProps> = ({
   const [isWakeUpExpanded, setIsWakeUpExpanded] = useState(false);
   const [isAchievementExpanded, setIsAchievementExpanded] = useState(false);
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
+  const [isTaskDetailExpanded, setIsTaskDetailExpanded] = useState(false);
 
   // Scroll to top when entering detailed view
   useEffect(() => {
-    if (selectedGroupId) {
+    if (selectedGroupId || selectedTaskId) {
       window.scrollTo({ top: 0, behavior: 'instant' });
       setCalendarYear(currentTime.getFullYear());
       setCalendarMonth(currentTime.getMonth());
     }
-  }, [selectedGroupId]);
+  }, [selectedGroupId, selectedTaskId]);
 
   const prevMonth = () => {
     if (calendarMonth === 0) {
@@ -162,8 +172,13 @@ export const StatsView: React.FC<StatsViewProps> = ({
   // --- Achievement Stats ---
   const achievementStats = useMemo(() => {
     const getAvgRateForPeriod = (days: string[]) => {
-      const rates = days.map(date => (userData.dailyCompletionRate?.[date]) || 0);
-      return rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+      const recordedRates = days
+        .map(date => userData.dailyCompletionRate?.[date])
+        .filter((rate): rate is number => rate !== undefined);
+      
+      return recordedRates.length > 0 
+        ? recordedRates.reduce((a, b) => a + b, 0) / recordedRates.length 
+        : null;
     };
 
     const avgRate7 = getAvgRateForPeriod(last7Days);
@@ -182,7 +197,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const avgDurationSeconds = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
 
       const completionCount = groupHistory.filter(h => h.completionStatus === '전체완료').length;
-      const rate = groupHistory.length > 0 ? (completionCount / groupHistory.length) * 100 : 0;
+      const rate = groupHistory.length > 0 ? (completionCount / groupHistory.length) * 100 : null;
 
       return {
         id: group.id,
@@ -190,15 +205,30 @@ export const StatsView: React.FC<StatsViewProps> = ({
         avgStartTime: avgStartMinutes !== null ? minutesToTime(avgStartMinutes) : 'N/A',
         avgEndTime: avgEndMinutes !== null ? minutesToTime(avgEndMinutes) : 'N/A',
         avgDuration: formatDurationPrecise(avgDurationSeconds),
-        rate: Math.floor(rate).toString()
+        rate: rate !== null ? Math.floor(rate).toString() : '-'
       };
     });
 
     const getDailyHistoryForPeriod = (days: string[]) => {
       return days.map(date => {
-        const rate = (userData.dailyCompletionRate?.[date]) || 0;
+        const rate = userData.dailyCompletionRate?.[date];
         const dayTaskHistory = (userData.taskHistory || []).filter(h => h.date === date && h.isActive);
         const dayGroupHistory = (userData.routineGroupHistory || []).filter(h => h.date === date && h.isActive);
+
+        // If no records at all for this day (not in taskHistory AND not in completionRate)
+        const hasAnyRecord = rate !== undefined || dayTaskHistory.length > 0 || dayGroupHistory.length > 0;
+
+        if (!hasAnyRecord) {
+          return {
+            date,
+            rate: '-',
+            totalActive: 0,
+            breakdown: '-',
+            startTime: '--:--',
+            endTime: '--:--',
+            duration: '-'
+          };
+        }
 
         let perfect = 0;
         let completed = 0;
@@ -226,7 +256,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
         return {
           date,
-          rate: Math.floor(rate) + '%',
+          rate: Math.floor(rate || 0) + '%',
           totalActive: dayTaskHistory.length,
           breakdown: `(${failed}/${skipped}/${completed}/${perfect})`,
           startTime: minStart !== null ? minutesToTime(minStart) : '--:--',
@@ -239,9 +269,36 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const dailyHistory7 = getDailyHistoryForPeriod(last7Days);
     const dailyHistory40 = getDailyHistoryForPeriod(last40Days);
 
+    const getStatsForPeriod = (days: string[]) => {
+      const histories = (userData.routineGroupHistory || []).filter(h => days.includes(h.date));
+      
+      const startTimes = histories.filter(h => h.firstTaskStartTime).map(h => timeToMinutes(h.firstTaskStartTime!));
+      const endTimes = histories.filter(h => h.completedAt).map(h => timeToMinutes(h.completedAt!));
+      const durations = histories.filter(h => h.totalDuration > 0).map(h => h.totalDuration || 0);
+
+      const avgStart = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
+      const avgEnd = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
+      const avgDur = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+
+      return {
+        avgStart: avgStart !== null ? minutesToTime(avgStart) : '--:--',
+        avgEnd: avgEnd !== null ? minutesToTime(avgEnd) : '--:--',
+        avgDuration: formatDurationPrecise(avgDur)
+      };
+    };
+
+    const overall7 = getStatsForPeriod(last7Days);
+    const overall30 = getStatsForPeriod(last30Days);
+
     return {
-      avgTotalRate7: Math.floor(avgRate7).toString(),
-      avgTotalRate30: Math.floor(avgRate30).toString(),
+      avgTotalRate7: avgRate7 !== null ? Math.floor(avgRate7).toString() : '-',
+      avgTotalRate30: avgRate30 !== null ? Math.floor(avgRate30).toString() : '-',
+      avgStart7: overall7.avgStart,
+      avgEnd7: overall7.avgEnd,
+      avgDuration7: overall7.avgDuration,
+      avgStart30: overall30.avgStart,
+      avgEnd30: overall30.avgEnd,
+      avgDuration30: overall30.avgDuration,
       groups: groupStats,
       dailyHistory7,
       dailyHistory40
@@ -259,18 +316,30 @@ export const StatsView: React.FC<StatsViewProps> = ({
       return sortedDays.map(date => {
         const entry = (userData.routineGroupHistory || []).find(h => h.groupId === selectedGroupId && h.date === date);
         
+        if (!entry) {
+          return {
+            date,
+            startTime: '--:--',
+            duration: '-',
+            endTime: '--:--',
+            rate: '-',
+            status: '미기록'
+          };
+        }
+
         // Calculate achievement rate for this day
         const tasksOnThisDay = group.tasks.filter(t => t.scheduledDays?.includes(new Date(date).getDay()) ?? true);
-        const taskEntries = (userData.taskHistory || []).filter(h => h.groupId === selectedGroupId && h.date === date);
+        const taskEntries = (userData.taskHistory || []).filter(h => h.groupId === selectedGroupId && h.date === date && h.isActive);
         const completedCount = taskEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵').length;
-        const rate = tasksOnThisDay.length > 0 ? (completedCount / tasksOnThisDay.length) * 100 : 0;
+        const rate = taskEntries.length > 0 ? (completedCount / taskEntries.length) * 100 : 0;
 
         return {
           date,
-          startTime: entry?.firstTaskStartTime || '미실행',
-          duration: entry ? formatDurationPrecise(entry.totalDuration) : '0초',
-          endTime: entry?.completedAt || '미완료',
-          rate: Math.floor(rate) + '%'
+          startTime: entry.firstTaskStartTime || '미실행',
+          duration: formatDurationPrecise(entry.totalDuration),
+          endTime: entry.completedAt || '미완료',
+          rate: Math.floor(rate) + '%',
+          status: entry.completionStatus
         };
       });
     };
@@ -278,15 +347,31 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const history7 = getHistoryForPeriod(last7Days);
     const history40 = getHistoryForPeriod(last40Days);
 
+    const getAvgRateForPeriod = (days: string[]) => {
+      const entries = (userData.taskHistory || []).filter(h => h.groupId === selectedGroupId && days.includes(h.date) && h.isActive);
+      const completedEntries = entries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵');
+      return entries.length > 0 ? (completedEntries.length / entries.length) * 100 : null;
+    };
+
     const taskStats = group.tasks.map(task => {
       const getStatsForPeriod = (days: string[]) => {
         const entries = (userData.taskHistory || []).filter(h => h.taskId === task.id && days.includes(h.date));
+        const activeEntries = entries.filter(h => h.isActive);
         
         // Skip is included in rate but excluded from duration
-        const attainmentEntries = entries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵');
-        const durationEntries = entries.filter(h => h.status === '완벽' || h.status === '완료');
+        const attainmentEntries = activeEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵');
+        const durationEntries = activeEntries.filter(h => h.status === '완벽' || h.status === '완료');
         
-        const rate = entries.length > 0 ? (attainmentEntries.length / entries.length) * 100 : 0;
+        if (entries.length === 0) {
+          return {
+            rate: '-',
+            avg: '-',
+            min: '-',
+            max: '-'
+          };
+        }
+
+        const rate = activeEntries.length > 0 ? (attainmentEntries.length / activeEntries.length) * 100 : 0;
         const durations = durationEntries.map(e => e.duration);
         
         const avg = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
@@ -302,6 +387,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
       };
 
       return {
+        id: task.id,
         name: task.text,
         type: task.taskType,
         targetDuration: task.targetDuration || task.duration || 0,
@@ -310,13 +396,305 @@ export const StatsView: React.FC<StatsViewProps> = ({
       };
     });
 
+    const getAvgMetricsForPeriod = (days: string[]) => {
+      const histories = (userData.routineGroupHistory || []).filter(h => h.groupId === selectedGroupId && days.includes(h.date));
+      const startTimes = histories.filter(h => h.firstTaskStartTime).map(h => timeToMinutes(h.firstTaskStartTime!));
+      const endTimes = histories.filter(h => h.completedAt).map(h => timeToMinutes(h.completedAt!));
+      const durations = histories.filter(h => h.totalDuration > 0).map(h => h.totalDuration);
+
+      const avgStart = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
+      const avgEnd = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
+      const avgDur = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+
+      return {
+        avgStart: avgStart !== null ? minutesToTime(avgStart) : '--:--',
+        avgEnd: avgEnd !== null ? minutesToTime(avgEnd) : '--:--',
+        avgDuration: formatDurationPrecise(avgDur)
+      };
+    };
+
+    const metrics7 = getAvgMetricsForPeriod(last7Days);
+    const metrics30 = getAvgMetricsForPeriod(last30Days);
+    const avgRate7 = getAvgRateForPeriod(last7Days);
+    const avgRate30 = getAvgRateForPeriod(last30Days);
+
     return {
       name: group.name,
       history7: history7,
       history40: history40,
-      tasks: taskStats
+      tasks: taskStats,
+      avgRate7: avgRate7 !== null ? Math.floor(avgRate7) : '-',
+      avgRate30: avgRate30 !== null ? Math.floor(avgRate30) : '-',
+      avgStart7: metrics7.avgStart,
+      avgEnd7: metrics7.avgEnd,
+      avgDuration7: metrics7.avgDuration,
+      avgStart30: metrics30.avgStart,
+      avgEnd30: metrics30.avgEnd,
+      avgDuration30: metrics30.avgDuration
     };
   }, [selectedGroupId, userData, last7Days, last30Days, last40Days]);
+
+  const taskDetailData = useMemo(() => {
+    if (!selectedTaskId) return null;
+    
+    // Find the task in all chunks
+    let foundTaskText = '';
+    for (const chunk of userData.routineChunks) {
+      const task = chunk.tasks.find(t => t.id === selectedTaskId);
+      if (task) {
+        foundTaskText = task.text;
+        break;
+      }
+    }
+
+    const getHistoryForPeriod = (days: string[]) => {
+      const sortedDays = [...days].reverse();
+      return sortedDays.map(date => {
+        const entry = (userData.taskHistory || []).find(h => h.taskId === selectedTaskId && h.date === date);
+        
+        if (!entry) {
+          return {
+            date,
+            startTime: '--:--',
+            duration: '-',
+            endTime: '--:--',
+            status: '미기록'
+          };
+        }
+
+        const startTime = entry.startTime || '--:--';
+        const duration = formatDurationPrecise(entry.duration);
+        const endTime = entry.endTime || '--:--';
+        const status = entry.status;
+
+        return {
+          date,
+          startTime,
+          duration,
+          endTime,
+          status
+        };
+      });
+    };
+
+    const getAvgRateForPeriod = (days: string[]) => {
+      const entries = (userData.taskHistory || []).filter(h => h.taskId === selectedTaskId && days.includes(h.date) && h.isActive);
+      const completedEntries = entries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵');
+      return entries.length > 0 ? (completedEntries.length / entries.length) * 100 : null;
+    };
+
+    const getAvgMetricsForPeriod = (days: string[]) => {
+      const histories = (userData.taskHistory || []).filter(h => h.taskId === selectedTaskId && days.includes(h.date));
+      const startTimes = histories.filter(h => h.startTime).map(h => timeToMinutes(h.startTime!));
+      const endTimes = histories.filter(h => h.endTime).map(h => timeToMinutes(h.endTime!));
+      const durations = histories.filter(h => h.duration > 0).map(h => h.duration);
+
+      const avgStart = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
+      const avgEnd = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
+      const avgDur = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+
+      return {
+        avgStart: avgStart !== null ? minutesToTime(avgStart) : '--:--',
+        avgEnd: avgEnd !== null ? minutesToTime(avgEnd) : '--:--',
+        avgDuration: formatDurationPrecise(avgDur)
+      };
+    };
+
+    const metrics7 = getAvgMetricsForPeriod(last7Days);
+    const metrics30 = getAvgMetricsForPeriod(last30Days);
+    const avgRate7 = getAvgRateForPeriod(last7Days);
+    const avgRate30 = getAvgRateForPeriod(last30Days);
+
+    return {
+      name: foundTaskText,
+      history7: getHistoryForPeriod(last7Days),
+      history40: getHistoryForPeriod(last40Days),
+      avgRate7: avgRate7 !== null ? Math.floor(avgRate7) : '-',
+      avgRate30: avgRate30 !== null ? Math.floor(avgRate30) : '-',
+      avgStart7: metrics7.avgStart,
+      avgEnd7: metrics7.avgEnd,
+      avgDuration7: metrics7.avgDuration,
+      avgStart30: metrics30.avgStart,
+      avgEnd30: metrics30.avgEnd,
+      avgDuration30: metrics30.avgDuration
+    };
+  }, [selectedTaskId, userData, last7Days, last30Days, last40Days]);
+
+  if (selectedTaskId && taskDetailData) {
+    const renderStatusIcon = (status: string) => {
+      let iconColor = "text-slate-200";
+      let statusIcon = <Circle className={`w-5 h-5 ${iconColor}`} />;
+
+      if (status === '미기록') {
+        iconColor = "text-slate-200";
+        statusIcon = <div className="text-slate-300 font-black">-</div>;
+      } else if (status === '완벽') {
+        iconColor = "text-indigo-600";
+        statusIcon = (
+          <div className="relative w-5 h-5 flex items-center justify-center">
+            <Circle className={`absolute inset-0 w-full h-full ${iconColor}`} />
+            <CheckCheck className={`absolute w-[60%] h-[60%] ${iconColor}`} strokeWidth={3} />
+          </div>
+        );
+      } else if (status === '완료') {
+        iconColor = "text-indigo-600";
+        statusIcon = (
+          <div className="relative w-5 h-5 flex items-center justify-center">
+            <Circle className={`absolute inset-0 w-full h-full ${iconColor}`} />
+            <Check className={`w-3 h-3 ${iconColor}`} strokeWidth={4} />
+          </div>
+        );
+      } else if (status === '스킵') {
+        iconColor = "text-[#CC9900]";
+        statusIcon = <CircleMinus className={`w-5 h-5 ${iconColor}`} />;
+      } else if (status === '나중에') {
+        iconColor = "text-slate-400";
+        statusIcon = <ArrowRightCircle className={`w-5 h-5 ${iconColor}`} />;
+      } else if (status === '일시정지') {
+        iconColor = "text-amber-400";
+        statusIcon = <PauseCircle className={`w-5 h-5 ${iconColor}`} />;
+      } else if (status === '실행중') {
+        iconColor = "text-indigo-500 animate-pulse";
+        statusIcon = <CircleDot className={`w-5 h-5 ${iconColor}`} />;
+      } else if (status === '비활성') {
+        iconColor = "text-slate-200";
+        statusIcon = (
+          <div className="relative w-5 h-5 flex items-center justify-center">
+            <Circle className={`absolute inset-0 w-full h-full ${iconColor}`} />
+            <X className="w-3 h-3 text-slate-400" strokeWidth={4} />
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex items-center justify-center">
+          {statusIcon}
+        </div>
+      );
+    };
+
+    return (
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex px-4 items-end relative z-20">
+          <button
+            onClick={() => {
+              setActiveTab('wake-up');
+              setSelectedTaskId(null);
+              setSelectedGroupId(null);
+            }}
+            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+              activeTab === 'wake-up' 
+                ? 'bg-white text-indigo-600 border-slate-100 -mb-[1px] pt-4' 
+                : 'bg-slate-50 text-slate-400 border-transparent'
+            }`}
+          >
+            <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
+            기상 시각 통계
+            {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('achievement');
+              setSelectedTaskId(null);
+              setSelectedGroupId(null);
+            }}
+            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+              activeTab === 'achievement' 
+                ? 'bg-white text-violet-600 border-slate-100 -mb-[1px] pt-4' 
+                : 'bg-slate-50 text-slate-400 border-transparent'
+            }`}
+          >
+            <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
+            달성률 통계
+            {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+          </button>
+        </div>
+
+        <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 p-4 md:p-6">
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setSelectedTaskId(null)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6 text-slate-600" />
+              </button>
+              <h2 className="text-xl font-black text-slate-900">{taskDetailData.name} 상세 통계</h2>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="text-center space-y-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균 달성률</p>
+                <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
+                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{taskDetailData.avgRate7}{taskDetailData.avgRate7 !== '-' ? '%' : ''}</h3>
+                <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
+                  <div>{taskDetailData.avgStart7} ~ {taskDetailData.avgEnd7}</div>
+                  <div className="text-slate-400">(평균 {taskDetailData.avgDuration7})</div>
+                </div>
+              </div>
+              <div className="text-center space-y-1 border-l border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균 달성률</p>
+                <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
+                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{taskDetailData.avgRate30}{taskDetailData.avgRate30 !== '-' ? '%' : ''}</h3>
+                <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
+                  <div>{taskDetailData.avgStart30} ~ {taskDetailData.avgEnd30}</div>
+                  <div className="text-slate-400">(평균 {taskDetailData.avgDuration30})</div>
+                </div>
+              </div>
+            </div>
+
+            <section className="bg-white rounded-[15px] shadow-sm border border-slate-100 overflow-hidden">
+              <div className="p-3 bg-slate-50 border-b border-slate-100">
+                <h3 className="text-xs font-black text-slate-700 flex items-center gap-2">
+                  <History className="w-4 h-4 text-indigo-500" />
+                  최근 {isTaskDetailExpanded ? '40' : '7'}일 기록
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[11px]">
+                  <thead>
+                    <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
+                      <th className="px-2 py-2">날짜</th>
+                      <th className="px-2 py-2 text-center">시작</th>
+                      <th className="px-2 py-2 text-center">소요</th>
+                      <th className="px-2 py-2 text-center">완료</th>
+                      <th className="px-2 py-2 text-center">상태</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(isTaskDetailExpanded ? taskDetailData.history40 : taskDetailData.history7).map((row, i) => (
+                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-2 py-2 font-bold text-slate-500 tracking-tighter whitespace-nowrap">{row.date.split('-').slice(1).join('/')}</td>
+                        <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime}</td>
+                        <td className="px-2 py-2 text-center font-bold text-indigo-600 tracking-tighter">{row.duration}</td>
+                        <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime}</td>
+                        <td className="px-2 py-2 flex justify-center">
+                          {renderStatusIcon(row.status)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-3 border-t border-slate-50">
+                <button 
+                  onClick={() => setIsTaskDetailExpanded(!isTaskDetailExpanded)}
+                  className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-400 hover:text-indigo-600 transition-colors py-2"
+                >
+                  <div className="flex flex-col items-center">
+                    <span>{isTaskDetailExpanded ? '접기' : '최근 40일 기록 확인'}</span>
+                    {!isTaskDetailExpanded && <div className="mt-1 border-b-2 border-r-2 border-slate-300 w-1.5 h-1.5 rotate-45" />}
+                    {isTaskDetailExpanded && <div className="mb-1 border-t-2 border-l-2 border-indigo-500 w-1.5 h-1.5 rotate-45" />}
+                  </div>
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedGroupId && detailData) {
     return (
@@ -369,6 +747,27 @@ export const StatsView: React.FC<StatsViewProps> = ({
               <h2 className="text-xl font-black text-slate-900">{detailData.name} 상세 통계</h2>
             </div>
 
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="text-center space-y-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균 달성률</p>
+                <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
+                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{detailData.avgRate7}{detailData.avgRate7 !== '-' ? '%' : ''}</h3>
+                <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
+                  <div>{detailData.avgStart7} ~ {detailData.avgEnd7}</div>
+                  <div className="text-slate-400">(평균 {detailData.avgDuration7})</div>
+                </div>
+              </div>
+              <div className="text-center space-y-1 border-l border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균 달성률</p>
+                <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
+                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{detailData.avgRate30}{detailData.avgRate30 !== '-' ? '%' : ''}</h3>
+                <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
+                  <div>{detailData.avgStart30} ~ {detailData.avgEnd30}</div>
+                  <div className="text-slate-400">(평균 {detailData.avgDuration30})</div>
+                </div>
+              </div>
+            </div>
+
             {/* 7-Day History Table 루틴그룹별 최근 7일간 통계*/}
             <section className="bg-white rounded-[15px] shadow-sm border border-slate-100 overflow-hidden">
               <div className="p-3 bg-slate-50 border-b border-slate-100">
@@ -419,20 +818,27 @@ export const StatsView: React.FC<StatsViewProps> = ({
             <div className="space-y-4">
               <h2 className="text-lg font-black text-slate-800 pl-1">개별 루틴 통계</h2>
               {detailData.tasks.map((task, i) => (
-                <div key={i} className="bg-white p-5 rounded-[15px] shadow-sm border border-slate-100 space-y-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                    <h4 className="font-black text-slate-800">{task.name}</h4>
-                    <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-[10px] font-black text-[8px] uppercase tracking-widest ml-1">
-                      {task.type === TaskType.TIME_INDEPENDENT ? (
-                        <Clock className="w-2.5 h-2.5 text-sky-400" />
-                      ) : task.type === TaskType.TIME_ACCUMULATED ? (
-                        <BrickWall className="w-2.5 h-2.5 text-pink-400" />
-                      ) : (
-                        <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
-                      )}
-                      <span>{task.targetDuration}분</span>
+                <button 
+                  key={i} 
+                  onClick={() => setSelectedTaskId(task.id)}
+                  className="w-full bg-white p-5 rounded-[15px] shadow-sm border border-slate-100 space-y-3 text-left hover:border-indigo-200 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                      <h4 className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors">{task.name}</h4>
+                      <div className="flex items-center gap-1 bg-slate-100 text-slate-400 px-2 py-0.5 rounded-[10px] font-black text-[8px] uppercase tracking-widest ml-1">
+                        {task.type === TaskType.TIME_INDEPENDENT ? (
+                          <Clock className="w-2.5 h-2.5 text-sky-400" />
+                        ) : task.type === TaskType.TIME_ACCUMULATED ? (
+                          <BrickWall className="w-2.5 h-2.5 text-pink-400" />
+                        ) : (
+                          <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
+                        )}
+                        <span>{task.targetDuration}분</span>
+                      </div>
                     </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] bg-slate-50 p-2 rounded-[10px]">
@@ -450,7 +856,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -599,12 +1005,20 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <div className="text-center space-y-1">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균 달성률</p>
                       <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate7}%</h3>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate7}{achievementStats.avgTotalRate7 !== '-' ? '%' : ''}</h3>
+                      <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
+                        <div>{achievementStats.avgStart7} ~ {achievementStats.avgEnd7}</div>
+                        <div className="text-slate-400">(평균 {achievementStats.avgDuration7})</div>
+                      </div>
                     </div>
                     <div className="text-center space-y-1 border-l border-slate-100">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균 달성률</p>
                       <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate30}%</h3>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate30}{achievementStats.avgTotalRate30 !== '-' ? '%' : ''}</h3>
+                      <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
+                        <div>{achievementStats.avgStart30} ~ {achievementStats.avgEnd30}</div>
+                        <div className="text-slate-400">(평균 {achievementStats.avgDuration30})</div>
+                      </div>
                     </div>
                   </div>
 
@@ -715,7 +1129,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             </div>
                             <div className="space-y-0.5">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">달성률</p>
-                              <p className="text-xs font-black text-emerald-600">{group.rate}%</p>
+                              <p className="text-xs font-black text-emerald-600">{group.rate}{group.rate !== '-' ? '%' : ''}</p>
                             </div>
                           </div>
                         </button>

@@ -147,8 +147,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             status: getChunkStatus(chunk)
           }))
           .sort((a, b) => {
-            const aInactive = a.status === '불활성';
-            const bInactive = b.status === '불활성';
+            const aInactive = a.status === '비활성';
+            const bInactive = b.status === '비활성';
             const aCompleted = a.status === '완료' || a.status === '완벽' || a.status === '전체완료';
             const bCompleted = b.status === '완료' || b.status === '완벽' || b.status === '전체완료';
 
@@ -174,7 +174,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             const startedTasks = scheduledTasks.filter(t => t.startTime || t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
             const isFullyCompleted = status === '전체완료' || status === '완료' || status === '완벽';
             const isExpanded = expandedGroups[chunk.id];
-            const isInactive = status === '불활성';
+            const isInactive = status === '비활성';
 
             const displayStatus = status;
             let statusColor = 'bg-slate-100 text-slate-500';
@@ -192,15 +192,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
             }
           
             // [코멘트] 루틴그룹 박스 배경색 설정 (상태에 따라 연한 배경색 적용)
-            // 미실행: bg-white, 실행중: bg-pink-50(연핑크), 완료: bg-emerald-50(연초록), 완벽: bg-sky-50(연파란)
-            // *주의: Tailwind 기본 색상값은 50, 100, 200등 정해진 단위를 사용해야 합니다.
+            // 미실행: bg-white | 실행중: bg-amber-100 | 완료: bg-emerald-50 | 완벽: bg-emerald-50 | 비활성: bg-slate-50
+            // *주의: Tailwind 기본 색상값은 50, 100, 200등 정해진 단위를 사용해야 합니다. 직접 입력한 배경색(#hex)도 사용 가능합니다.
             let boxBgColor = 'bg-white';
-            if (!isInactive) {
-              if (displayStatus === '실행중') boxBgColor = 'bg-amber-100';
-              else if (displayStatus === '완료') boxBgColor = 'bg-emerald-50';
-              else if (displayStatus === '완벽') boxBgColor = 'bg-emerald-50';
-              else if (displayStatus === '비활성') boxBgColor = 'bg-sky-500';
-            }
+            if (displayStatus === '실행중') boxBgColor = 'bg-amber-100';
+            else if (displayStatus === '완료') boxBgColor = 'bg-emerald-50';
+            else if (displayStatus === '완벽') boxBgColor = 'bg-emerald-50';
+            else if (displayStatus === '비활성') boxBgColor = 'bg-slate-50'; // 비활성 상태 배경색 설정 포인트
           
           return (
             <section 

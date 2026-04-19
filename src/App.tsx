@@ -2182,28 +2182,44 @@ const RoutineGroupFormView: React.FC<{
     const finalTasks: Task[] = [];
     const now = Date.now();
     
+    // Create a map of existing tasks to preserve their state (startTime, accumulatedDuration, status, etc.)
+    const existingTasksMap = new Map<string, Task>();
+    if (mode === 'edit' && initialChunk) {
+      initialChunk.tasks.forEach(t => existingTasksMap.set(t.id, t));
+    }
+
     // 1. Trigger Task
+    const triggerId = mode === 'edit' && initialChunk?.tasks[0]?.id ? initialChunk.tasks[0].id : `trigger-${now}`;
+    const existingTrigger = existingTasksMap.get(triggerId);
     finalTasks.push({
-      id: mode === 'edit' && initialChunk?.tasks[0]?.id ? initialChunk.tasks[0].id : `trigger-${now}`,
+      ...(existingTrigger || {}),
+      id: triggerId,
       text: triggerTask.text || '트리거 루틴',
-      completed: false,
       targetDuration: Math.min(3, Number(triggerTask.duration) || 1),
       taskType: triggerTask.type,
       scheduledDays: triggerTask.scheduledDays.filter(d => scheduledDays.includes(d)),
-      checklist: (triggerTask as any).checklist || []
-    });
+      checklist: (triggerTask as any).checklist || [],
+      // Ensure basic state if it's a new task
+      completed: existingTrigger ? existingTrigger.completed : false,
+      status: existingTrigger ? existingTrigger.status : TaskStatus.NOT_STARTED
+    } as Task);
     
     // 2. Routine List
     routineList.forEach((rt, idx) => {
+      const rtId = rt.id.startsWith('new-rt-') ? `routine-${idx}-${now}` : rt.id;
+      const existingRt = existingTasksMap.get(rtId);
       finalTasks.push({
-        id: rt.id.startsWith('new-rt-') ? `routine-${idx}-${now}` : rt.id,
+        ...(existingRt || {}),
+        id: rtId,
         text: rt.text,
-        completed: false,
         targetDuration: Number(rt.duration) || 1,
         taskType: rt.type,
         scheduledDays: rt.scheduledDays.filter(d => scheduledDays.includes(d)),
-        checklist: (rt as any).checklist || []
-      });
+        checklist: (rt as any).checklist || [],
+        // Ensure basic state if it's a new task
+        completed: existingRt ? existingRt.completed : false,
+        status: existingRt ? existingRt.status : TaskStatus.NOT_STARTED
+      } as Task);
     });
 
     // 3. Current Input (if not empty)
@@ -2212,11 +2228,12 @@ const RoutineGroupFormView: React.FC<{
         id: `routine-last-${now}`,
         text: currentRoutineInput.text,
         completed: false,
+        status: TaskStatus.NOT_STARTED,
         targetDuration: Number(currentRoutineInput.duration) || 1,
         taskType: currentRoutineInput.type,
         scheduledDays: currentRoutineInput.scheduledDays.filter(d => scheduledDays.includes(d)),
         checklist: (currentRoutineInput as any).checklist || []
-      });
+      } as Task);
     }
     
     if (finalTasks.length < 2) {
@@ -3082,23 +3099,27 @@ export default function App() {
 
     // Update Task and Group History
     data.routineChunks.forEach(chunk => {
-      const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, syncDate, data));
-      const isActive = scheduledTasks.length > 0;
-      
       let firstStartTime: string | null = null;
       let totalDuration = 0;
-      let allFinished = scheduledTasks.length > 0;
       let anyStarted = false;
       let lastEndTime: string | null = null;
+      const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, syncDate, data));
+      let allFinished = scheduledTasks.length > 0;
+      const isActive = scheduledTasks.length > 0;
 
-      scheduledTasks.forEach(task => {
+      chunk.tasks.forEach(task => {
+        const isScheduled = isTaskScheduledToday(task, chunk, syncDate, data);
+        
         // Task History
-        let statusStr = '미실행';
-        if (task.status === TaskStatus.PERFECT) statusStr = '완벽';
-        else if (task.status === TaskStatus.COMPLETED || task.completed) statusStr = '완료';
-        else if (task.status === TaskStatus.SKIP) statusStr = '스킵';
-        else if (task.isPaused) statusStr = '일시정지';
-        else if (task.startTime) statusStr = '실행중';
+        let statusStr = isScheduled ? '미실행' : '비활성';
+        if (isScheduled) {
+          if (task.status === TaskStatus.PERFECT) statusStr = '완벽';
+          else if (task.status === TaskStatus.COMPLETED || task.completed) statusStr = '완료';
+          else if (task.status === TaskStatus.SKIP) statusStr = '스킵';
+          else if (task.laterTimestamp) statusStr = '나중에';
+          else if (task.isPaused) statusStr = '일시정지';
+          else if (task.startTime) statusStr = '실행중';
+        }
 
         const taskDuration = task.duration || task.accumulatedDuration || 0;
         
@@ -3107,7 +3128,9 @@ export default function App() {
           date: today,
           taskId: task.id,
           groupId: chunk.id,
-          isActive: true,
+          isActive: isScheduled,
+          startTime: task.startTime || null,
+          endTime: task.endTime || null,
           duration: taskDuration,
           status: statusStr
         };
@@ -3118,19 +3141,21 @@ export default function App() {
           newTaskHistory.push(taskEntry);
         }
 
-        // Group Stats
-        if (task.startTime && (!firstStartTime || task.startTime < firstStartTime)) {
-          firstStartTime = task.startTime;
-        }
-        if (task.endTime && (!lastEndTime || task.endTime > lastEndTime)) {
-          lastEndTime = task.endTime;
-        }
-        totalDuration += taskDuration;
-        if (!task.completed && task.status !== TaskStatus.SKIP && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.PERFECT) {
-          allFinished = false;
-        }
-        if (task.startTime || task.completed || task.status !== TaskStatus.NOT_STARTED) {
-          anyStarted = true;
+        if (isScheduled) {
+          // Group Stats
+          if (task.startTime && (!firstStartTime || task.startTime < firstStartTime)) {
+            firstStartTime = task.startTime;
+          }
+          if (task.endTime && (!lastEndTime || task.endTime > lastEndTime)) {
+            lastEndTime = task.endTime;
+          }
+          totalDuration += taskDuration;
+          if (!task.completed && task.status !== TaskStatus.SKIP && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.PERFECT) {
+            allFinished = false;
+          }
+          if (task.startTime || task.completed || task.status !== TaskStatus.NOT_STARTED) {
+            anyStarted = true;
+          }
         }
       });
 
@@ -3972,10 +3997,10 @@ export default function App() {
   };
 
   const getChunkStatus = (chunk: RoutineChunk) => {
-    if (chunk.inactiveDates?.includes(todayStr)) return '불활성';
-    if (!isChunkScheduledToday(chunk, effectiveDate, userData)) return '불활성';
+    if (chunk.inactiveDates?.includes(todayStr)) return '비활성';
+    if (!isChunkScheduledToday(chunk, effectiveDate, userData)) return '비활성';
     const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
-    if (scheduledTasks.length === 0) return '불활성';
+    if (scheduledTasks.length === 0) return '비활성';
 
     const allFinished = scheduledTasks.every(t => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
     
@@ -4005,7 +4030,7 @@ export default function App() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case '불활성': return <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-[10px]">불활성</span>;
+      case '비활성': return <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-[10px]">비활성</span>;
       case '미실행': return <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-[10px]">미실행</span>;
       case '실행중': return <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-[10px]">실행중</span>;
       case '완료': return <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-[10px]">완료</span>;
@@ -4177,6 +4202,70 @@ export default function App() {
         };
       });
     }
+  };
+
+  const resetWakeUpHistory = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: '기상시각 기록 삭제',
+      message: '현재까지 기록된 기상시각 기록을 모두 삭제하시겠습니까?',
+      confirmLabel: '삭제',
+      onConfirm: () => {
+        setUserData(prev => ({
+          ...prev,
+          wakeUpTimeHistory: [],
+          lastCheckInDate: null,
+          dailyCheckIn: {},
+          history: [] // also clear the older WakeUpRecord history if any
+        }));
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
+  const resetRoutineHistory = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: '루틴 기록 삭제',
+      message: '현재까지 기록된 모든 루틴 기록을 삭제하시겠습니까? 루틴 설정은 유지됩니다.',
+      confirmLabel: '삭제',
+      onConfirm: () => {
+        setUserData(prev => ({
+          ...prev,
+          taskHistory: [],
+          routineGroupHistory: [],
+          dailyCompletionRate: {},
+          lastResetDate: null,
+          dailyTaskStatus: {},
+          forcedActiveTasks: {},
+          dailyActivityLog: {}
+        }));
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
+  const resetAllRoutines = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: '루틴 전체 삭제',
+      message: '지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다. 계속하시겠습니까?',
+      confirmLabel: '전체 삭제',
+      onConfirm: () => {
+        setUserData(prev => ({
+          ...prev,
+          routineChunks: [],
+          taskHistory: [],
+          routineGroupHistory: [],
+          dailyCompletionRate: {},
+          lastResetDate: null,
+          dailyTaskStatus: {},
+          forcedActiveTasks: {},
+          dailyActivityLog: {}
+        }));
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   // 체크체크박스 아이콘 결정 로직 (클릭 횟수에 따라 진화)
@@ -4448,6 +4537,41 @@ export default function App() {
                     ))}
                   </SortableContext>
                 </DndContext>
+              </div>
+            </div>
+
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                <div className="w-8 h-8 bg-rose-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Settings className="w-5 h-5 text-rose-600" />
+                </div>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">리셋하기</h3>
+              </div>
+
+              <div className="space-y-4 pt-1">
+                <button 
+                  onClick={resetWakeUpHistory}
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                >
+                  <span className="text-sm font-black text-slate-700 mb-1">기상시각 기록 삭제</span>
+                  <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 기상시각 기록을 모두 삭제합니다.</span>
+                </button>
+
+                <button 
+                  onClick={resetRoutineHistory}
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                >
+                  <span className="text-sm font-black text-slate-700 mb-1">루틴 기록 삭제</span>
+                  <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 모든 루틴 기록을 삭제합니다. 루틴 설정은 유지합니다.</span>
+                </button>
+
+                <button 
+                  onClick={resetAllRoutines}
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                >
+                  <span className="text-sm font-black text-slate-700 mb-1">루틴 전체 삭제</span>
+                  <span className="text-[11px] font-bold text-slate-400 leading-tight">지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다.</span>
+                </button>
               </div>
             </div>
           </div>

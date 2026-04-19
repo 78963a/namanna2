@@ -104,7 +104,9 @@ export interface TaskHistoryEntry {
   groupId: string;
   isActive: boolean;
   duration: number; // seconds
-  status: string; // '미실행' | '일시정지' | '실행중' | '스킵' | '완벽' | '완료'
+  startTime: string | null; // HH:mm:ss
+  endTime: string | null;   // HH:mm:ss
+  status: string; // '비활성' | '미실행' | '일시정지' | '실행중' | '스킵' | '완벽' | '완료' | '나중에'
 }
 
 /**
