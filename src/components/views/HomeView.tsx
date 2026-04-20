@@ -193,11 +193,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
           
             // [코멘트] 루틴그룹 박스 배경색 설정 (상태에 따라 연한 배경색 적용)
             // 미실행: bg-white | 실행중: bg-amber-100 | 완료: bg-emerald-50 | 완벽: bg-emerald-50 | 비활성: bg-slate-50
-            // *주의: Tailwind 기본 색상값은 50, 100, 200등 정해진 단위를 사용해야 합니다. 직접 입력한 배경색(#hex)도 사용 가능합니다.
+            // *주의: Tailwind 기본 색상값은 50, 100, 200등 정해진 단위를 사용해야 합니다. 직접 입력 bg-["#739BE1"] 한 배경색(#hex)도 사용 가능합니다.
             let boxBgColor = 'bg-white';
             if (displayStatus === '실행중') boxBgColor = 'bg-amber-100';
-            else if (displayStatus === '완료') boxBgColor = 'bg-emerald-50';
-            else if (displayStatus === '완벽') boxBgColor = 'bg-emerald-50';
+            else if (displayStatus === '완료') boxBgColor = 'bg-[#D2E1FF]';
+            else if (displayStatus === '완벽') boxBgColor = 'bg-[#D2E1FF]';
             else if (displayStatus === '비활성') boxBgColor = 'bg-slate-50'; // 비활성 상태 배경색 설정 포인트
           
           return (
@@ -269,7 +269,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
 
               {isExpanded && (
-                <div className="divide-y divide-slate-50 border-t border-slate-50 pb-[15px]">
+                <div className="pb-[15px]">
                   {chunk.tasks.map(t => ({
                     task: t,
                     isScheduled: isTaskScheduledToday(t, chunk, effectiveDate, userData)
@@ -292,11 +292,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   }).map(({ task, isScheduled }) => (
                     <div
                       key={task.id}
-                      className={`group flex items-center gap-3 py-1 px-[15px] transition-all ${
-                        task.completed 
-                          ? 'bg-slate-50/50' 
-                          : ''
-                      }`}
+                      className="group flex items-center gap-3 py-1 px-[15px] transition-all"
                     >
                       <RoutineTitleLine 
                         task={task} 

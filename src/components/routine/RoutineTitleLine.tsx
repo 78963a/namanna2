@@ -153,15 +153,15 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
         return (
           <div 
             key={dayNum}
-            className="relative flex items-center justify-center w-[18px] h-[18px]"
+            className={`relative flex items-center justify-center w-[18px] h-[18px] rounded-full border flex-shrink-0 transition-all ${
+              isScheduled 
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-600' 
+                : 'bg-slate-50 border-slate-100 text-slate-300'
+            }`}
           >
-            <div className={`w-full h-full rounded-full border flex items-center justify-center ${isScheduled ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-slate-50'}`}>
-              <span className={`text-[9px] font-bold ${isScheduled ? 'text-indigo-600' : 'text-slate-400'}`}>
-                {days[i]}
-              </span>
-            </div>
+            <span className="text-[9px] font-black z-10">{days[i]}</span>
             {!isScheduled && (
-              <X className="absolute w-2.5 h-2.5 text-slate-400/60" strokeWidth={3} />
+              <X className="absolute w-full h-full text-slate-300/60" strokeWidth={5} />
             )}
           </div>
         );

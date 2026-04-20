@@ -35,6 +35,7 @@ export const minutesToTime = (minutes: number): string => {
  */
 export const isChunkScheduledToday = (chunk: RoutineChunk, date: Date, userData: UserData): boolean => {
   const dateStr = formatDate(date);
+  if (chunk.inactiveDates?.includes(dateStr)) return false;
   if (chunk.forcedActiveDates?.includes(dateStr)) return true;
   const day = date.getDay(); // 0 (Sun) to 6 (Sat)
   return chunk.scheduledDays.includes(day);

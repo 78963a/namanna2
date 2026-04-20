@@ -205,6 +205,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   const tasks = chunk.tasks;
   const scheduledTasks = tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
   
+  const isAlreadyFinalized = useMemo(() => {
+    const history = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === selectedChunkId);
+    return !!history?.selectedPhrase;
+  }, [userData.routineGroupHistory, todayStr, selectedChunkId]);
+
   const handleActivateTaskInternal = (taskId: string) => {
     setConfirmModal({
       isOpen: true,
@@ -265,7 +270,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   }
   
   // 3. 미실행 루틴 중 가장 순서가 빠른 루틴 (단, '나중에' 제외, 스킵 제외)
-  if (!activeTask) {
+  // [수정] 이미 완료(finalized)된 그룹인 경우, 미실행 루틴을 다음 루틴으로 제안하지 않음
+  if (!activeTask && !isAlreadyFinalized) {
     activeTask = scheduledTasks.find(t => !t.startTime && !t.completed && !t.laterTimestamp && t.status !== TaskStatus.SKIP);
   }
   
@@ -309,7 +315,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   }, [allTasksDone]);
 
   useEffect(() => {
-    if (allTasksDone && !wasDoneOnMount.current && !isCompleted) {
+    if (allTasksDone && !wasDoneOnMount.current && !isCompleted && !isAlreadyFinalized) {
       // Start completion sequence after a short delay (0.3s after last task celebration)
       const timer = setTimeout(() => {
         setIsCompleted(true);
@@ -376,6 +382,15 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
       }, 1000);
     }
   }, [animationStage]);
+
+  useEffect(() => {
+    if (animationStage === 'rising' && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [visibleTasksCount, animationStage]);
 
   useEffect(() => {
     if (animationStage === 'final') {
@@ -1910,6 +1925,36 @@ const SortableRoutineItem = ({
               )}
               <span className="text-[10px] font-bold text-slate-400">{rt.duration}분</span>
             </div>
+            {(() => {
+              const isSameSchedule = JSON.stringify([...(rt.scheduledDays || [])].sort()) === JSON.stringify([...(groupScheduledDays || [])].sort());
+              if (!isSameSchedule) {
+                const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+                const weekDays = ['월', '화', '수', '목', '금', '토', '일'];
+                return (
+                  <div className="flex items-center gap-1">
+                    {dayOrder.map((dayNum, i) => {
+                      const isScheduled = (rt.scheduledDays || []).includes(dayNum);
+                      return (
+                        <div 
+                          key={dayNum}
+                          className={`relative flex items-center justify-center w-[16px] h-[16px] rounded-full border transition-all ${
+                            isScheduled 
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-600' 
+                              : 'bg-slate-50 border-slate-100 text-slate-300'
+                          }`}
+                        >
+                          <span className="text-[8px] font-black z-10">{weekDays[i]}</span>
+                          {!isScheduled && (
+                            <X className="absolute w-full h-full text-slate-300/40" strokeWidth={5} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
       </div>
@@ -2623,6 +2668,7 @@ const RoutineGroupFormView: React.FC<{
 export default function App() {
   // --- State ---
   const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
+
   const [selectedChunkId, setSelectedChunkId] = useState<string | null>(null);
   const [showCheckInCelebration, setShowCheckInCelebration] = useState(false);
   const [isForeground, setIsForeground] = useState(true);
@@ -2795,6 +2841,11 @@ export default function App() {
   const [activeAlarmChunk, setActiveAlarmChunk] = useState<RoutineChunk | null>(null);
   const [isResetTimeDropdownOpen, setIsResetTimeDropdownOpen] = useState(false);
   const [swUpdateRegistration, setSwUpdateRegistration] = useState<ServiceWorkerRegistration | null>(null);
+
+  // [수정] 탭 변경 시 항상 최상단으로 스크롤 이동
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [activeTab, settingsSubView.type]);
 
   // Initialize/Sync chunk time inputs when settings open or routineChunks change
   useEffect(() => {
