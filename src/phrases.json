@@ -15,6 +15,7 @@
     "userName_style": { "color": "#f59e0b", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
     "startTime_style": { "color": "#8b5cf6", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
     "endTime_style": { "color": "#ec4899", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+    "triggerTask_style": { "color": "#f97316", "fontSize": "1.1rem", "fontWeight": "bold", "fontFamily": "Font2" },
  
  
  
@@ -28,7 +29,8 @@
       "totalTargetDuration_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
       "userName_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
       "startTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
-      "endTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" }
+      "endTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
+      "triggerTask_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" }
     }
   },
   "routine_messages": {
@@ -45,6 +47,7 @@
       "{{purpose}}이/가 되려면 때로는 {{title}}을/를 쉬어가야하지"
     ],
     "NOT_STARTED": [
+      "{{triggerTask}}부터 시작하는 {{purpose}}되기",
       "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다"
     ],
     "IN_PROGRESS": [

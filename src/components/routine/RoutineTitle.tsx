@@ -33,7 +33,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       return `<span style="color: ${style.color || 'inherit'}; font-size: ${style.fontSize || 'inherit'}; font-weight: ${style.fontWeight || 'normal'}; font-family: '${style.fontFamily || 'inherit'}', sans-serif;">${value}</span>`;
     };
 
-    const replaceWithJosa = (msg: string, tag: 'title' | 'purpose' | 'userName', value: string, html: string) => {
+    const replaceWithJosa = (msg: string, tag: 'title' | 'purpose' | 'userName' | 'triggerTask', value: string, html: string) => {
       const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|이/가)`, 'g');
       return msg.replace(regex, (_, p1) => {
         return html + getJosa(value, p1 as any);
@@ -42,6 +42,8 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
 
     const titleHtml = getStyledHtml('title', chunk.name);
     const purposeHtml = getStyledHtml('purpose', chunk.purpose || '목표');
+    const triggerTaskName = chunk.tasks[0]?.text || '첫 번째 루틴';
+    const triggerTaskHtml = getStyledHtml('triggerTask', triggerTaskName);
 
     let baseMessage = selectedPhrase;
     if (!baseMessage && isExecutionTitle) {
@@ -54,9 +56,11 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       message = replaceWithJosa(message, 'title', chunk.name, titleHtml);
       message = replaceWithJosa(message, 'purpose', chunk.purpose || '목표', purposeHtml);
       message = replaceWithJosa(message, 'userName', userName || '나', getStyledHtml('userName', userName || '나'));
+      message = replaceWithJosa(message, 'triggerTask', triggerTaskName, triggerTaskHtml);
 
       message = message.replace(/\{\{title\}\}/g, titleHtml);
       message = message.replace(/\{\{purpose\}\}/g, purposeHtml);
+      message = message.replace(/\{\{triggerTask\}\}/g, triggerTaskHtml);
       
       // Handle remaining potential placeholders
       const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || 0), 0);
@@ -134,14 +138,15 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     const totalTargetDurationHtml = getStyledHtml('totalTargetDuration', totalTargetDurationText);
 
     // --- [메시지 치환 로직] ---
-
     message = replaceWithJosa(message, 'title', chunk.name, titleHtml);
     message = replaceWithJosa(message, 'purpose', chunk.purpose || '목표', purposeHtml);
     message = replaceWithJosa(message, 'userName', userName || '나', getStyledHtml('userName', userName || '나'));
+    message = replaceWithJosa(message, 'triggerTask', triggerTaskName, triggerTaskHtml);
 
     // Handle remaining placeholders
     message = message.replace(/\{\{title\}\}/g, titleHtml);
     message = message.replace(/\{\{purpose\}\}/g, purposeHtml);
+    message = message.replace(/\{\{triggerTask\}\}/g, triggerTaskHtml);
     message = message.replace(/\{\{days\}\}/g, daysHtml);
     message = message.replace(/\{\{start_info\}\}/g, startInfoHtml);
     message = message.replace(/\{\{duration\}\}/g, durationHtml);

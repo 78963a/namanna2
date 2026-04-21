@@ -2192,6 +2192,14 @@ const RoutineGroupFormView: React.FC<{
 
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
   const [activeChecklistTarget, setActiveChecklistTarget] = useState<'trigger' | 'current' | null>(null);
+  const [routineAddedMessage, setRoutineAddedMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (routineAddedMessage) {
+      const timer = setTimeout(() => setRoutineAddedMessage(null), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [routineAddedMessage]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -2216,6 +2224,7 @@ const RoutineGroupFormView: React.FC<{
       setIsEditModalOpen(false);
     } else {
       setRoutineList([...routineList, { ...taskToSave, id: `new-rt-${Date.now()}` }]);
+      setRoutineAddedMessage(`'${taskToSave.text}' 루틴이 추가되었습니다`);
     }
     setCurrentRoutineInput({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
   };
@@ -2356,6 +2365,25 @@ const RoutineGroupFormView: React.FC<{
 
   return (
     <div className="space-y-5 pb-20">
+      {/* 루틴 추가 알림 팝업 */}
+      <AnimatePresence>
+        {routineAddedMessage && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 10 }}
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[300] pointer-events-none"
+          >
+            <div className="bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-[20px] shadow-2xl flex flex-col items-center gap-2 border border-white/10 min-w-[200px]">
+              <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center mb-1">
+                <Check className="w-6 h-6 text-emerald-400" />
+              </div>
+              <span className="text-sm font-black tracking-tight text-center">{routineAddedMessage}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {isEditModalOpen && (
           <RoutineEditModal 
