@@ -262,50 +262,48 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   })();
 
   // 9-2-1. '현재 실행중인 루틴' 우선순위 로직
-  // 0. 현재 실제로 실행 중인 루틴 (startTime 있고, 일시정지 아님, 완료 아님, 스킵/완료/완벽 상태 아님)
+  // 현재 루틴 후보군 탐색
+  // 1순위: '진행 중'인 집중 루틴 (실행 중이거나, 사용자가 실행했다가 일시정지한 루틴)
   let activeTask = scheduledTasks.find(t => 
-    t.startTime && 
-    !t.isPaused && 
+    (t.startTime || (t.status === TaskStatus.IN_PROGRESS && !t.laterTimestamp)) && 
     !t.completed && 
     t.status !== TaskStatus.SKIP &&
     t.status !== TaskStatus.COMPLETED &&
     t.status !== TaskStatus.PERFECT
   );
   
-  // 1순위: 미실행 루틴 중 가장 번호가 빠른 루틴 (startTime 없고, 완료 아니고, 일시정지 아니고, '나중에' 아님)
+  // 2순위: 현재 진행 중인 루틴이 없을 때, 다음 루틴을 선정하는 우선순위 (의도: 미실행 > 나중에 > 일시정지)
   if (!activeTask && !isAlreadyFinalized) {
+    // 1. 미실행 루틴 (Ready)
     activeTask = scheduledTasks.find(t => 
       !t.startTime && 
       !t.completed && 
-      !t.isPaused && 
+      (!t.status || t.status === TaskStatus.NOT_STARTED) &&
       !t.laterTimestamp && 
-      t.status !== TaskStatus.SKIP &&
-      t.status !== TaskStatus.COMPLETED &&
-      t.status !== TaskStatus.PERFECT
+      !t.isPaused
     );
-  }
-  
-  // 2순위: 더 이상 미실행 루틴이 없을 때 '나중에' 루틴 중 번호가 빠른 루틴
-  if (!activeTask) {
-    activeTask = scheduledTasks.find(t => 
-      t.laterTimestamp && 
-      !t.completed && 
-      t.status !== TaskStatus.SKIP &&
-      t.status !== TaskStatus.COMPLETED &&
-      t.status !== TaskStatus.PERFECT
-    );
-  }
-
-  // 3순위: 더 이상 '나중에' 루틴이 없을 때 '일시정지' 루틴 중 번호가 빠른 루틴
-  if (!activeTask) {
-    activeTask = scheduledTasks.find(t => 
-      t.isPaused && 
-      !t.completed && 
-      !t.laterTimestamp && 
-      t.status !== TaskStatus.SKIP &&
-      t.status !== TaskStatus.COMPLETED &&
-      t.status !== TaskStatus.PERFECT
-    );
+    
+    // 2. '나중에 하기' 루틴 (Later)
+    if (!activeTask) {
+      activeTask = scheduledTasks.find(t => 
+        t.laterTimestamp && 
+        !t.completed && 
+        t.status !== TaskStatus.SKIP &&
+        t.status !== TaskStatus.COMPLETED &&
+        t.status !== TaskStatus.PERFECT
+      );
+    }
+    
+    // 3. 기타 일시정지 루틴 (Paused)
+    if (!activeTask) {
+      activeTask = scheduledTasks.find(t => 
+        t.isPaused && 
+        !t.completed && 
+        t.status !== TaskStatus.SKIP &&
+        t.status !== TaskStatus.COMPLETED &&
+        t.status !== TaskStatus.PERFECT
+      );
+    }
   }
 
   const isNotStarted = tasks.every(t => !t.startTime && !t.completed);
@@ -2925,35 +2923,6 @@ export default function App() {
     }
   }, [deletionMessage]);
 
-  // [수정] 탭 변경 시 항상 최상단으로 스크롤 이동 및 완벽한 하루 체크
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
-    
-    // 완벽한 하루 애니메이션 체크
-    if (activeTab === 'home') {
-      const scheduledChunks = userData.routineChunks.filter(chunk => 
-        isChunkScheduledToday(chunk, effectiveDate, userData)
-      );
-
-      // 모든 오늘 예정된 그룹이 '완벽' 또는 '완료' 상태여야 함 (비활성일 포함하여 실패로 간주)
-      const isPerfect = scheduledChunks.length > 0 && scheduledChunks.every(chunk => {
-        const status = getChunkStatus(chunk);
-        return status === '완벽' || status === '완료';
-      });
-
-      if (isPerfect) {
-        const groups = scheduledChunks.map(c => ({
-          name: c.name,
-          status: getChunkStatus(c)
-        }));
-        setPerfectDayGroups(groups);
-        // [수정] 1.5초 여유를 둔 후에 애니메이션 작동
-        const timer = setTimeout(() => setShowPerfectDay(true), 1500);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [activeTab, settingsSubView.type]);
-
   // Initialize/Sync chunk time inputs when settings open or routineChunks change
   useEffect(() => {
     if (isSettingsOpen) {
@@ -2989,6 +2958,43 @@ export default function App() {
   }, [currentTime, userData.resetTime]);
 
   const todayStr = useMemo(() => formatDate(effectiveDate), [effectiveDate]);
+
+  // [수정] 탭 변경 시 항상 최상단으로 스크롤 이동 및 완벽한 하루 체크
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    
+    // 완벽한 하루 애니메이션 체크
+    if (activeTab === 'home') {
+      const scheduledChunks = userData.routineChunks.filter(chunk => 
+        isChunkScheduledToday(chunk, effectiveDate, userData)
+      );
+
+      // 모든 오늘 예정된 그룹이 '완벽' 또는 '완료' 상태여야 함 (비활성일 포함하여 실패로 간주)
+      const isPerfect = scheduledChunks.length > 0 && scheduledChunks.every(chunk => {
+        const status = getChunkStatus(chunk);
+        return status === '완벽' || status === '완료';
+      });
+
+      // 하루에 한 번만 실행되도록 체크
+      if (isPerfect && userData.lastPerfectDayAnimationDate !== todayStr) {
+        const groups = scheduledChunks.map(c => ({
+          name: c.name,
+          status: getChunkStatus(c)
+        }));
+        setPerfectDayGroups(groups);
+        // [수정] 1.5초 여유를 둔 후에 애니메이션 작동
+        const timer = setTimeout(() => {
+          setShowPerfectDay(true);
+          // 표시한 날짜를 기록
+          setUserData(prev => ({
+            ...prev,
+            lastPerfectDayAnimationDate: todayStr
+          }));
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [activeTab, settingsSubView.type, todayStr, userData.lastPerfectDayAnimationDate]);
 
   useEffect(() => {
     if (settingsSubView.type === 'detail') {
@@ -3282,13 +3288,24 @@ export default function App() {
         const taskDuration = task.duration || task.accumulatedDuration || 0;
         
         const taskEntryIdx = newTaskHistory.findIndex(h => h.date === today && h.taskId === task.id);
+        const existingTaskEntry = taskEntryIdx >= 0 ? newTaskHistory[taskEntryIdx] : null;
+
+        // Preserve earliest non-null start time for the day
+        const finalTaskStartTime = [task.startTime, existingTaskEntry?.startTime]
+          .filter(Boolean)
+          .sort()[0] || null;
+
+        // Preserve end time if already completed
+        const isFinished = task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT || task.status === TaskStatus.SKIP;
+        const finalTaskEndTime = isFinished ? (task.endTime || existingTaskEntry?.endTime || null) : null;
+
         const taskEntry: TaskHistoryEntry = {
           date: today,
           taskId: task.id,
           groupId: chunk.id,
           isActive: isScheduled,
-          startTime: task.startTime || null,
-          endTime: task.endTime || null,
+          startTime: finalTaskStartTime,
+          endTime: finalTaskEndTime,
           duration: taskDuration,
           status: statusStr
         };
@@ -3612,7 +3629,7 @@ export default function App() {
           if (nextTask) {
             return {
               ...chunk,
-              tasks: updatedTasks.map(t => (t.id === nextTask.id && prev.nextRoutineAutoStart) ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
+              tasks: updatedTasks.map(t => (t.id === nextTask.id && prev.nextRoutineAutoStart) ? { ...t, status: TaskStatus.IN_PROGRESS, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
             };
           }
 
@@ -3850,10 +3867,18 @@ export default function App() {
             ? Math.floor((totalCompleted / totalScheduledTasksCount) * 100) 
             : 0;
 
+          // Clear task history for this group and day
+          const newTaskHistory = (prev.taskHistory || []).map(h => 
+            (h.groupId === chunkId && h.date === todayStr) 
+              ? { ...h, startTime: null, endTime: null, duration: 0, status: '미실행' } 
+              : h
+          );
+          
           const next = {
             ...prev,
             routineChunks: newChunks,
             routineGroupHistory: newGroupHistory,
+            taskHistory: newTaskHistory,
             dailyCompletionRate: {
               ...prev.dailyCompletionRate,
               [todayStr]: completionPercentage
@@ -3944,7 +3969,7 @@ export default function App() {
             return {
               ...chunk,
               completionDates: newCompletionDates,
-              tasks: updatedTasks.map(t => (t.id === nextTask.id && prev.nextRoutineAutoStart) ? { ...t, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
+              tasks: updatedTasks.map(t => (t.id === nextTask.id && prev.nextRoutineAutoStart) ? { ...t, status: TaskStatus.IN_PROGRESS, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
             };
           }
             return {
@@ -4423,7 +4448,8 @@ export default function App() {
           lastResetDate: null,
           dailyTaskStatus: {},
           forcedActiveTasks: {},
-          dailyActivityLog: {}
+          dailyActivityLog: {},
+          lastPerfectDayAnimationDate: undefined
         }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setDeletionMessage('모든 루틴 데이터가 삭제되었습니다');

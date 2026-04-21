@@ -74,7 +74,7 @@
     ]
   },
   "checkCheckSettings": {
-    "intervalMinutes": 47,
+    "intervalMinutes": 1,
     "evolutionStages": [
       { "minClicks": 0, "iconId": "egg", "label": "알" }, 
       { "minClicks": 1, "iconId": "broken_egg", "label": "깨진 알" }, 

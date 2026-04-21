@@ -83,15 +83,18 @@ export const CheckCheckIcon: React.FC<PixelArtProps> = ({ iconId, size = 32 }) =
       colors: { H: '#F8FAFC', h: '#CBD5E1' }
     },
 
-       chick_in_shell: {
+    chick_in_shell: {
       pixels: [
-        "         hhh       ",
-        "       hhHHHhh     ",
-        "      hHHHHHHHh    ",
-        "     hhhhhhhhhh   ",
-        "    hyyyyyyyyyyh   ",
-        "   hyyyyEyyEyyyyh  ",
-        "   hyyyyyByyyyyyh  ",
+        "                   ",
+        "                   ",
+        "        hhhhh      ",
+        "      hhHHHHHh     ",
+        "     hHHHHHHHHhh   ",
+        "    hHHHHHHHHHHHh  ",
+        "   hhhhhhhhhhhhh   ",
+        "     hyyyyyyyyh    ",
+        "    hyyyEyyEyyyh   ",
+        "    hyyyyByyyyyh   ",
         "  hhhhyhhhhyhhhhhh ",
         "  hHHHhHHHHhHHhHHh ",
         "  hHHHHHHHHHHHhHHh ",
@@ -101,14 +104,12 @@ export const CheckCheckIcon: React.FC<PixelArtProps> = ({ iconId, size = 32 }) =
         "    hHHHHHHHhHHh   ",
         "     hHHHHHHHHh    ",
         "      hhHHHHhh     ",
-        "        hhhh       ",
-        "                   ",
-        "                   ",
-        "                   "
-      ],
-      colors: { H: '#F8FAFC', h: '#CBD5E1', y: '#FDE047', E: '#000000', B: '#F97316' }
-    },
-    
+        "        hhhh       "
+  ],
+  colors: { H: '#F8FAFC', h: '#CBD5E1', y: '#FDE047', E: '#000000', B: '#F97316' }
+},    
+
+
  chick_hat_shell: {
       pixels: [
         "                   ",

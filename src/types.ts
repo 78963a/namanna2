@@ -139,6 +139,7 @@ export interface UserData {
   userName?: string;
   forcedActiveTasks?: { [date: string]: { [taskId: string]: boolean } };
   dailyActivityLog?: { [date: string]: number[] };
+  lastPerfectDayAnimationDate?: string; // YYYY-MM-DD
 }
 
 /**
