@@ -116,6 +116,7 @@ import { ConfirmModal } from './components/common/ConfirmModal';
 import { CelebrationModal } from './components/common/CelebrationModal';
 import { RoutineTitleLine } from './components/routine/RoutineTitleLine';
 import { RoutineTitle } from './components/routine/RoutineTitle';
+import { PerfectDayAnimation } from './PerfectDayAnimation';
 // import { TaskInputSection } from './components/routine/TaskInputSection';
 // import { SortableTaskItem } from './components/routine/SortableTaskItem';
 // import { SortableChunkItem } from './components/routine/SortableChunkItem';
@@ -261,21 +262,51 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   })();
 
   // 9-2-1. '현재 실행중인 루틴' 우선순위 로직
-  // 1. 현재 실행 중인 루틴 (startTime 있고, 일시정지 아님, 완료 아님, 스킵 아님)
-  let activeTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed && t.status !== TaskStatus.SKIP);
+  // 0. 현재 실제로 실행 중인 루틴 (startTime 있고, 일시정지 아님, 완료 아님, 스킵/완료/완벽 상태 아님)
+  let activeTask = scheduledTasks.find(t => 
+    t.startTime && 
+    !t.isPaused && 
+    !t.completed && 
+    t.status !== TaskStatus.SKIP &&
+    t.status !== TaskStatus.COMPLETED &&
+    t.status !== TaskStatus.PERFECT
+  );
   
-  // 2. 일시정지 루틴 중 가장 순서가 빠른 루틴 (단, '나중에' 제외, 스킵 제외)
-  if (!activeTask) {
-    activeTask = scheduledTasks.find(t => t.isPaused && !t.completed && !t.laterTimestamp && t.status !== TaskStatus.SKIP);
-  }
-  
-  // 3. 미실행 루틴 중 가장 순서가 빠른 루틴 (단, '나중에' 제외, 스킵 제외)
-  // [수정] 이미 완료(finalized)된 그룹인 경우, 미실행 루틴을 다음 루틴으로 제안하지 않음
+  // 1순위: 미실행 루틴 중 가장 번호가 빠른 루틴 (startTime 없고, 완료 아니고, 일시정지 아니고, '나중에' 아님)
   if (!activeTask && !isAlreadyFinalized) {
-    activeTask = scheduledTasks.find(t => !t.startTime && !t.completed && !t.laterTimestamp && t.status !== TaskStatus.SKIP);
+    activeTask = scheduledTasks.find(t => 
+      !t.startTime && 
+      !t.completed && 
+      !t.isPaused && 
+      !t.laterTimestamp && 
+      t.status !== TaskStatus.SKIP &&
+      t.status !== TaskStatus.COMPLETED &&
+      t.status !== TaskStatus.PERFECT
+    );
   }
   
-  // '나중에' 루틴은 더 이상 자동으로 현재 루틴이 되지 않음 (사용자가 클릭해야 함)
+  // 2순위: 더 이상 미실행 루틴이 없을 때 '나중에' 루틴 중 번호가 빠른 루틴
+  if (!activeTask) {
+    activeTask = scheduledTasks.find(t => 
+      t.laterTimestamp && 
+      !t.completed && 
+      t.status !== TaskStatus.SKIP &&
+      t.status !== TaskStatus.COMPLETED &&
+      t.status !== TaskStatus.PERFECT
+    );
+  }
+
+  // 3순위: 더 이상 '나중에' 루틴이 없을 때 '일시정지' 루틴 중 번호가 빠른 루틴
+  if (!activeTask) {
+    activeTask = scheduledTasks.find(t => 
+      t.isPaused && 
+      !t.completed && 
+      !t.laterTimestamp && 
+      t.status !== TaskStatus.SKIP &&
+      t.status !== TaskStatus.COMPLETED &&
+      t.status !== TaskStatus.PERFECT
+    );
+  }
 
   const isNotStarted = tasks.every(t => !t.startTime && !t.completed);
 
@@ -285,6 +316,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   const [shakingTaskId, setShakingTaskId] = useState<string | null>(null);
 
   const activeTaskRef = useRef<HTMLDivElement>(null);
+  const scrollBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (activeTask?.id) {
@@ -384,24 +416,30 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   }, [animationStage]);
 
   useEffect(() => {
-    if (animationStage === 'rising' && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
+    if (animationStage === 'rising' && scrollBottomRef.current) {
+      // [수정] 앵커 포인트를 사용하여 스크롤을 끝으로 부드럽게 유도 (setTimeout 소폭 증가로 안정성 확보)
+      const timer = setTimeout(() => {
+        if (scrollBottomRef.current) {
+          scrollBottomRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'end'
+          });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
     }
   }, [visibleTasksCount, animationStage]);
 
   useEffect(() => {
-    if (animationStage === 'final') {
+    if ((animationStage === 'title' || animationStage === 'final') && scrollBottomRef.current) {
       const timer = setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({
-            top: scrollContainerRef.current.scrollHeight,
-            behavior: 'smooth'
+        if (scrollBottomRef.current) {
+          scrollBottomRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'end'
           });
         }
-      }, 300); // Give a bit more time for the phrase list entrance animation
+      }, animationStage === 'final' ? 400 : 100);
       return () => clearTimeout(timer);
     }
   }, [animationStage]);
@@ -558,7 +596,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           </div>
         )}
 
-        <div ref={scrollContainerRef} className="flex-grow overflow-y-auto pb-20">
+        <div 
+          ref={scrollContainerRef} 
+          className="flex-grow overflow-y-scroll pb-20"
+          style={{ scrollbarGutter: 'stable' }}
+        >
           <div className="p-6 flex flex-col items-center">
             {/* Rising Tasks List */}
             <div className="w-full max-w-sm space-y-3 mt-8">
@@ -570,13 +612,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   animate={{ 
                     y: 0, 
                     opacity: 1,
-                    scale: shakingTaskId === task.id ? [1, 1.05, 1] : 1,
-                    x: shakingTaskId === task.id ? [0, -2, 2, -2, 2, 0] : 0
+                    scale: shakingTaskId === task.id ? [1, 1.05, 1] : 1
                   }}
                   transition={{ 
-                    y: { type: "spring", stiffness: 100, damping: 20 },
-                    scale: { duration: 0.3 },
-                    x: { duration: 0.3 }
+                    y: { type: "tween", ease: "easeOut", duration: 0.8 },
+                    scale: { duration: 0.3 }
                   }}
                   className={`p-4 rounded-[15px] border-2 flex items-center justify-between bg-white shadow-sm ${shakingTaskId === task.id ? 'border-indigo-500 shadow-indigo-100' : 'border-slate-100'}`}
                 >
@@ -675,6 +715,9 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
               </div>
             </motion.div>
           )}
+          
+          {/* [수정] 스크롤 고정을 위한 앵커 포인트를 최하단으로 이동 */}
+          <div ref={scrollBottomRef} className="h-px w-full" />
         </div>
       </div>
     </div>
@@ -2841,10 +2884,36 @@ export default function App() {
   const [activeAlarmChunk, setActiveAlarmChunk] = useState<RoutineChunk | null>(null);
   const [isResetTimeDropdownOpen, setIsResetTimeDropdownOpen] = useState(false);
   const [swUpdateRegistration, setSwUpdateRegistration] = useState<ServiceWorkerRegistration | null>(null);
+  const [showPerfectDay, setShowPerfectDay] = useState(false);
+  const [perfectDayGroups, setPerfectDayGroups] = useState<{ name: string, status: string }[]>([]);
 
-  // [수정] 탭 변경 시 항상 최상단으로 스크롤 이동
+  // [수정] 탭 변경 시 항상 최상단으로 스크롤 이동 및 완벽한 하루 체크
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
+    
+    // 완벽한 하루 애니메이션 체크
+    if (activeTab === 'home') {
+      const scheduledChunks = userData.routineChunks.filter(chunk => 
+        isChunkScheduledToday(chunk, effectiveDate, userData)
+      );
+
+      // 모든 오늘 예정된 그룹이 '완벽' 또는 '완료' 상태여야 함 (비활성일 포함하여 실패로 간주)
+      const isPerfect = scheduledChunks.length > 0 && scheduledChunks.every(chunk => {
+        const status = getChunkStatus(chunk);
+        return status === '완벽' || status === '완료';
+      });
+
+      if (isPerfect) {
+        const groups = scheduledChunks.map(c => ({
+          name: c.name,
+          status: getChunkStatus(c)
+        }));
+        setPerfectDayGroups(groups);
+        // [수정] 1.5초 여유를 둔 후에 애니메이션 작동
+        const timer = setTimeout(() => setShowPerfectDay(true), 1500);
+        return () => clearTimeout(timer);
+      }
+    }
   }, [activeTab, settingsSubView.type]);
 
   // Initialize/Sync chunk time inputs when settings open or routineChunks change
@@ -5138,6 +5207,12 @@ export default function App() {
           </>
         )}
       </AnimatePresence>
+
+      <PerfectDayAnimation 
+        isOpen={showPerfectDay}
+        onClose={() => setShowPerfectDay(false)}
+        completedGroups={perfectDayGroups}
+      />
 
       {/* 앱 업데이트 알림 */}
       <AnimatePresence>

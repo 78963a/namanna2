@@ -744,7 +744,10 @@ export const StatsView: React.FC<StatsViewProps> = ({
               >
                 <ChevronLeft className="w-6 h-6 text-slate-600" />
               </button>
-              <h2 className="text-xl font-black text-slate-900">{detailData.name} 상세 통계</h2>
+              <div className="flex flex-col">
+                <h2 className="text-xl font-black text-slate-900">{detailData.name} 상세 통계</h2>
+                <p className="text-[10px] font-bold text-slate-400 mt-0.5">※ 해당 기간 동안의 모든 개별 루틴 수행 평균 점수</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 py-4">
@@ -841,18 +844,18 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors" />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] bg-slate-50 p-2 rounded-[10px]">
-                      <div className="font-black text-slate-400 whitespace-nowrap">30일</div>
-                      <div className="text-emerald-600 font-black whitespace-nowrap">달성: {task.last30.rate}</div>
-                      <div className="text-slate-600 font-bold whitespace-nowrap">
-                        평균: {task.last30.avg} (최단: {task.last30.min} / 최장: {task.last30.max})
-                      </div>
-                    </div>
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] bg-indigo-50/50 p-2 rounded-[10px]">
                       <div className="font-black text-indigo-400 whitespace-nowrap">7일</div>
                       <div className="text-emerald-600 font-black whitespace-nowrap">달성: {task.last7.rate}</div>
                       <div className="text-slate-600 font-bold whitespace-nowrap">
                         평균: {task.last7.avg} (최단: {task.last7.min} / 최장: {task.last7.max})
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] bg-slate-50 p-2 rounded-[10px]">
+                      <div className="font-black text-slate-400 whitespace-nowrap">30일</div>
+                      <div className="text-emerald-600 font-black whitespace-nowrap">달성: {task.last30.rate}</div>
+                      <div className="text-slate-600 font-bold whitespace-nowrap">
+                        평균: {task.last30.avg} (최단: {task.last30.min} / 최장: {task.last30.max})
                       </div>
                     </div>
                   </div>
@@ -1099,7 +1102,10 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <div className="bg-violet-50 p-2.5 rounded-[12px]">
                       <Target className="w-5 h-5 text-violet-600" />
                     </div>
-                    <h2 className="text-lg font-black text-slate-800">루틴 그룹별 통계</h2>
+                    <div className="flex flex-col">
+                      <h2 className="text-lg font-black text-slate-800">루틴 그룹별 통계</h2>
+                      <p className="text-[10px] font-bold text-slate-400">※ 7일간 루틴 그룹 전체를 완료한 일수 비중</p>
+                    </div>
                   </div>
 
 
