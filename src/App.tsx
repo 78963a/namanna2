@@ -2886,6 +2886,16 @@ export default function App() {
   const [swUpdateRegistration, setSwUpdateRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [showPerfectDay, setShowPerfectDay] = useState(false);
   const [perfectDayGroups, setPerfectDayGroups] = useState<{ name: string, status: string }[]>([]);
+  const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (deletionMessage) {
+      const timer = setTimeout(() => {
+        setDeletionMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [deletionMessage]);
 
   // [수정] 탭 변경 시 항상 최상단으로 스크롤 이동 및 완벽한 하루 체크
   useEffect(() => {
@@ -4070,6 +4080,7 @@ export default function App() {
   };
 
   const deleteChunk = (id: string, onSuccess?: () => void) => {
+    const chunk = userData.routineChunks.find(c => c.id === id);
     setConfirmModal({
       isOpen: true,
       title: '그룹 삭제',
@@ -4080,6 +4091,7 @@ export default function App() {
           routineChunks: prev.routineChunks.filter(c => c.id !== id)
         }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setDeletionMessage(`'${chunk?.name}' 그룹이 삭제되었습니다`);
         if (onSuccess) onSuccess();
       }
     });
@@ -4339,6 +4351,7 @@ export default function App() {
           history: [] // also clear the older WakeUpRecord history if any
         }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setDeletionMessage('기상시각 기록이 삭제되었습니다');
       }
     });
   };
@@ -4361,6 +4374,7 @@ export default function App() {
           dailyActivityLog: {}
         }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setDeletionMessage('루틴 기록이 삭제되었습니다');
       }
     });
   };
@@ -4384,6 +4398,7 @@ export default function App() {
           dailyActivityLog: {}
         }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setDeletionMessage('모든 루틴 데이터가 삭제되었습니다');
       }
     });
   };
@@ -5213,6 +5228,23 @@ export default function App() {
         onClose={() => setShowPerfectDay(false)}
         completedGroups={perfectDayGroups}
       />
+
+      {/* Deletion Message Toast */}
+      <AnimatePresence>
+        {deletionMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-24 left-4 right-4 flex justify-center z-[9999] pointer-events-none"
+          >
+            <div className="bg-slate-900/90 backdrop-blur-md text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 border border-white/10">
+              <Trash2 className="w-4 h-4 text-rose-400" />
+              <span className="text-sm font-black tracking-tight">{deletionMessage}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 앱 업데이트 알림 */}
       <AnimatePresence>
