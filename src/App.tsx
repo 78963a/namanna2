@@ -463,6 +463,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     const target = (task.targetDuration || 0) * 60;
     const progress = Math.min((elapsed / target) * 100, 100);
     
+    /* 
+       [디자인 수정 구역 0: 타이머 채우기(Progress) 색상 로직]
+       - 루틴 타입에 따라 타이머 박스 내부가 채워지는 색상을 결정합니다.
+       - bg-sky-400, bg-indigo-500, bg-rose-400 등 Tailwind 색상 클래스를 변경하세요.
+    */
     let color = "bg-sky-400";
     let isFinished = elapsed >= target;
 
@@ -885,13 +890,20 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
               className="bg-white rounded-[10px] p-6 shadow-2xl shadow-indigo-100 border-2 border-indigo-500 relative overflow-hidden mb-6"
             >
               <>
-                {/* Active Indicator */}
+                {/* [디자인 수정 구역 5: 현재 루틴 인디케이터] 
+                    - 배경색: bg-indigo-500
+                    - 글자색: text-white
+                */}
                 <div className="absolute top-0 right-0 bg-indigo-500 text-white px-4 py-1.5 rounded-bl-[10px] text-[10px] font-black uppercase tracking-widest">
                   현재루틴
                 </div>
 
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
+                    {/* [디자인 수정 구역 6: 루틴 제목 및 타입 배지] 
+                        - 제목 색상: text-slate-900
+                        - 배지 배경: bg-slate-100, 배지 글자: text-slate-500
+                    */}
                     <h3 className="text-[32px] font-black text-slate-900 tracking-tight leading-tight">
                       {chunk.tasks.findIndex(t => t.id === activeTask.id) + 1}. {activeTask.id === scheduledTasks[0]?.id && "⚡"}{activeTask.text}
                       <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 px-3 py-1 rounded-[10px] font-bold text-xs ml-3 align-middle shrink-0">
@@ -907,7 +919,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     </h3>
                   </div>
 
-                  {/* Timer Display */}
+                  {/* [디자인 수정 구역 7: 타이머 박스 본체] 
+                      - 배경색(일시정지시): bg-slate-50
+                      - 배경색(진행시): bg-slate-100
+                      - 테두리: border-slate-200
+                  */}
                   <div 
                     onClick={() => {
                       if (activeTask.isPaused || !activeTask.startTime) {
@@ -916,7 +932,10 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     }}
                     className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden cursor-pointer ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200`}
                   >
-                    {/* Filling Background */}
+                    {/* [디자인 수정 구역 8: 타이머 채움 애니메이션 레이어] 
+                        - 투명도: opacity-0.2 ~ 0.4
+                        - 색상은 위쪽 'getStageInfo' 함수 내 'color' 값을 따릅니다. 
+                    */}
                     {getElapsed(activeTask) > 0 && (
                       <motion.div 
                         initial={false}
@@ -930,14 +949,27 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     )}
                     
                     <div className="relative z-10 flex flex-col items-center">
+                      {/* [디자인 수정 구역 9: 타이머 내 날짜/시각 정보] 
+                          - 글자색: text-slate-500
+                      */}
                       <div className="text-sm font-bold text-slate-500 mb-1 tabular-nums flex flex-col items-center">
                         <div>{`${currentTime.getFullYear()}-${(currentTime.getMonth() + 1).toString().padStart(2, '0')}-${currentTime.getDate().toString().padStart(2, '0')}`}</div>
                         <div>{`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}</div>
                       </div>
+                      
+                      {/* [디자인 수정 구역 10: 타이머 숫자 (00:00)] 
+                          - 진행중 색상: text-slate-900
+                          - 일시정지 색상: text-slate-300
+                          - 분 표시 색상: text-slate-400
+                      */}
                       <div className={`text-6xl font-black tabular-nums tracking-tighter ${activeTask.isPaused ? 'text-slate-300' : 'text-slate-900'}`}>
                         {formatDuration(getElapsed(activeTask))}
                         <span className="text-xl text-slate-400 ml-2">/ {activeTask.targetDuration}분</span>
                       </div>
+                      
+                      {/* [디자인 수정 구역 11: 타이머 상태 텍스트 (Ready/Paused/In Progress)] 
+                          - 글자색: text-slate-400 ~ text-slate-500
+                      */}
                       <div className="flex items-center gap-2 mt-2">
                         <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${activeTask.isPaused || !activeTask.startTime ? 'text-slate-400' : 'text-slate-500'}`}>
                           {!activeTask.startTime ? 'Ready' : activeTask.isPaused ? 'Paused' : 'In Progress'}
@@ -1004,7 +1036,9 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     </div>
                   )}
 
-                  {/* Action Buttons */}
+                  {/* [디자인 수정 구역 12: 하단 보조 버튼들 (START/PAUSE, LATER, SKIP)] 
+                      - 각 버튼의 배경색(bg-...) 및 글자색(text-...)을 변경하세요.
+                  */}
                   <div className="grid grid-cols-3 gap-3">
                     <button 
                       onClick={() => togglePauseTask(activeTask.id, true)}
@@ -1049,6 +1083,9 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     const isFinished = elapsed >= target;
                     
                     let btnText = "실행 완료";
+                    /* 
+                       [디자인 수정 구역 13: 메인 완료 버튼 색상 설정]
+                    */
                     let btnColor = "bg-indigo-600";
                     
                     if (activeTask.taskType === TaskType.TIME_LIMITED) {
@@ -2484,50 +2521,6 @@ const RoutineGroupFormView: React.FC<{
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {confirmModal.isOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200]"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-[25px] p-6 z-[210] shadow-2xl w-[90%] max-w-sm"
-            >
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6 text-rose-500" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-lg font-black text-slate-900">{confirmModal.title}</h3>
-                  <p className="text-sm text-slate-500 font-bold leading-relaxed">{confirmModal.message}</p>
-                </div>
-                <div className="flex gap-3 w-full pt-2">
-                  <button 
-                    onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-                    className="flex-1 py-3 rounded-[15px] font-black text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
-                  >
-                    {confirmModal.cancelLabel || '취소'}
-                  </button>
-                  <button 
-                    onClick={confirmModal.onConfirm}
-                    className="flex-1 py-3 rounded-[15px] font-black text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-100"
-                  >
-                    {confirmModal.confirmLabel || '확인'}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
       <ChecklistModal 
         isOpen={isChecklistModalOpen}
         onClose={() => {
@@ -3029,12 +3022,16 @@ export default function App() {
     onConfirm: () => void;
     confirmLabel?: string;
     cancelLabel?: string;
+    showCancel?: boolean;
+    validationValue?: string;
+    validationPlaceholder?: string;
   }>({
     isOpen: false,
     title: '',
     message: '',
     confirmLabel: '확인',
     cancelLabel: '취소',
+    showCancel: true,
     onConfirm: () => {}
   });
 
@@ -4527,6 +4524,7 @@ export default function App() {
       title: '기상시각 기록 삭제',
       message: '현재까지 기록된 기상시각 기록을 모두 삭제하시겠습니까?',
       confirmLabel: '삭제',
+      validationValue: userData.userName || '나',
       onConfirm: () => {
         setUserData(prev => ({
           ...prev,
@@ -4547,6 +4545,7 @@ export default function App() {
       title: '루틴 기록 삭제',
       message: '현재까지 기록된 모든 루틴 기록을 삭제하시겠습니까? 루틴 설정은 유지됩니다.',
       confirmLabel: '삭제',
+      validationValue: userData.userName || '나',
       onConfirm: () => {
         setUserData(prev => ({
           ...prev,
@@ -4570,6 +4569,7 @@ export default function App() {
       title: '루틴 전체 삭제',
       message: '지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다. 계속하시겠습니까?',
       confirmLabel: '전체 삭제',
+      validationValue: userData.userName || '나',
       onConfirm: () => {
         setUserData(prev => ({
           ...prev,
@@ -5003,6 +5003,33 @@ export default function App() {
                 </button>
               </div>
             </div>
+
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-5 h-5 text-slate-600" />
+                </div>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">소개 및 지원</h3>
+              </div>
+
+              <div className="space-y-4 pt-1">
+                <button 
+                  onClick={() => {}}
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-300 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                >
+                  <span className="text-sm font-black text-slate-700 mb-1">개인정보 처리방침 Privacy Policy</span>
+                  <span className="text-[11px] font-bold text-slate-400 leading-tight">앱의 개인정보 취급 방침을 확인합니다.</span>
+                </button>
+
+                <button 
+                  onClick={() => {}}
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-300 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                >
+                  <span className="text-sm font-black text-slate-700 mb-1">지원 Support URL</span>
+                  <span className="text-[11px] font-bold text-slate-400 leading-tight">도움말 확인 및 개발자에게 문의합니다.</span>
+                </button>
+              </div>
+            </div>
           </div>
           
           {mode === 'modal' && (
@@ -5429,49 +5456,18 @@ export default function App() {
       </AnimatePresence>
 
       {/* Confirmation Modal */}
-      <AnimatePresence>
-        {confirmModal.isOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60]"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-[10px] p-6 z-[70] shadow-2xl w-[90%] max-w-sm"
-            >
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6 text-rose-500" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-lg font-bold text-slate-900">{confirmModal.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed">{confirmModal.message}</p>
-                </div>
-                <div className="flex gap-3 w-full pt-2">
-                  <button 
-                    onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-                    className="flex-1 py-3 rounded-[10px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
-                  >
-                    {confirmModal.cancelLabel || '취소'}
-                  </button>
-                  <button 
-                    onClick={confirmModal.onConfirm}
-                    className="flex-1 py-3 rounded-[10px] font-bold text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-100"
-                  >
-                    {confirmModal.confirmLabel || '확인'}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmLabel={confirmModal.confirmLabel}
+        cancelLabel={confirmModal.cancelLabel}
+        showCancel={confirmModal.showCancel}
+        validationValue={confirmModal.validationValue}
+        validationPlaceholder={confirmModal.validationPlaceholder || (confirmModal.validationValue ? `${confirmModal.validationValue} 입력` : undefined)}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
       {/* Alarm Modal */}
       <AnimatePresence>
         {activeAlarmChunk && (

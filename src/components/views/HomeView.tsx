@@ -210,6 +210,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     isOpen: true,
                     title: '진행 중인 루틴 있음',
                     message: `현재 '${globalActiveTask.task.text}' 루틴이 진행 중입니다. 해당 루틴을 일시정지하거나 완료한 후 다른 루틴을 시작할 수 있습니다.`,
+                    showCancel: false,
                     onConfirm: () => setConfirmModal((prev: any) => ({ ...prev, isOpen: false }))
                   });
                   return;

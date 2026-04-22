@@ -10,6 +10,9 @@ interface ConfirmModalProps {
   onCancel: () => void;
   confirmLabel?: string;
   cancelLabel?: string;
+  showCancel?: boolean;
+  validationValue?: string;
+  validationPlaceholder?: string;
 }
 
 /**
@@ -25,8 +28,21 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onConfirm,
   onCancel,
   confirmLabel = "확인",
-  cancelLabel = "취소"
+  cancelLabel = "취소",
+  showCancel = true,
+  validationValue,
+  validationPlaceholder = "내용을 입력해주세요"
 }) => {
+  const [inputValue, setInputValue] = React.useState('');
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setInputValue('');
+    }
+  }, [isOpen]);
+
+  const isValid = !validationValue || inputValue === validationValue;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -48,20 +64,43 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               <div className="w-12 h-12 bg-rose-50 rounded-[10px] flex items-center justify-center">
                 <AlertCircle className="w-6 h-6 text-rose-500" />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 w-full">
                 <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{message}</p>
+                <p className="text-sm text-slate-500 leading-relaxed whitespace-pre-wrap">{message}</p>
+                
+                {validationValue && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-bold text-rose-500 text-left">
+                      삭제하려면 "{validationValue}"을(를) 정확히 입력해주세요.
+                    </p>
+                    <input
+                      type="text"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder={validationPlaceholder}
+                      className="w-full p-3 bg-slate-50 border border-slate-100 rounded-[10px] text-sm font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all"
+                      autoFocus
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex gap-3 w-full pt-2">
-                <button 
-                  onClick={onCancel}
-                  className="flex-1 py-3 rounded-[10px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
-                >
-                  {cancelLabel}
-                </button>
+                {showCancel && (
+                  <button 
+                    onClick={onCancel}
+                    className="flex-1 py-3 rounded-[10px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
+                  >
+                    {cancelLabel}
+                  </button>
+                )}
                 <button 
                   onClick={onConfirm}
-                  className="flex-1 py-3 rounded-[10px] font-bold text-white bg-rose-500 hover:bg-rose-600 transition-colors shadow-lg shadow-rose-100"
+                  disabled={!isValid}
+                  className={`flex-1 py-3 rounded-[10px] font-bold text-white transition-all shadow-lg ${
+                    isValid 
+                      ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-100' 
+                      : 'bg-slate-300 cursor-not-allowed shadow-none'
+                  }`}
                 >
                   {confirmLabel}
                 </button>
