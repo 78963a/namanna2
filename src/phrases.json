@@ -11,13 +11,13 @@
       "color": "#4a4abf",
       "fontSize": "1.7rem",
       "fontWeight": "bold",
-      "fontFamily": "serif"
+      "fontFamily": "Font2"
     },
     "title_style": {
       "color": "#b30000",
       "fontSize": "2rem",
       "fontWeight": "bold",
-      "fontFamily": "serif"
+      "fontFamily": "Font1"
     },
     "days_style": {
       "color": "#000000",
