@@ -8,7 +8,7 @@
     },
     "purpose_style": {
       "color": "#4a4abf",
-      "fontSize": "1.7rem",
+      "fontSize": "1rem",
       "fontWeight": "bold"
     },
     "title_style": {
@@ -79,7 +79,7 @@
       "{{purpose}}이/가 되려면 때로는 {{title}}을/를 쉬어가야하지"
     ],
     "NOT_STARTED": [
-      "{{triggerTask}}만해내면 {{purpose}} 끝내는 건 금방이고 그럼 나도 {{purpose}}",
+      "{{triggerTask}}만해내면 {{title}} 끝내는 건 금방이고 그럼 나도 {{purpose}}",
       "{{triggerTask}}부터 시작하는 {{purpose}}되기",
       "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다"
     ],
