@@ -38,7 +38,9 @@ import {
   CheckCheck,
   CircleMinus,
   Volume2,
-  VolumeX
+  VolumeX,
+  Download,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -4586,6 +4588,70 @@ export default function App() {
       }
     });
   };
+  
+  const handleExportData = () => {
+    const keys = [
+      STORAGE_KEY,
+      'WakeUpTimeHistory',
+      'RoutineGroupHistory',
+      'TaskHistory',
+      'routine_activity_log',
+      'routine_last_activity_sync'
+    ];
+    const data: Record<string, string | null> = {};
+    keys.forEach(key => {
+      data[key] = localStorage.getItem(key);
+    });
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const dateStr = formatDate(currentTime).replace(/-/g, '');
+    link.download = `danharu_backup_${dateStr}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setDeletionMessage('데이터가 파일로 저장되었습니다');
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        
+        // Basic validation: must contain at least the main storage key
+        if (!data[STORAGE_KEY]) {
+          throw new Error('유효한 백업 파일이 아닙니다.');
+        }
+
+        setConfirmModal({
+          isOpen: true,
+          title: '데이터 복구',
+          message: '선택한 백업 파일로 기존 데이터를 모두 덮어씌웁니다. 이 작업은 되돌릴 수 없으며 앱이 새로고침됩니다. 계속하시겠습니까?',
+          confirmLabel: '덮어쓰기',
+          onConfirm: () => {
+            Object.entries(data).forEach(([key, value]) => {
+              if (value !== null) {
+                localStorage.setItem(key, value as string);
+              }
+            });
+            window.location.reload();
+          }
+        });
+      } catch (err) {
+        setDeletionMessage('파일을 읽는 중 오류가 발생했습니다.');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    e.target.value = '';
+  };
 
   // 체크체크박스 아이콘 결정 로직 (클릭 횟수에 따라 진화)
   const checkCheckIconId = useMemo(() => {
@@ -4856,6 +4922,50 @@ export default function App() {
                     ))}
                   </SortableContext>
                 </DndContext>
+              </div>
+            </div>
+
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Download className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">백업 및 복구</h3>
+              </div>
+
+              <div className="space-y-4 pt-1">
+                <button 
+                  onClick={handleExportData}
+                  className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px] group"
+                >
+                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-indigo-200 transition-colors">
+                    <Download className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-black text-slate-700">데이터 백업하기</span>
+                    <span className="text-[11px] font-bold text-slate-400 leading-tight">현재 데이터를 JSON 파일로 다운로드합니다.</span>
+                  </div>
+                </button>
+
+                <div className="relative">
+                  <input 
+                    type="file" 
+                    accept=".json" 
+                    onChange={handleImportData}
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                  />
+                  <button 
+                    className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px] group"
+                  >
+                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-indigo-200 transition-colors">
+                      <Upload className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-slate-700">데이터 복구하기</span>
+                      <span className="text-[11px] font-bold text-slate-400 leading-tight">백업된 JSON 파일을 불러와 데이터를 복원합니다.</span>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
 
