@@ -733,15 +733,28 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   return (
     <div className="space-y-4 relative">
       {/* 루틴그룹박스 (Routine Group Box) */}
-      <section className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[10px] shadow-xl overflow-hidden relative">
+      <section className="bg-gradient-to-br from-indigo-500 to-violet-700 rounded-[10px] shadow-xl overflow-hidden relative">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -ml-12 -mb-12" />
         
         <div className="p-4 relative z-10">
-          {/* Top Row: Title (Left) and Reset Button (Right) */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-grow">
-              <h2 className="text-base font-black text-white tracking-tight leading-relaxed">
+          <div className="space-y-4">
+            {/* 첫번째줄: 설정아이콘 + {목적}이 되기 위한 {제목} */}
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  setSettingsSubView({ type: 'detail', chunkId: chunk.id });
+                  setIsSettingsOpen(true);
+                }}
+                className="inline-flex items-center justify-center p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-[10px] transition-all flex-shrink-0"
+              >
+                <Settings className="w-6 h-6" />
+              </button>
+              <h2 className="text-lg font-black text-white tracking-tight leading-relaxed">
+                {/* [디자인 수정 구역 1: 제목 텍스트]
+                    - 글자 크기: text-lg, text-xl 등
+                    - 글자 색상: text-white, text-indigo-100 등
+                */}
                 {(() => {
                   const entry = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
                   return (
@@ -754,29 +767,72 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     />
                   );
                 })()}
-                <button 
-                  onClick={() => {
-                    setSettingsSubView({ type: 'detail', chunkId: chunk.id });
-                    setIsSettingsOpen(true);
-                  }}
-                  className="inline-flex items-center justify-center p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-[10px] transition-all ml-1 align-middle"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
               </h2>
             </div>
-          </div>
 
-          {/* Bottom Row: Progress Graph (Left) and Percentage (Right) */}
-          <div className="flex items-center gap-4">
-            <div className="flex-grow h-2 bg-white/10 rounded-full overflow-hidden">
-              <motion.div 
-                animate={{ width: `${scheduledTasks.length > 0 ? (scheduledTasks.filter(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT).length / scheduledTasks.length) * 100 : 0}%` }}
-                className="h-full bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full"
-              />
+            {/* 두번째줄: 실행요일표시 + 시작상황/시각 + 오늘 목표시간 합산 */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-1">
+              {/* [디자인 수정 구역 2: 요일 표시 (동그라미)]
+                  - 동그라미 크기: w-7 h-7
+                  - 활성 배경색: bg-white/20, 테두리: border-white/40
+                  - 비활성 배경색: bg-black/10, 테두리: border-white/5
+                  - 글자 크기: text-xs
+              */}
+              <div className="flex items-center gap-1.5">
+                {[1, 2, 3, 4, 5, 6, 0].map((dayNum, i) => {
+                  const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+                  const isScheduled = chunk.scheduledDays.includes(dayNum);
+                  return (
+                    <div 
+                      key={dayNum}
+                      className={`relative flex items-center justify-center w-7 h-7 rounded-full border-2 transition-all ${
+                        isScheduled 
+                          ? 'bg-white/20 border-white/40 text-white shadow-sm' 
+                          : 'bg-black/10 border-white/5 text-white/20'
+                      }`}
+                    >
+                      <span className="text-[11px] font-black z-10">{dayNames[i]}</span>
+                      {!isScheduled && (
+                        <X className="absolute w-[60%] h-[60%] text-white/5" strokeWidth={4} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* [디자인 수정 구역 3: 시작 정보 및 합산 시간]
+                  - 글자 크기: text-xs
+                  - 배경색: bg-white/10
+                  - 테두리: border-white/10
+              */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>
+                    {chunk.startType === 'time' && chunk.startTime ? `${chunk.startTime}시` : (chunk.situation || '언제든')}
+                  </span>
+                </div>
+                <div className="flex items-center px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
+                  <span>총 {scheduledTasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0)}분</span>
+                </div>
+              </div>
             </div>
-            <div className="text-xl font-black text-white tabular-nums leading-none">
-              {scheduledTasks.length > 0 ? Math.round((scheduledTasks.filter(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT).length / scheduledTasks.length) * 100) : 0}<span className="text-xs text-white/40 ml-0.5">%</span>
+
+            {/* 세번째 줄: 프로그레스 바 */}
+            <div className="flex items-center gap-4 pt-3">
+              <div className="flex-grow h-2.5 bg-white/10 rounded-full overflow-hidden shadow-inner">
+                {/* [디자인 수정 구역 4: 프로그레스 바]
+                    - 바 높이: h-2.5
+                    - 바 채우기 색상: from-indigo-300 to-violet-300 (그라데이션)
+                */}
+                <motion.div 
+                  animate={{ width: `${scheduledTasks.length > 0 ? (scheduledTasks.filter(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT).length / scheduledTasks.length) * 100 : 0}%` }}
+                  className="h-full bg-gradient-to-r from-indigo-300 to-violet-300 rounded-full shadow-[0_0_10px_rgba(165,180,252,0.3)]"
+                />
+              </div>
+              <div className="text-xl font-black text-white tabular-nums leading-none tracking-tight">
+                {scheduledTasks.length > 0 ? Math.round((scheduledTasks.filter(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT).length / scheduledTasks.length) * 100) : 0}<span className="text-xs text-white/40 ml-0.5">%</span>
+              </div>
             </div>
           </div>
         </div>
@@ -3029,7 +3085,13 @@ export default function App() {
 
   const globalActiveTask = useMemo(() => {
     for (const chunk of userData.routineChunks) {
-      const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && t.status !== TaskStatus.SKIP && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.PERFECT);
+      const active = chunk.tasks.find(t => 
+        (t.startTime || (t.status === TaskStatus.IN_PROGRESS && !t.laterTimestamp)) && 
+        !t.completed && 
+        t.status !== TaskStatus.SKIP && 
+        t.status !== TaskStatus.COMPLETED && 
+        t.status !== TaskStatus.PERFECT
+      );
       if (active) return { task: active, chunkId: chunk.id };
     }
     return null;
