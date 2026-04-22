@@ -30,7 +30,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     const getStyledHtml = (key: string, value: string) => {
       const style = (context as any)[`${key}_style`];
       if (!style) return value;
-      return `<span style="color: ${style.color || 'inherit'}; font-size: ${style.fontSize || 'inherit'}; font-weight: ${style.fontWeight || 'normal'}; font-family: '${style.fontFamily || 'inherit'}', sans-serif;">${value}</span>`;
+      return `<span style="color: ${style.color || 'inherit'}; font-size: ${style.fontSize || 'inherit'}; font-weight: ${style.fontWeight || 'normal'};">${value}</span>`;
     };
 
     const replaceWithJosa = (msg: string, tag: 'title' | 'purpose' | 'userName' | 'triggerTask', value: string, html: string) => {
@@ -165,7 +165,6 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     <span 
       className="inline leading-relaxed"
       style={{ 
-        fontFamily: baseStyle?.fontFamily ? `'${baseStyle.fontFamily}', sans-serif` : 'inherit',
         color: baseStyle?.color || 'inherit',
         fontSize: baseStyle?.fontSize || 'inherit'
       }}

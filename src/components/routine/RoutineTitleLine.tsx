@@ -243,7 +243,6 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
           <div className={`flex items-center gap-2 min-w-0 flex-grow`}>
             <span 
               className={`font-bold truncate ${isDone ? 'line-through text-slate-400' : 'text-slate-700'}`}
-              style={{ fontFamily: phrases.settings.base_style.fontFamily ? `'${phrases.settings.base_style.fontFamily}', sans-serif` : 'inherit' }}
             >
               {index === 0 && "⚡"}{task.text}
             </span>
@@ -277,7 +276,6 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
           <div className="flex items-center gap-2 min-w-0 flex-grow">
             <span 
               className={`font-bold truncate max-w-[200px] ${isDone ? 'line-through' : ''}`}
-              style={{ fontFamily: phrases.settings.base_style.fontFamily ? `'${phrases.settings.base_style.fontFamily}', sans-serif` : 'inherit' }}
             >
               {index === 0 && "⚡"}{task.text}
             </span>

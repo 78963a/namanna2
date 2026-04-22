@@ -4,20 +4,17 @@
     "base_style": {
       "color": "#000000",
       "fontSize": "1rem",
-      "fontWeight": "300",
-      "fontFamily": "sans-serif"
+      "fontWeight": "300"
     },
     "purpose_style": {
       "color": "#4a4abf",
       "fontSize": "1.7rem",
-      "fontWeight": "bold",
-      "fontFamily": "Font2"
+      "fontWeight": "bold"
     },
     "title_style": {
       "color": "#b30000",
       "fontSize": "2rem",
-      "fontWeight": "bold",
-      "fontFamily": "Font1"
+      "fontWeight": "bold"
     },
     "days_style": {
       "color": "#000000",
@@ -38,8 +35,7 @@
     "userName_style": {
       "color": "#8f5819",
       "fontSize": "1.3rem",
-      "fontWeight": "bold",
-      "fontFamily": "serif"
+      "fontWeight": "bold"
     },
     "startTime_style": {
       "color": "#1c9c64",
@@ -52,22 +48,21 @@
     "triggerTask_style": {
       "color": "#f97316",
       "fontSize": "1.1rem",
-      "fontWeight": "bold",
-      "fontFamily": "monospace"
+      "fontWeight": "bold"
     },
     "_comment_execution": "실행화면의 글꼴설정",
     "execution_settings": {
-      "base_style": { "color": "#ff00ff", "fontSize": "1rem", "fontFamily": "Font1", "fontWeight": "bold" },
-      "purpose_style": { "color": "#ffffff", "fontSize": "1.5rem", "fontWeight": "bold", "fontFamily": "Font1" },
-      "title_style": { "color": "#ffffff", "fontSize": "1.8rem", "fontWeight": "bold", "fontFamily": "바탕" },
-      "days_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
-      "start_info_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
-      "duration_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
-      "totalTargetDuration_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
-      "userName_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
-      "startTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
-      "endTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },
-      "triggerTask_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" }
+      "base_style": { "color": "#ff00ff", "fontSize": "1rem", "fontWeight": "bold" },
+      "purpose_style": { "color": "#ffffff", "fontSize": "1.5rem", "fontWeight": "bold" },
+      "title_style": { "color": "#ffffff", "fontSize": "1.8rem", "fontWeight": "bold" },
+      "days_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+      "start_info_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+      "duration_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+      "totalTargetDuration_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+      "userName_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+      "startTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+      "endTime_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+      "triggerTask_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" }
     }
   },
   "routine_messages": {

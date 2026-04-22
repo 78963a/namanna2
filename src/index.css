@@ -1,29 +1,5 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: 'Font1';
-  src: url('./assets/fonts/Cafe24SsukssukLight.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Font2';
-  src: url('./assets/fonts/Pretendard-Regular.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Font3';
-  src: url('./assets/fonts/Pretendard-Regular.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
 @theme {
   --animate-spin-slow: spin 3s linear infinite;
 }
