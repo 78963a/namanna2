@@ -2,7 +2,7 @@
 
 @font-face {
   font-family: 'Font1';
-  src: url('./public/fonts/Cafe24SsukssukLight.woff2') format('woff2');
+  src: url('/fonts/Cafe24SsukssukLight.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -10,7 +10,7 @@
 
 @font-face {
   font-family: 'Font2';
-  src: url('./public/fonts/PretendardVariable.woff2') format('woff2');
+  src: url('/fonts/Pretendard-Regular.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -18,7 +18,7 @@
 
 @font-face {
   font-family: 'Font3';
-  src: url('./public/fonts/Pretendard-Regular.woff2') format('woff2');
+  src: url('/fonts/Pretendard-Regular.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
   font-display: swap;

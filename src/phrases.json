@@ -1,71 +1,63 @@
 {
+  "_comment_home": "홈화면의 글꼴설정",
   "settings": {
-"base_style": {
-    "color": "#000000",
-    "fontSize": "1rem",
-    "fontWeight": "300",
-    "fontFamily": "sans-serif"
-},
-
-"purpose_style": {
-    "color": "#4a4abf",
-    "fontSize": "1.7rem",
-    "fontWeight": "bold",
-    "fontFamily": "serif"
-},
-
-"title_style": {
-    "color": "#b30000",
-    "fontSize": "2rem",
-    "fontWeight": "bold",
-    "fontFamily": "serif"
-},
-
-"days_style": {
-    "color": "#000000",
-    "fontSize": "1.1rem"
-},
-
-"start_info_style": {
-    "color": "#1c9c64",
-    "fontSize": "1.1rem"
-},
-
-"duration_style": {
-    "color": " #1c9c64",
-    "fontSize": "1.1rem"
-},
-
-"totalTargetDuration_style": {
-    "color": "#1c9c64",
-    "fontSize": "1.1rem"
-},
-
-"userName_style": {
-    "color": "#8f5819",
-    "fontSize": "1.3rem",
-    "fontWeight": "bold",
-    "fontFamily": "serif"
-},
-
-"startTime_style": {
-    "color": "#1c9c64",
-    "fontSize": "1.1rem"
-},
-
-"endTime_style": {
-    "color": "#1c9c64",
-    "fontSize": "1.1rem"
-},
-
-"triggerTask_style": {
-    "color": "#f97316",
-    "fontSize": "1.1rem",
-    "fontWeight": "bold",
-    "fontFamily": "monospace"
-}, 
-      "execution_settings": {
-      "base_style": { "color": "#ffffff", "fontSize": "1rem", "fontFamily": "Font1", "fontWeight": "bold" },
+    "base_style": {
+      "color": "#000000",
+      "fontSize": "1rem",
+      "fontWeight": "300",
+      "fontFamily": "sans-serif"
+    },
+    "purpose_style": {
+      "color": "#4a4abf",
+      "fontSize": "1.7rem",
+      "fontWeight": "bold",
+      "fontFamily": "serif"
+    },
+    "title_style": {
+      "color": "#b30000",
+      "fontSize": "2rem",
+      "fontWeight": "bold",
+      "fontFamily": "serif"
+    },
+    "days_style": {
+      "color": "#000000",
+      "fontSize": "1.1rem"
+    },
+    "start_info_style": {
+      "color": "#1c9c64",
+      "fontSize": "1.1rem"
+    },
+    "duration_style": {
+      "color": " #1c9c64",
+      "fontSize": "1.1rem"
+    },
+    "totalTargetDuration_style": {
+      "color": "#1c9c64",
+      "fontSize": "1.1rem"
+    },
+    "userName_style": {
+      "color": "#8f5819",
+      "fontSize": "1.3rem",
+      "fontWeight": "bold",
+      "fontFamily": "serif"
+    },
+    "startTime_style": {
+      "color": "#1c9c64",
+      "fontSize": "1.1rem"
+    },
+    "endTime_style": {
+      "color": "#1c9c64",
+      "fontSize": "1.1rem"
+    },
+    "triggerTask_style": {
+      "color": "#f97316",
+      "fontSize": "1.1rem",
+      "fontWeight": "bold",
+      "fontFamily": "monospace"
+    },
+    "_comment_execution": "실행화면의 글꼴설정",
+    "execution_settings": {
+      "base_style": { "color": "#ff00ff", "fontSize": "1rem", "fontFamily": "Font1", "fontWeight": "bold" },
       "purpose_style": { "color": "#ffffff", "fontSize": "1.5rem", "fontWeight": "bold", "fontFamily": "Font1" },
       "title_style": { "color": "#ffffff", "fontSize": "1.8rem", "fontWeight": "bold", "fontFamily": "바탕" },
       "days_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold", "fontFamily": "Font2" },

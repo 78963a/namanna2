@@ -3086,7 +3086,8 @@ export default function App() {
   const globalActiveTask = useMemo(() => {
     for (const chunk of userData.routineChunks) {
       const active = chunk.tasks.find(t => 
-        (t.startTime || (t.status === TaskStatus.IN_PROGRESS && !t.laterTimestamp)) && 
+        t.startTime && 
+        !t.isPaused && 
         !t.completed && 
         t.status !== TaskStatus.SKIP && 
         t.status !== TaskStatus.COMPLETED && 
