@@ -36,7 +36,9 @@ import {
   BrickWall,
   Check,
   CheckCheck,
-  CircleMinus
+  CircleMinus,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -105,6 +107,7 @@ import {
 } from './utils';
 import phrases from './phrases.json';
 import { CheckCheckIcon } from './components/CheckCheckIcon';
+import { voiceService } from './services/voiceService';
 
 // Components
 import { HeaderBox } from './components/layout/HeaderBox';
@@ -728,6 +731,20 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     return 0;
   });
 
+  // --- [음성 안내 (Voice Notification) 로직] ---
+  // phrases.json에 정의된 규칙에 따라 타이머 시점에 맞춰 음성 안내를 실행합니다.
+  useEffect(() => {
+    if (activeTask && !activeTask.isPaused && activeTask.startTime && userData.isVoiceEnabled) {
+      voiceService.processRules(
+        phrases.voiceSettings.rules,
+        activeTask.text,
+        getElapsed(activeTask),
+        activeTask.targetDuration || 0,
+        !!userData.isVoiceEnabled
+      );
+    }
+  }, [activeTask?.id, activeTask?.isPaused, activeTask?.startTime, activeTask ? getElapsed(activeTask) : 0, userData.isVoiceEnabled]);
+
   const isTriggerComplete = true; // Placeholder
 
   return (
@@ -739,17 +756,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
         
         <div className="p-4 relative z-10">
           <div className="space-y-4">
-            {/* 첫번째줄: 설정아이콘 + {목적}이 되기 위한 {제목} */}
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => {
-                  setSettingsSubView({ type: 'detail', chunkId: chunk.id });
-                  setIsSettingsOpen(true);
-                }}
-                className="inline-flex items-center justify-center p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-[10px] transition-all flex-shrink-0"
-              >
-                <Settings className="w-6 h-6" />
-              </button>
+            {/* 첫번째줄: {목적}이 되기 위한 {제목} <아이콘> */}
+            <div className="mb-4">
               <h2 className="text-lg font-black text-white tracking-tight leading-relaxed">
                 {/* [디자인 수정 구역 1: 제목 텍스트]
                     - 글자 크기: text-lg, text-xl 등
@@ -767,6 +775,17 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     />
                   );
                 })()}
+                
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSettingsSubView({ type: 'detail', chunkId: chunk.id });
+                    setIsSettingsOpen(true);
+                  }}
+                  className="inline-flex items-center justify-center p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-[10px] transition-all ml-1 align-middle"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
               </h2>
             </div>
 
@@ -862,23 +881,19 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                      <h3 className="text-[32px] font-black text-slate-900 tracking-tight leading-tight">
-                        {chunk.tasks.findIndex(t => t.id === activeTask.id) + 1}. {activeTask.id === scheduledTasks[0]?.id && "⚡"}{activeTask.text}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 bg-slate-100 text-slate-500 px-2 py-1 rounded-[10px] font-bold text-xs">
-                          {activeTask.taskType === TaskType.TIME_INDEPENDENT ? (
-                            <Clock className="w-4 h-4 text-sky-500" />
-                          ) : activeTask.taskType === TaskType.TIME_ACCUMULATED ? (
-                            <BrickWall className="w-4 h-4 text-pink-500" />
-                          ) : (
-                            <Hourglass className="w-4 h-4 text-indigo-600" />
-                          )}
-                          <span>{activeTask.targetDuration}분</span>
-                        </div>
-                      </div>
-                    </div>
+                    <h3 className="text-[32px] font-black text-slate-900 tracking-tight leading-tight">
+                      {chunk.tasks.findIndex(t => t.id === activeTask.id) + 1}. {activeTask.id === scheduledTasks[0]?.id && "⚡"}{activeTask.text}
+                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 px-3 py-1 rounded-[10px] font-bold text-xs ml-3 align-middle shrink-0">
+                        {activeTask.taskType === TaskType.TIME_INDEPENDENT ? (
+                          <Clock className="w-3.5 h-3.5 text-sky-500" />
+                        ) : activeTask.taskType === TaskType.TIME_ACCUMULATED ? (
+                          <BrickWall className="w-3.5 h-3.5 text-pink-500" />
+                        ) : (
+                          <Hourglass className="w-3.5 h-3.5 text-indigo-600" />
+                        )}
+                        <span>{activeTask.targetDuration}분</span>
+                      </span>
+                    </h3>
                   </div>
 
                   {/* Timer Display */}
@@ -2522,7 +2537,11 @@ const RoutineGroupFormView: React.FC<{
         <div className="space-y-1 mb-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-              <PlusCircle className="w-6 h-6 text-indigo-600" />
+              {mode === 'edit' ? (
+                <Settings className="w-6 h-6 text-indigo-600" />
+              ) : (
+                <PlusCircle className="w-6 h-6 text-indigo-600" />
+              )}
             </div>
             <h2 className="text-xl font-black text-slate-900">{mode === 'edit' ? '루틴 그룹 수정' : '새로운 루틴 그룹 만들기'}</h2>
           </div>
@@ -5006,6 +5025,19 @@ export default function App() {
               className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${activeTab === 'stats' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'}`}
             >
               <BarChart3 className="w-5 h-5" />
+            </button>
+
+            {/* 음성안내아이콘 */}
+            <button 
+              onClick={() => setUserData(prev => ({ ...prev, isVoiceEnabled: !prev.isVoiceEnabled }))}
+              className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white border shadow-sm ${
+                userData.isVoiceEnabled 
+                  ? 'border-blue-400 text-blue-500 shadow-blue-50' 
+                  : 'border-slate-100 text-slate-400'
+              }`}
+              title="음성 안내"
+            >
+              {userData.isVoiceEnabled ? <Volume2 className="w-5 h-5" strokeWidth={2.5} /> : <VolumeX className="w-5 h-5" />}
             </button>
 
             {/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}

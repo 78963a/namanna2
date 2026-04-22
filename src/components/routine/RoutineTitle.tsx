@@ -34,10 +34,19 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     };
 
     const replaceWithJosa = (msg: string, tag: 'title' | 'purpose' | 'userName' | 'triggerTask', value: string, html: string) => {
+      // 1. Handle standard particles attached to placeholders
       const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|이/가)`, 'g');
-      return msg.replace(regex, (_, p1) => {
+      let result = msg.replace(regex, (_, p1) => {
         return html + getJosa(value, p1 as any);
       });
+
+      // 2. Handle specific particle tags following the placeholder
+      const particleRegex = new RegExp(`\\{\\{${tag}\\}\\}\\{\\{particle:(이/가|을/를|은/는|이/가)\\}\\}(\\s|$)`, 'g');
+      result = result.replace(particleRegex, (_, p1, trailing) => {
+        return html + getJosa(value, p1 as any) + trailing;
+      });
+
+      return result;
     };
 
     const titleHtml = getStyledHtml('title', chunk.name);
@@ -163,8 +172,9 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
 
   return (
     <span 
-      className="inline leading-relaxed"
+      className="leading-relaxed"
       style={{ 
+        display: 'inline',
         color: baseStyle?.color || 'inherit',
         fontSize: baseStyle?.fontSize || 'inherit'
       }}

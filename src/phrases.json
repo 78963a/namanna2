@@ -4,7 +4,7 @@
     "base_style": {
       "color": "#000000",
       "fontSize": "1rem",
-      "fontWeight": "300"
+      "fontWeight": "100"
     },
     "purpose_style": {
       "color": "#4a4abf",
@@ -52,7 +52,7 @@
     },
     "_comment_execution": "실행화면의 글꼴설정",
     "execution_settings": {
-      "base_style": { "color": "#ff00ff", "fontSize": "1rem", "fontWeight": "bold" },
+      "base_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
       "purpose_style": { "color": "#ffffff", "fontSize": "1.5rem", "fontWeight": "bold" },
       "title_style": { "color": "#ffffff", "fontSize": "1.8rem", "fontWeight": "bold" },
       "days_style": { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
@@ -66,28 +66,25 @@
     }
   },
   "routine_messages": {
-    "EXECUTION_TITLE": "{{purpose}}이/가 되기 위한 {{title}}",
+    "EXECUTION_TITLE": "{{purpose}}{{particle:이/가}} 되기 위한 {{title}}",
 
 
     "COMPLETION_SELECTION_TEMPLATES": [
       "나는 {{title}}을 완료한 {{purpose}}이다",
       "{{title}}을 완료하다니, 정말 훌륭해!",
-      "{{title}}을/를 모두 완수했습니다!",
+      "오늘도 나는 {{title}}을/를 모두 완수한 {{purpose}}!!!",
       "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
     ],
     "INACTIVE": [
       "{{purpose}}이/가 되려면 때로는 {{title}}을/를 쉬어가야하지"
     ],
     "NOT_STARTED": [
-      "{{title}}하면 나도 {{purpose}}",
+      "{{triggerTask}}만해내면 {{purpose}} 끝내는 건 금방이고 그럼 나도 {{purpose}}",
       "{{triggerTask}}부터 시작하는 {{purpose}}되기",
       "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다"
     ],
     "IN_PROGRESS": [
-      "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}}에 실천하기로 했다",
-      "나는 오늘도 {{purpose}}이/가 되기 위해 {{title}}을/를 할거야",
-      "{{title}}하여 {{purpose}}이/가 되자",
-      "성실한 나는 {{purpose}}을/를 목표로 {{title}}에 매진한다"
+      "{{purpose}}이/가 되기 위해 {{title}}을/를 실천하는 중"
     ],
     "COMPLETED": [
       "나는 {{purpose}}을/를 달성하기 위한 {{title}}을/를 {{duration}}에 걸쳐 완료했다",
@@ -125,7 +122,43 @@
       { "minClicks": 13, "iconId": "flower_red_chicken", "label": "꽃 빨간 닭" },
       { "minClicks": 14, "iconId": "phoenix", "label": "피닉스" },
       { "minClicks": 15, "iconId": "crown_phoenix", "label": "왕관 피닉스" }
-
+    ]
+  },
+  "voiceSettings": {
+    "rules": [
+      {
+        "id": "5min_remaining",
+        "type": "remaining",
+        "triggerSeconds": 300,
+        "minTargetMinutes": 15,
+        "message": "{{title}}{{particle:이/가}} 5분 남았어요."
+      },
+      {
+        "id": "1min_remaining",
+        "type": "remaining",
+        "triggerSeconds": 60,
+        "minTargetMinutes": 5,
+        "message": "{{title}}{{particle:이/가}} 1분 남았어요."
+      },
+      {
+        "id": "timer_ended",
+        "type": "elapsed",
+        "triggerSeconds": 0,
+        "message": "{{title}}{{particle:이/가}} 시간이 지났어요."
+      },
+      {
+        "id": "1min_elapsed",
+        "type": "elapsed",
+        "triggerSeconds": 60,
+        "maxTargetMinutes": 5,
+        "message": "{{title}}{{particle:이/가}} 1분 지났어요."
+      },
+      {
+        "id": "5min_elapsed",
+        "type": "elapsed",
+        "triggerSeconds": 300,
+        "message": "{{title}}{{particle:이/가}} 5분 지났어요."
+      }
     ]
   }
 }

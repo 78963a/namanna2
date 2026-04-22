@@ -11,6 +11,7 @@ interface HeaderBoxProps {
   challengeDays: number;
   successDays: number;
   currentTime: Date;
+  activityLog?: number[];
 }
 
 const COLORS = {

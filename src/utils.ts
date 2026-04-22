@@ -182,6 +182,7 @@ export const getJosa = (text: string, type: '이/가' | '을/를' | '은/는'): 
  * @returns {number} Total duration in seconds
  */
 export const calculateTaskDuration = (task: Task, currentTime: Date): number => {
+  if (!task) return 0;
   let currentSession = 0;
   if (task.startTime && !task.isPaused) {
     const [h, m, s] = task.startTime.split(':').map(Number);
