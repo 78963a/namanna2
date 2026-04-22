@@ -96,6 +96,7 @@ import {
   minutesToTime,
   isChunkScheduledToday, 
   isTaskScheduledToday, 
+  isTaskTargetForStats,
   formatDate, 
   getEffectiveDate,
   getEffectiveDateObject,
@@ -203,18 +204,29 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   isCheckCheckAvailable,
   setConfirmModal
 }) => {
-  const chunk = userData.routineChunks.find(c => c.id === selectedChunkId);
-  if (!chunk) return null;
+  // --- [Hook declarations FIRST to comply with React rules] ---
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [animationStage, setAnimationStage] = useState<'none' | 'whiteout' | 'rising' | 'title' | 'fireworks' | 'final'>('none');
+  const [visibleTasksCount, setVisibleTasksCount] = useState(0);
+  const [shakingTaskId, setShakingTaskId] = useState<string | null>(null);
 
-  const tasks = chunk.tasks;
-  const scheduledTasks = tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
-  
+  const activeTaskRef = useRef<HTMLDivElement>(null);
+  const scrollBottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const isAlreadyFinalized = useMemo(() => {
+    if (!selectedChunkId) return false;
     const history = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === selectedChunkId);
     return !!history?.selectedPhrase;
   }, [userData.routineGroupHistory, todayStr, selectedChunkId]);
 
+  // --- [Data derivation] ---
+  const chunk = userData.routineChunks.find(c => c.id === selectedChunkId);
+  const tasks = chunk ? chunk.tasks : [];
+  const scheduledTasks = tasks.filter(t => chunk ? isTaskScheduledToday(t, chunk, effectiveDate, userData) : false);
+
   const handleActivateTaskInternal = (taskId: string) => {
+    if (!chunk) return;
     setConfirmModal({
       isOpen: true,
       title: '루틴 활성화',
@@ -311,13 +323,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   const isNotStarted = tasks.every(t => !t.startTime && !t.completed);
 
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [animationStage, setAnimationStage] = useState<'none' | 'whiteout' | 'rising' | 'title' | 'fireworks' | 'final'>('none');
-  const [visibleTasksCount, setVisibleTasksCount] = useState(0);
-  const [shakingTaskId, setShakingTaskId] = useState<string | null>(null);
-
-  const activeTaskRef = useRef<HTMLDivElement>(null);
-  const scrollBottomRef = useRef<HTMLDivElement>(null);
+  const allTasksDone = scheduledTasks.length > 0 && scheduledTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
+  const wasDoneOnMount = useRef(allTasksDone);
 
   useEffect(() => {
     if (activeTask?.id) {
@@ -336,11 +343,6 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     }
   }, [activeTask?.id]);
 
-  const allTasksDone = scheduledTasks.length > 0 && scheduledTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
-  const wasDoneOnMount = useRef(allTasksDone);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // Re-completion logic: if it becomes not done, reset the mount flag
   useEffect(() => {
     if (!allTasksDone) {
       wasDoneOnMount.current = false;
@@ -354,14 +356,14 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
         setIsCompleted(true);
         setAnimationStage('whiteout');
         
-        // Whiteout for a brief moment then start rising
-        setTimeout(() => {
-          setAnimationStage('rising');
-        }, 500);
+        // Use a second state or similar if we really need precise cleanup, 
+        // but for now, moving the second timeout to its own effect or sharpening this one.
+        setAnimationStage('whiteout');
+        setTimeout(() => setAnimationStage('rising'), 500);
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [allTasksDone, isCompleted]);
+  }, [allTasksDone, isCompleted, isAlreadyFinalized]);
 
   useEffect(() => {
     if (animationStage === 'rising') {
@@ -384,8 +386,9 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   useEffect(() => {
     if (animationStage === 'title') {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setAnimationStage('fireworks');
+        
         // 루틴그룹완료축하애니메이션: 폭죽
         const duration = 3 * 1000;
         const animationEnd = Date.now() + duration;
@@ -403,16 +406,20 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           }
 
           const particleCount = 100 * (timeLeft / duration);
-          // 화려한 불꽃놀이: 여러 위치에서 발사
-          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.4, 0.6), y: Math.random() - 0.1 } });
-          
-          if (timeLeft < duration * 0.5) {
-            confetti({ ...defaults, particleCount: particleCount * 0.5, origin: { x: randomInRange(0.2, 0.8), y: Math.random() } });
+          if (typeof confetti === 'function') {
+            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.4, 0.6), y: Math.random() - 0.1 } });
+            
+            if (timeLeft < duration * 0.5) {
+              confetti({ ...defaults, particleCount: particleCount * 0.5, origin: { x: randomInRange(0.2, 0.8), y: Math.random() } });
+            }
           }
         }, 150);
+
+        return () => clearInterval(interval);
       }, 1000);
+      return () => clearTimeout(timer);
     }
   }, [animationStage]);
 
@@ -516,6 +523,20 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     setActiveTab('home');
     setAnimationStage('none');
   };
+
+  // --- [음성 안내 (Voice Notification) 로직] ---
+  // phrases.json에 정의된 규칙에 따라 타이머 시점에 맞춰 음성 안내를 실행합니다.
+  useEffect(() => {
+    if (activeTask && !activeTask.isPaused && activeTask.startTime && userData.isVoiceEnabled) {
+      voiceService.processRules(
+        phrases.voiceSettings.rules,
+        activeTask.text,
+        getElapsed(activeTask),
+        activeTask.targetDuration || 0,
+        !!userData.isVoiceEnabled
+      );
+    }
+  }, [activeTask?.id, activeTask?.isPaused, activeTask?.startTime, activeTask ? getElapsed(activeTask) : 0, userData.isVoiceEnabled]);
 
   if (isCompleted && animationStage !== 'none') {
     // 루틴그룹완료화면 (Routine Group Completion Screen)
@@ -731,21 +752,9 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     return 0;
   });
 
-  // --- [음성 안내 (Voice Notification) 로직] ---
-  // phrases.json에 정의된 규칙에 따라 타이머 시점에 맞춰 음성 안내를 실행합니다.
-  useEffect(() => {
-    if (activeTask && !activeTask.isPaused && activeTask.startTime && userData.isVoiceEnabled) {
-      voiceService.processRules(
-        phrases.voiceSettings.rules,
-        activeTask.text,
-        getElapsed(activeTask),
-        activeTask.targetDuration || 0,
-        !!userData.isVoiceEnabled
-      );
-    }
-  }, [activeTask?.id, activeTask?.isPaused, activeTask?.startTime, activeTask ? getElapsed(activeTask) : 0, userData.isVoiceEnabled]);
-
   const isTriggerComplete = true; // Placeholder
+
+  if (!chunk) return null;
 
   return (
     <div className="space-y-4 relative">
@@ -919,8 +928,9 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     )}
                     
                     <div className="relative z-10 flex flex-col items-center">
-                      <div className="text-sm font-bold text-slate-500 mb-1 tabular-nums">
-                        {`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}
+                      <div className="text-sm font-bold text-slate-500 mb-1 tabular-nums flex flex-col items-center">
+                        <div>{`${currentTime.getFullYear()}-${(currentTime.getMonth() + 1).toString().padStart(2, '0')}-${currentTime.getDate().toString().padStart(2, '0')}`}</div>
+                        <div>{`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}</div>
                       </div>
                       <div className={`text-6xl font-black tabular-nums tracking-tighter ${activeTask.isPaused ? 'text-slate-300' : 'text-slate-900'}`}>
                         {formatDuration(getElapsed(activeTask))}
@@ -1077,10 +1087,10 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           )}
 
           {/* 나머지루틴목록 (Remaining Routines List) */}
-          {chunk.tasks.filter(t => t.id !== activeTask?.id).length > 0 && (
+          {chunk.tasks.filter(t => activeTask ? t.id !== activeTask.id : true).length > 0 && (
             <div className="space-y-3">
               {[...chunk.tasks]
-                .filter(t => t.id !== activeTask?.id)
+                .filter(t => activeTask ? t.id !== activeTask.id : true)
                 .sort((a, b) => {
                   const isScheduledA = isTaskScheduledToday(a, chunk, effectiveDate, userData);
                   const isScheduledB = isTaskScheduledToday(b, chunk, effectiveDate, userData);
@@ -3222,27 +3232,62 @@ export default function App() {
   // Reset tasks when todayStr changes
   useEffect(() => {
     if (userData.lastResetDate !== todayStr) {
-      setUserData(prev => ({
-        ...prev,
-        lastResetDate: todayStr,
-        routineChunks: prev.routineChunks.map(chunk => ({
-          ...chunk,
-          tasks: chunk.tasks.map(t => ({ 
-            ...t, 
-            completed: false,
-            laterTimestamp: undefined,
-            startTime: undefined,
-            endTime: undefined,
-            isPaused: false,
-            accumulatedDuration: 0,
-            duration: 0,
-            closingNote: undefined,
-            satisfaction: undefined,
-            status: TaskStatus.NOT_STARTED,
-            checklist: t.checklist?.map(c => ({ ...c, completed: false }))
+      setUserData(prev => {
+        const lastDate = prev.lastResetDate;
+        const newGroupHistory = [...(prev.routineGroupHistory || [])];
+        
+        // Finalize yesterday's history according to Rule 89, 94, 95
+        prev.routineChunks.forEach(chunk => {
+          // Determine status for the day that just ended (lastDate)
+          const lastDateObj = new Date(lastDate);
+          const isScheduled = chunk.scheduledDays.includes(lastDateObj.getDay());
+          const isRested = chunk.inactiveDates?.includes(lastDate);
+          const isForced = chunk.forcedActiveDates?.includes(lastDate);
+          
+          const isB = isScheduled && isRested;
+          const isActive = (isScheduled && !isRested) || isForced;
+
+          // Per Rule 94: (B) is failure. (A) and (D) were active so if not finished, they should be failure too.
+          // Per Rule 95: (C) is ignored (no history entry needed).
+          if (isB || isActive) {
+            const existing = newGroupHistory.find(h => h.date === lastDate && h.groupId === chunk.id);
+            if (!existing) {
+              newGroupHistory.push({
+                date: lastDate,
+                groupId: chunk.id,
+                isActive: true, // It was a target day
+                firstTaskStartTime: null,
+                completionStatus: 'fail', // 미실행(실패)
+                completedAt: null,
+                totalDuration: 0
+              });
+            }
+          }
+        });
+
+        return {
+          ...prev,
+          lastResetDate: todayStr,
+          routineGroupHistory: newGroupHistory,
+          routineChunks: prev.routineChunks.map(chunk => ({
+            ...chunk,
+            tasks: chunk.tasks.map(t => ({ 
+              ...t, 
+              completed: false,
+              laterTimestamp: undefined,
+              startTime: undefined,
+              endTime: undefined,
+              isPaused: false,
+              accumulatedDuration: 0,
+              duration: 0,
+              closingNote: undefined,
+              satisfaction: undefined,
+              status: TaskStatus.NOT_STARTED,
+              checklist: t.checklist?.map(c => ({ ...c, completed: false }))
+            }))
           }))
-        }))
-      }));
+        };
+      });
     }
   }, [todayStr, userData.lastResetDate]);
 
@@ -3282,11 +3327,11 @@ export default function App() {
     const totalCompleted = userData.routineChunks.reduce((acc, chunk) => 
       acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData) && (t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT)).length, 0
     );
-    const totalScheduledTasksCount = userData.routineChunks.reduce((acc, chunk) => 
-      acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData)).length, 0
+    const totalStatsTasksCount = userData.routineChunks.reduce((acc, chunk) => 
+      acc + chunk.tasks.filter(t => isTaskTargetForStats(t, chunk, effectiveDate, userData)).length, 0
     );
-    const completionPercentage = totalScheduledTasksCount > 0 
-      ? Math.floor((totalCompleted / totalScheduledTasksCount) * 100) 
+    const completionPercentage = totalStatsTasksCount > 0 
+      ? Math.floor((totalCompleted / totalStatsTasksCount) * 100) 
       : 0;
 
     if ((userData.dailyCompletionRate?.[todayStr]) !== completionPercentage) {
@@ -3795,6 +3840,7 @@ export default function App() {
               return {
                 ...task,
                 completed: false,
+                status: undefined,
                 laterTimestamp: undefined,
                 isPaused: !autoStart,
                 startTime: autoStart ? nowStr : undefined,
@@ -4075,12 +4121,14 @@ export default function App() {
         setTimeout(() => setLastCompletedTaskName(null), 2000);
 
         // Confetti
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#6366f1', '#a855f7', '#ec4899', '#3b82f6', '#10b981']
-        });
+        if (typeof confetti === 'function') {
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#6366f1', '#a855f7', '#ec4899', '#3b82f6', '#10b981']
+          });
+        }
       }
 
       const totalCompleted = newChunks.reduce((acc, chunk) => 
@@ -4984,7 +5032,11 @@ export default function App() {
                 setActiveTab('home');
                 setSelectedChunkId(null);
               }}
-              className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${activeTab === 'home' && !selectedChunkId ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'}`}
+              className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${
+                activeTab === 'home' && !selectedChunkId 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
+                  : 'bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 border border-slate-100 shadow-sm'
+              }`}
             >
               <Home className="w-5 h-5" />
             </button>
@@ -4998,7 +5050,7 @@ export default function App() {
               className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all ${
                 activeTab === 'settings'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
-                  : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'
+                  : 'bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 border border-slate-100 shadow-sm'
               }`}
             >
               <Settings className="w-5 h-5" />
@@ -5012,7 +5064,7 @@ export default function App() {
               className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all ${
                 activeTab === 'add'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
-                  : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'
+                  : 'bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 border border-slate-100 shadow-sm'
               }`}
             >
               <PlusCircle className="w-5 h-5" />
@@ -5022,20 +5074,28 @@ export default function App() {
                 setActiveTab('stats');
                 setSelectedChunkId(null);
               }}
-              className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${activeTab === 'stats' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm'}`}
+              className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${
+                activeTab === 'stats' 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
+                  : 'bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 border border-slate-100 shadow-sm'
+              }`}
             >
               <BarChart3 className="w-5 h-5" />
             </button>
 
             {/* 음성안내아이콘 */}
             <button 
-              onClick={() => setUserData(prev => ({ ...prev, isVoiceEnabled: !prev.isVoiceEnabled }))}
-              className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white border shadow-sm ${
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.speechSynthesis) {
+                  window.speechSynthesis.cancel();
+                }
+                setUserData(prev => ({ ...prev, isVoiceEnabled: !prev.isVoiceEnabled }));
+              }}
+              className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white border shadow-sm hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 ${
                 userData.isVoiceEnabled 
                   ? 'border-blue-400 text-blue-500 shadow-blue-50' 
                   : 'border-slate-100 text-slate-400'
               }`}
-              title="음성 안내"
             >
               {userData.isVoiceEnabled ? <Volume2 className="w-5 h-5" strokeWidth={2.5} /> : <VolumeX className="w-5 h-5" />}
             </button>

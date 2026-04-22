@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Calendar } from 'lucide-react';
 import { UserData, TaskStatus } from '../../types';
-import { isTaskScheduledToday, calculateTaskDuration } from '../../utils';
+import { isTaskScheduledToday, calculateTaskDuration, isTaskTargetForStats } from '../../utils';
 
 interface HeaderBoxProps {
   userData: UserData;
@@ -40,11 +40,19 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
   const totalCompleted = userData.routineChunks.reduce((acc, chunk) => 
     acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && (t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT)).length, 0
   );
-  const totalScheduledTasksCount = userData.routineChunks.reduce((acc, chunk) => 
+  
+  // UI Count (Rule 92): Exclude (B) and (C)
+  const totalUiTasksCount = userData.routineChunks.reduce((acc, chunk) => 
     acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData)).length, 0
   );
-  const completionPercentage = totalScheduledTasksCount > 0 
-    ? Number(((totalCompleted / totalScheduledTasksCount) * 100).toFixed(1)) 
+
+  // Stats Count (Rule 94, 95): Include (B) as failure target, Exclude (C)
+  const totalStatsTasksCount = userData.routineChunks.reduce((acc, chunk) => 
+    acc + chunk.tasks.filter(t => isTaskTargetForStats(t, chunk, currentTime, userData)).length, 0
+  );
+
+  const completionPercentage = totalStatsTasksCount > 0 
+    ? Number(((totalCompleted / totalStatsTasksCount) * 100).toFixed(1)) 
     : 0;
 
   // --- [합산시간 계산] ---
@@ -152,7 +160,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
             />
           </div>
           <div className="text-l font-black text-slate-800 tabular-nums leading-none">
-            {Math.round(completionPercentage)}<span className="text-xs text-slate-400 ml-0.5">% ({totalCompleted}/{totalScheduledTasksCount})</span> 
+            {Math.round(completionPercentage)}<span className="text-xs text-slate-400 ml-0.5">% ({totalCompleted}/{totalUiTasksCount})</span> 
           </div>
         </div>
       </div>

@@ -74,6 +74,41 @@ export const isTaskScheduledToday = (task: Task, chunk: RoutineChunk, date: Date
 };
 
 /**
+ * Checks if a specific task should be counted for statistics performance calculation.
+ * According to Rule 10.2.8:
+ * - State (A) and (D) are recorded normally.
+ * - State (B) (User skipped scheduled rest) is counted as a target (failure if not done).
+ * - State (C) (Normal inactive) is NOT a target.
+ * 
+ * @param {Task} task - The task to check
+ * @param {RoutineChunk} chunk - The parent routine group
+ * @param {Date} date - The date to check against
+ * @param {UserData} userData - The current user data
+ * @returns {boolean} True if should be counted for stats, false otherwise
+ */
+export const isTaskTargetForStats = (task: Task, chunk: RoutineChunk, date: Date, userData: UserData): boolean => {
+  const dateStr = formatDate(date);
+  
+  // (D) Forced Active: Not scheduled day but user forced it
+  const isForcedActive = userData.forcedActiveTasks?.[dateStr]?.[task.id] || chunk.forcedActiveDates?.includes(dateStr);
+  if (isForcedActive) return true;
+
+  // Check if it's a scheduled day
+  const isScheduledDay = chunk.scheduledDays.includes(date.getDay());
+  
+  // If it's a scheduled day:
+  // - (A) normal active (not in inactiveDates)
+  // - (B) manual rested (in inactiveDates) -> COUNTS as failure target per Rule 94
+  if (isScheduledDay) {
+    if (!task.scheduledDays) return true;
+    return task.scheduledDays.includes(date.getDay());
+  }
+
+  // (C) Normal Inactive: Not scheduled and not forced -> NOT a target per Rule 95
+  return false;
+};
+
+/**
  * Formats a Date object into a YYYY-MM-DD string.
  * 
  * @param {Date} date - The date to format
