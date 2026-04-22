@@ -2205,7 +2205,8 @@ const RoutineGroupFormView: React.FC<{
   setIsSettingsOpen: (open: boolean) => void;
   userData: UserData;
   mode?: 'add' | 'edit';
-}> = ({ addChunk, updateChunk, initialChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData, mode = 'add' }) => {
+  onDirtyChange?: (isDirty: boolean) => void;
+}> = ({ addChunk, updateChunk, initialChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData, mode = 'add', onDirtyChange }) => {
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState('');
   
@@ -2325,6 +2326,17 @@ const RoutineGroupFormView: React.FC<{
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  useEffect(() => {
+    if (mode === 'add') {
+      const isDirty = name.trim() !== '' || purpose.trim() !== '' || triggerTask.text.trim() !== '' || routineList.length > 0;
+      onDirtyChange?.(isDirty);
+    } else {
+      // In edit mode, compare with initial values if needed, 
+      // but the user only explicitly asked for the "new routine group" screen
+      onDirtyChange?.(false); 
+    }
+  }, [name, purpose, triggerTask.text, routineList, mode, onDirtyChange]);
 
   const addRoutineToList = () => {
     if (!currentRoutineInput.text.trim()) return;
@@ -3020,11 +3032,13 @@ export default function App() {
     title: string;
     message: string;
     onConfirm: () => void;
+    onCancel?: () => void;
     confirmLabel?: string;
     cancelLabel?: string;
     showCancel?: boolean;
     validationValue?: string;
     validationPlaceholder?: string;
+    confirmColor?: 'rose' | 'indigo';
   }>({
     isOpen: false,
     title: '',
@@ -3034,6 +3048,32 @@ export default function App() {
     showCancel: true,
     onConfirm: () => {}
   });
+
+  const [isAddRoutineDirty, setIsAddRoutineDirty] = useState(false);
+
+  const handleTabTransition = (targetTab: 'home' | 'stats' | 'execution' | 'settings' | 'add', extraAction?: () => void) => {
+    if (activeTab === 'add' && targetTab !== 'add' && isAddRoutineDirty) {
+      setConfirmModal({
+        isOpen: true,
+        title: '알림',
+        message: '입력 내용이 저장되지 않았습니다. 루틴 그룹 만들기를 취소하고 다른 화면으로 이동하시겠습니까?',
+        confirmLabel: '루틴 그룹 만들기를\n취소하고 나가기',
+        cancelLabel: '루틴 그룹 만들기로\n 돌아가기',
+        confirmColor: 'indigo',
+        showCancel: true,
+        onConfirm: () => {
+          setIsAddRoutineDirty(false);
+          setActiveTab(targetTab);
+          if (extraAction) extraAction();
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        },
+        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+      });
+      return;
+    }
+    setActiveTab(targetTab);
+    if (extraAction) extraAction();
+  };
 
   // --- Effects ---
   const effectiveDate = useMemo(() => {
@@ -4259,6 +4299,7 @@ export default function App() {
     }));
     setNewChunkName('');
     setNewGroupPurpose('');
+    setIsAddRoutineDirty(false);
   };
 
   const deleteChunk = (id: string, onSuccess?: () => void) => {
@@ -5166,8 +5207,9 @@ export default function App() {
           <nav className="flex items-center gap-3">
             <button 
               onClick={() => {
-                setActiveTab('home');
-                setSelectedChunkId(null);
+                handleTabTransition('home', () => {
+                  setSelectedChunkId(null);
+                });
               }}
               className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${
                 activeTab === 'home' && !selectedChunkId 
@@ -5179,10 +5221,11 @@ export default function App() {
             </button>
             <button 
               onClick={() => {
-                setActiveTab('settings');
-                setSettingsSubView({ type: 'main' });
-                setSelectedChunkId(null);
-                setIsSettingsOpen(false);
+                handleTabTransition('settings', () => {
+                  setSettingsSubView({ type: 'main' });
+                  setSelectedChunkId(null);
+                  setIsSettingsOpen(false);
+                });
               }}
               className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all ${
                 activeTab === 'settings'
@@ -5194,9 +5237,10 @@ export default function App() {
             </button>
             <button 
               onClick={() => {
-                setActiveTab('add');
-                setSelectedChunkId(null);
-                setIsSettingsOpen(false);
+                handleTabTransition('add', () => {
+                  setSelectedChunkId(null);
+                  setIsSettingsOpen(false);
+                });
               }}
               className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all ${
                 activeTab === 'add'
@@ -5208,8 +5252,9 @@ export default function App() {
             </button>
             <button 
               onClick={() => {
-                setActiveTab('stats');
-                setSelectedChunkId(null);
+                handleTabTransition('stats', () => {
+                  setSelectedChunkId(null);
+                });
               }}
               className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${
                 activeTab === 'stats' 
@@ -5369,6 +5414,7 @@ export default function App() {
                 setIsSettingsOpen={setIsSettingsOpen}
                 userData={userData}
                 mode="add"
+                onDirtyChange={(isDirty) => setIsAddRoutineDirty(isDirty)}
               />
             </motion.div>
           ) : activeTab === 'settings' ? (
@@ -5394,8 +5440,9 @@ export default function App() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           onClick={() => {
-            setSelectedChunkId(globalActiveTask.chunkId);
-            setActiveTab('execution');
+            handleTabTransition('execution', () => {
+              setSelectedChunkId(globalActiveTask.chunkId);
+            });
           }}
           className="fixed bottom-8 left-4 right-4 bg-indigo-600 text-white p-4 rounded-[10px] shadow-2xl z-[60] flex items-center justify-between cursor-pointer border border-white/20 backdrop-blur-lg"
         >
@@ -5465,8 +5512,15 @@ export default function App() {
         showCancel={confirmModal.showCancel}
         validationValue={confirmModal.validationValue}
         validationPlaceholder={confirmModal.validationPlaceholder || (confirmModal.validationValue ? `${confirmModal.validationValue} 입력` : undefined)}
+        confirmColor={confirmModal.confirmColor}
         onConfirm={confirmModal.onConfirm}
-        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onCancel={() => {
+          if (confirmModal.onCancel) {
+            confirmModal.onCancel();
+          } else {
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          }
+        }}
       />
       {/* Alarm Modal */}
       <AnimatePresence>

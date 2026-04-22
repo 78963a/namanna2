@@ -13,6 +13,7 @@ interface ConfirmModalProps {
   showCancel?: boolean;
   validationValue?: string;
   validationPlaceholder?: string;
+  confirmColor?: 'rose' | 'indigo';
 }
 
 /**
@@ -31,17 +32,35 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   cancelLabel = "취소",
   showCancel = true,
   validationValue,
-  validationPlaceholder = "내용을 입력해주세요"
+  validationPlaceholder = "내용을 입력해주세요",
+  confirmColor = 'rose'
 }) => {
   const [inputValue, setInputValue] = React.useState('');
+  const [isFocused, setIsFocused] = React.useState(false);
 
   React.useEffect(() => {
     if (isOpen) {
       setInputValue('');
+      setIsFocused(false);
     }
   }, [isOpen]);
 
   const isValid = !validationValue || inputValue === validationValue;
+
+  const colorClasses = {
+    rose: 'bg-rose-500 hover:bg-rose-600 shadow-rose-100',
+    indigo: 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'
+  };
+
+  const iconClasses = {
+    rose: 'text-rose-500',
+    indigo: 'text-indigo-600'
+  };
+
+  const iconBgClasses = {
+    rose: 'bg-rose-50',
+    indigo: 'bg-indigo-50'
+  };
 
   return (
     <AnimatePresence>
@@ -55,14 +74,20 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60]"
           />
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-[10px] p-6 z-[70] shadow-2xl w-[90%] max-w-sm"
+            initial={{ opacity: 0, scale: 0.95, x: '-50%', y: '-40%' }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1, 
+              x: '-50%',
+              y: isFocused ? '-85%' : '-50%' 
+            }}
+            exit={{ opacity: 0, scale: 0.95, x: '-50%', y: '-40%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed top-1/2 left-1/2 bg-white rounded-[10px] p-6 z-[70] shadow-2xl w-[90%] max-w-sm"
           >
             <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-12 h-12 bg-rose-50 rounded-[10px] flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-rose-500" />
+              <div className={`w-12 h-12 ${iconBgClasses[confirmColor]} rounded-[10px] flex items-center justify-center`}>
+                <AlertCircle className={`w-6 h-6 ${iconClasses[confirmColor]}`} />
               </div>
               <div className="space-y-1 w-full">
                 <h3 className="text-lg font-bold text-slate-900">{title}</h3>
@@ -77,6 +102,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                       type="text"
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
+                      onFocus={() => setIsFocused(true)}
+                      onBlur={() => setIsFocused(false)}
                       placeholder={validationPlaceholder}
                       className="w-full p-3 bg-slate-50 border border-slate-100 rounded-[10px] text-sm font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all"
                       autoFocus
@@ -88,7 +115,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 {showCancel && (
                   <button 
                     onClick={onCancel}
-                    className="flex-1 py-3 rounded-[10px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
+                    className="flex-1 py-3 rounded-[10px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors whitespace-pre-wrap"
                   >
                     {cancelLabel}
                   </button>
@@ -96,9 +123,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 <button 
                   onClick={onConfirm}
                   disabled={!isValid}
-                  className={`flex-1 py-3 rounded-[10px] font-bold text-white transition-all shadow-lg ${
+                  className={`flex-1 py-3 rounded-[10px] font-bold text-white transition-all shadow-lg whitespace-pre-wrap ${
                     isValid 
-                      ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-100' 
+                      ? `${colorClasses[confirmColor]}`
                       : 'bg-slate-300 cursor-not-allowed shadow-none'
                   }`}
                 >
