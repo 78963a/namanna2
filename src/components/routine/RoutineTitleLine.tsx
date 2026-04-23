@@ -18,6 +18,8 @@ import { Task, TaskType, TaskStatus } from '../../types';
 import { calculateTaskDuration } from '../../utils';
 import phrases from '../../phrases.json';
 
+import { voiceService } from '../../services/voiceService';
+
 interface RoutineTitleLineProps {
   task: Task;
   index: number;
@@ -195,6 +197,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
       {showActivate && (
         <button
           onClick={(e) => {
+            voiceService.unlock();
             e.stopPropagation();
             onActivate(task.id);
           }}
@@ -207,6 +210,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
       {showStartResume && (
         <button
           onClick={(e) => {
+            voiceService.unlock();
             e.stopPropagation();
             onDoFirst(task.id);
           }}
@@ -219,6 +223,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
       {showRestart && (
         <button
           onClick={(e) => {
+            voiceService.unlock();
             e.stopPropagation();
             onRestart(task.id);
           }}

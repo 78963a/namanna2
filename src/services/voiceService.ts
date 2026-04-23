@@ -6,6 +6,49 @@ import { getJosa } from "../utils";
 class VoiceService {
   private synth: SpeechSynthesis | null = typeof window !== 'undefined' ? window.speechSynthesis : null;
   private lastTriggeredId: string | null = null;
+  private isUnlocked: boolean = false;
+  private voice: SpeechSynthesisVoice | null = null;
+
+  constructor() {
+    this.initVoices();
+  }
+
+  private initVoices() {
+    if (!this.synth) return;
+    
+    const loadVoices = () => {
+      const voices = this.synth!.getVoices();
+      if (voices.length > 0) {
+        // Try to find a Korean voice, or use default
+        this.voice = voices.find(v => v.lang === 'ko-KR') || voices[0];
+      }
+    };
+
+    loadVoices();
+    if (this.synth.onvoiceschanged !== undefined) {
+      this.synth.onvoiceschanged = loadVoices;
+    }
+  }
+
+  /**
+   * Unlocks the speech synthesis session.
+   * MUST be called from a user interaction (click/tap) event for iOS compatibility.
+   */
+  unlock() {
+    if (!this.synth || this.isUnlocked) return;
+    
+    // RULE 5.1: Speak an empty string to initialize the audio session on iOS
+    try {
+      this.synth.cancel();
+      const utterance = new SpeechSynthesisUtterance('');
+      utterance.volume = 0;
+      this.synth.speak(utterance);
+      this.isUnlocked = true;
+      console.log("Voice audio session unlocked for iOS");
+    } catch (e) {
+      console.error("Failed to unlock voice session", e);
+    }
+  }
 
   /**
    * Speaks a message using the browser's SpeechSynthesis API.
@@ -20,6 +63,22 @@ class VoiceService {
     const utterance = new SpeechSynthesisUtterance(message);
     utterance.lang = 'ko-KR';
     utterance.rate = 1.0;
+    
+    // Rule 5.1: Ensure voice is set if available
+    if (!this.voice) {
+      const voices = this.synth.getVoices();
+      if (voices.length > 0) {
+        this.voice = voices.find(v => v.lang === 'ko-KR' || v.lang.startsWith('ko')) || voices[0];
+      }
+    }
+    
+    if (this.voice) {
+      utterance.voice = this.voice;
+    }
+
+    // Force unlock flag if we are speaking
+    this.isUnlocked = true;
+
     this.synth.speak(utterance);
   }
 

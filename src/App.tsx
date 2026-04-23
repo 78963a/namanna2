@@ -278,49 +278,27 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     return currentStage.iconId;
   })();
 
-  // 9-2-1. '현재 실행중인 루틴' 우선순위 로직
-  // 현재 루틴 후보군 탐색
-  // 1순위: '진행 중'인 집중 루틴 (실행 중이거나, 사용자가 실행했다가 일시정지한 루틴)
-  let activeTask = scheduledTasks.find(t => 
-    (t.startTime || (t.status === TaskStatus.IN_PROGRESS && !t.laterTimestamp)) && 
-    !t.completed && 
-    t.status !== TaskStatus.SKIP &&
-    t.status !== TaskStatus.COMPLETED &&
-    t.status !== TaskStatus.PERFECT
-  );
+  // 20.3. 현재 루틴(Current Task) 선정 우선순위 로직
+  // 1순위: '현재 루틴'으로 마킹되어 있거나 타이머가 돌아가고 있는 루틴
+  let activeTask = scheduledTasks.find(t => t.status === TaskStatus.IN_PROGRESS && !t.completed);
   
-  // 2순위: 현재 진행 중인 루틴이 없을 때, 다음 루틴을 선정하는 우선순위 (의도: 미실행 > 나중에 > 일시정지)
-  if (!activeTask && !isAlreadyFinalized) {
-    // 1. 미실행 루틴 (Ready)
-    activeTask = scheduledTasks.find(t => 
-      !t.startTime && 
-      !t.completed && 
-      (!t.status || t.status === TaskStatus.NOT_STARTED) &&
-      !t.laterTimestamp && 
-      !t.isPaused
-    );
-    
-    // 2. '나중에 하기' 루틴 (Later)
-    if (!activeTask) {
-      activeTask = scheduledTasks.find(t => 
-        t.laterTimestamp && 
-        !t.completed && 
-        t.status !== TaskStatus.SKIP &&
-        t.status !== TaskStatus.COMPLETED &&
-        t.status !== TaskStatus.PERFECT
-      );
-    }
-    
-    // 3. 기타 일시정지 루틴 (Paused)
-    if (!activeTask) {
-      activeTask = scheduledTasks.find(t => 
-        t.isPaused && 
-        !t.completed && 
-        t.status !== TaskStatus.SKIP &&
-        t.status !== TaskStatus.COMPLETED &&
-        t.status !== TaskStatus.PERFECT
-      );
-    }
+  // 2순위: 타이머가 돌아가고 있다면 (비정상 상태 방어)
+  if (!activeTask) {
+    activeTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed);
+  }
+  
+  // 20.2. 트리거 루틴 (미실행 그룹인 경우 첫 번째 루틴을 현재 루틴으로 자동 선정)
+  // '미실행' 판단: 모든 루틴이 시작되지 않았고, 완료/스킵/나중에 된 것이 없음
+  const isInitiallyUnstarted = scheduledTasks.every(t => 
+    (!t.status || t.status === TaskStatus.NOT_STARTED) && 
+    !t.completed && 
+    !t.laterTimestamp && 
+    (t.accumulatedDuration || 0) === 0 &&
+    !t.startTime
+  );
+
+  if (!activeTask && isInitiallyUnstarted && scheduledTasks.length > 0 && !isAlreadyFinalized) {
+    activeTask = scheduledTasks[0];
   }
 
   const isNotStarted = tasks.every(t => !t.startTime && !t.completed);
@@ -2916,6 +2894,7 @@ export default function App() {
         dailyCheckCheckCounts: {},
         autoReorderInactiveGroups: true,
         autoReorderCompletedGroups: true,
+        autoReorderInProgressGroups: true,
         firstRoutineAutoStart: false,
         nextRoutineAutoStart: false,
         userName: '나'
@@ -2936,6 +2915,9 @@ export default function App() {
       } else {
         parsed.autoReorderCompletedGroups = true;
       }
+    }
+    if (parsed.autoReorderInProgressGroups === undefined) {
+      parsed.autoReorderInProgressGroups = true;
     }
     // Cleanup old retired key
     if (parsed.autoReorderGroups !== undefined) {
@@ -3694,6 +3676,7 @@ export default function App() {
   };
 
   const handleCheckIn = () => {
+    voiceService.unlock();
     if (!canCheckIn) return;
 
     let newStreak = userData.streak;
@@ -3740,6 +3723,7 @@ export default function App() {
   };
 
   const handleLateCheckIn = () => {
+    voiceService.unlock();
     const checkInTimeStr = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => ({
       ...prev,
@@ -3755,6 +3739,7 @@ export default function App() {
   };
 
   const skipTask = (id: string) => {
+    voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
@@ -3766,8 +3751,9 @@ export default function App() {
           if (!foundTask) return chunk;
 
           const updatedTasks = chunk.tasks.map(t => {
+            let updated = { ...t };
             if (t.id === id) {
-              return { 
+              updated = { 
                 ...t, 
                 status: TaskStatus.SKIP,
                 endTime: nowStr, 
@@ -3776,31 +3762,49 @@ export default function App() {
                 startTime: undefined,
                 isPaused: false
               };
+            } else if (updated.status === TaskStatus.IN_PROGRESS) {
+              // Clear IN_PROGRESS from other tasks in this chunk
+              updated.status = TaskStatus.NOT_STARTED;
             }
-            return t;
+            return updated;
           });
 
-          const nextTask = updatedTasks.find(t => 
-            !t.completed && 
-            t.status !== TaskStatus.SKIP && 
-            !t.laterTimestamp &&
-            isTaskScheduledToday(t, chunk, effectiveDate, prev)
-          );
+          // 20.3 우선순위에 따른 다음 루틴 선정 (현재 루틴 제외)
+          const getNext = (ts: Task[]) => {
+            const sched = ts.filter(t => 
+              t.id !== id && 
+              isTaskScheduledToday(t, chunk, effectiveDate, prev) && 
+              !t.completed &&
+              t.status !== TaskStatus.SKIP
+            );
+            
+            // 1. 미실행
+            let n = sched.find(t => !t.startTime && !t.isPaused && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED));
+            if (n) return n;
+            // 2. 나중에
+            n = sched.find(t => t.laterTimestamp);
+            if (n) return n;
+            // 3. 일시정지
+            n = sched.find(t => t.isPaused || (t.accumulatedDuration || 0) > 0);
+            return n;
+          };
 
-          if (nextTask) {
-            return {
-              ...chunk,
-              tasks: updatedTasks.map(t => 
-                (t.id === nextTask.id && prev.nextRoutineAutoStart) 
-                  ? { ...t, status: TaskStatus.IN_PROGRESS, startTime: nowStr, isPaused: false, laterTimestamp: undefined } 
-                  : t
-              )
-            };
-          }
+          const nextTask = getNext(updatedTasks);
 
           return {
             ...chunk,
-            tasks: updatedTasks
+            tasks: updatedTasks.map(t => {
+              if (nextTask && t.id === nextTask.id) {
+                return { 
+                  ...t, 
+                  status: TaskStatus.IN_PROGRESS, 
+                  startTime: prev.nextRoutineAutoStart ? nowStr : undefined,
+                  isPaused: !prev.nextRoutineAutoStart,
+                  laterTimestamp: undefined 
+                };
+              }
+              return t;
+            })
           };
         })
       };
@@ -3809,6 +3813,7 @@ export default function App() {
   };
 
   const laterTask = (id: string) => {
+    voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
@@ -3820,36 +3825,59 @@ export default function App() {
           if (!foundTask) return chunk;
 
           const updatedTasks = chunk.tasks.map(t => {
+            let updated = { ...t };
             if (t.id === id) {
-              return { 
+              updated = { 
                 ...t, 
                 laterTimestamp: Date.now(), 
                 completed: false, 
                 isPaused: true,
                 accumulatedDuration: undefined,
-                startTime: undefined
+                startTime: undefined,
+                status: TaskStatus.NOT_STARTED // 현재 루틴 지위 상실
               };
+            } else if (updated.status === TaskStatus.IN_PROGRESS) {
+              // Clear IN_PROGRESS from other tasks
+              updated.status = TaskStatus.NOT_STARTED;
             }
-            return t;
+            return updated;
           });
           
-          // Find next task to start
-          const nextTask = updatedTasks.find(t => 
-            !t.completed && 
-            !t.laterTimestamp &&
-            isTaskScheduledToday(t, chunk, effectiveDate, prev)
-          );
+          // 20.3 우선순위에 따른 다음 루틴 선정 (현재 루틴 제외)
+          const getNext = (ts: Task[]) => {
+            const sched = ts.filter(t => 
+              t.id !== id && 
+              isTaskScheduledToday(t, chunk, effectiveDate, prev) && 
+              !t.completed
+            );
+            
+            // 1. 미실행
+            let n = sched.find(t => !t.startTime && !t.isPaused && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED));
+            if (n) return n;
+            // 2. 나중에
+            n = sched.find(t => t.laterTimestamp);
+            if (n) return n;
+            // 3. 일시정지
+            n = sched.find(t => (t.isPaused || (t.accumulatedDuration || 0) > 0));
+            return n;
+          };
 
-          if (nextTask) {
-            return {
-              ...chunk,
-              tasks: updatedTasks.map(t => (t.id === nextTask.id && prev.nextRoutineAutoStart) ? { ...t, status: TaskStatus.IN_PROGRESS, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
-            };
-          }
+          const nextTask = getNext(updatedTasks);
 
           return {
             ...chunk,
-            tasks: updatedTasks
+            tasks: updatedTasks.map(t => {
+              if (nextTask && t.id === nextTask.id) {
+                return { 
+                  ...t, 
+                  status: TaskStatus.IN_PROGRESS, 
+                  startTime: prev.nextRoutineAutoStart ? nowStr : undefined,
+                  isPaused: !prev.nextRoutineAutoStart,
+                  laterTimestamp: undefined 
+                };
+              }
+              return t;
+            })
           };
         })
       };
@@ -3858,6 +3886,7 @@ export default function App() {
   };
 
   const startTask = (taskId: string, resetTimer: boolean = true) => {
+    voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
@@ -3881,14 +3910,15 @@ export default function App() {
               };
             }
             
-            // If this is an active task (not the target one), pause it
-            const isActive = task.startTime && !task.isPaused && !task.completed && task.status !== TaskStatus.SKIP && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.PERFECT;
-            if (isActive) {
+            // 20.3.5 다른 루틴을 시작하는 경우 기존 실행 루틴(타이머 중 또는 일시정지 중)은 일시정지 상태로 목록으로 이동
+            const wasActive = task.startTime || task.status === TaskStatus.IN_PROGRESS;
+            if (wasActive) {
               return {
                 ...task,
                 isPaused: true,
                 accumulatedDuration: calculateTaskDuration(task, now),
-                startTime: undefined
+                startTime: undefined,
+                status: TaskStatus.NOT_STARTED
               };
             }
             
@@ -3903,6 +3933,7 @@ export default function App() {
   };
 
   const onRestart = (taskId: string, resetTimer: boolean = true) => {
+    voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     
@@ -3927,7 +3958,7 @@ export default function App() {
               return {
                 ...task,
                 completed: false,
-                status: undefined,
+                status: TaskStatus.IN_PROGRESS,
                 laterTimestamp: undefined,
                 isPaused: !autoStart,
                 startTime: autoStart ? nowStr : undefined,
@@ -3937,13 +3968,15 @@ export default function App() {
               };
             }
             
-            // If this was the active task, pause it
-            if (task.id === activeTaskId) {
+            // 20.3.5 다른 루틴을 시작/다시하는 경우 기존 실행 루틴은 일시정지 상태로 목록으로 이동
+            const wasActive = task.startTime || task.status === TaskStatus.IN_PROGRESS;
+            if (wasActive) {
               return {
                 ...task,
                 isPaused: true,
                 accumulatedDuration: calculateTaskDuration(task, now),
-                startTime: undefined
+                startTime: undefined,
+                status: TaskStatus.NOT_STARTED
               };
             }
             
@@ -3958,6 +3991,7 @@ export default function App() {
   };
 
   const togglePauseTask = (id: string, forceStart: boolean = false) => {
+    voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
@@ -3967,58 +4001,60 @@ export default function App() {
           // Determine if we are about to resume a task
           const isTargetResuming = chunk.tasks.some(t => t.id === id && (t.isPaused || !t.startTime));
 
-          return {
-            ...chunk,
-            tasks: chunk.tasks.map(t => {
-              if (t.id === id) {
-                if (t.isPaused || !t.startTime || t.completed || t.status === TaskStatus.SKIP) {
-                  // Resuming, Starting, or Reviving from SKIP: set new startTime and status
-                  const autoStart = prev.nextRoutineAutoStart;
-                  const isAlreadyPaused = t.isPaused;
-                  // If it was already in a paused/ready state, the user is explicitly starting it (forceStart or second click), so ignore autoStart.
-                  const shouldStartNow = isAlreadyPaused || autoStart || forceStart;
+          const newTasks = chunk.tasks.map(task => {
+            // 20.3.5 다른 루틴을 시작/재개하는 경우 기존 실행 루틴은 목록으로 내려감 (status 해제)
+            const wasActive = task.id !== id && (task.startTime || task.status === TaskStatus.IN_PROGRESS);
 
-                  return { 
-                    ...t, 
-                    isPaused: !shouldStartNow, 
-                    startTime: shouldStartNow ? nowStr : undefined,
-                    completed: false,
-                    laterTimestamp: undefined,
-                    status: TaskStatus.IN_PROGRESS,
-                    endTime: undefined,
-                    duration: undefined,
-                    closingNote: undefined,
-                    satisfaction: undefined,
-                    accumulatedDuration: t.duration ?? t.accumulatedDuration ?? 0
-                  };
-                } else {
-                  // Pausing: calculate accumulated duration
-                  return { 
-                    ...t, 
-                    isPaused: true, 
-                    accumulatedDuration: calculateTaskDuration(t, now),
-                    startTime: undefined 
-                  };
-                }
+            if (task.id === id) {
+              if (task.isPaused || !task.startTime || task.completed || task.status === TaskStatus.SKIP) {
+                // Resuming, Starting, or Reviving from SKIP: set new startTime and status
+                const autoStart = prev.nextRoutineAutoStart;
+                const isAlreadyPaused = task.isPaused || (!task.startTime && (task.accumulatedDuration || 0) > 0);
+                const shouldStartNow = isAlreadyPaused || autoStart || forceStart;
+
+                return { 
+                  ...task, 
+                  isPaused: !shouldStartNow, 
+                  startTime: shouldStartNow ? nowStr : undefined,
+                  completed: false,
+                  laterTimestamp: undefined,
+                  status: TaskStatus.IN_PROGRESS,
+                  endTime: undefined,
+                  duration: undefined,
+                  closingNote: undefined,
+                  satisfaction: undefined,
+                  accumulatedDuration: task.duration ?? task.accumulatedDuration ?? 0
+                };
+              } else {
+                // Pausing: calculate accumulated duration
+                return { 
+                  ...task, 
+                  isPaused: true, 
+                  accumulatedDuration: calculateTaskDuration(task, now),
+                  startTime: undefined,
+                  status: TaskStatus.IN_PROGRESS // 일시정지해도 '현재 루틴'으로 유지 (Rule 20.6)
+                };
               }
-              
-              // If we are resuming the target task, pause all other active tasks
-              // BUT if we are pausing the target task, do NOT touch other tasks
-              if (isTargetResuming) {
-                const isActive = t.startTime && !t.isPaused && !t.completed && t.status !== TaskStatus.SKIP && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.PERFECT;
-                if (isActive) {
-                  return {
-                    ...t,
-                    isPaused: true,
-                    accumulatedDuration: calculateTaskDuration(t, now),
-                    startTime: undefined
-                  };
-                }
-              }
-              
-              return t;
-            }),
-          };
+            } else if (wasActive && isTargetResuming) {
+              // 다른 루틴이 시작되는 경우만 status를 해제함. 
+              // 단순히 한 루틴을 일시정지하는 경우에는 (isTargetResuming이 false임) 건드리지 않음.
+              return {
+                ...task,
+                isPaused: true,
+                accumulatedDuration: calculateTaskDuration(task, now),
+                startTime: undefined,
+                status: TaskStatus.NOT_STARTED // 현재 루틴 지위 상실
+              };
+            }
+            
+            // 타겟 루틴이 새로 시작/재개되는 경우 중복 방지
+            if (isTargetResuming && task.status === TaskStatus.IN_PROGRESS && task.id !== id) {
+               return { ...task, status: TaskStatus.NOT_STARTED };
+            }
+
+            return task;
+          });
+          return { ...chunk, tasks: newTasks };
         }),
       };
       return syncHistory(next, todayStr);
@@ -4107,6 +4143,7 @@ export default function App() {
   };
 
   const toggleTask = (id: string, closingData?: { note?: string, satisfaction?: number }) => {
+    voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
@@ -4130,13 +4167,15 @@ export default function App() {
       const newChunks = prev.routineChunks.map(chunk => {
         if (chunk.id === targetChunkId) {
           const updatedTasks = chunk.tasks.map(t => {
+            let updated = { ...t };
             if (t.id === id) {
-              const updated = { ...t, completed: isBecomingCompleted };
+              updated = { ...t, completed: isBecomingCompleted };
               if (isBecomingCompleted) {
                 updated.endTime = nowStr;
                 const totalSeconds = calculateTaskDuration(t, now);
                 updated.duration = totalSeconds;
-                updated.startTime = undefined; // 완료 시 startTime 제거하여 타이머 중단
+                updated.startTime = undefined;
+                updated.isPaused = false;
                 
                 // Determine status (PERFECT or COMPLETED)
                 const targetSeconds = (t.targetDuration || 0) * 60;
@@ -4145,7 +4184,6 @@ export default function App() {
                 } else if (t.taskType === TaskType.TIME_ACCUMULATED) {
                   updated.status = totalSeconds >= targetSeconds ? TaskStatus.PERFECT : TaskStatus.COMPLETED;
                 } else {
-                  // TIME_INDEPENDENT
                   updated.status = TaskStatus.PERFECT;
                 }
 
@@ -4157,22 +4195,39 @@ export default function App() {
                 updated.endTime = undefined;
                 updated.duration = undefined;
                 updated.status = TaskStatus.NOT_STARTED;
+                updated.isPaused = false;
               }
-              return updated;
+            } else if (updated.status === TaskStatus.IN_PROGRESS && isBecomingCompleted) {
+              // Clear IN_PROGRESS if we are completing the current task
+              updated.status = TaskStatus.NOT_STARTED;
             }
-            return t;
+            return updated;
           });
 
-          // If we just completed a task, start the next one
+          // If we just completed a task, 20.3 우선순위에 따른 다음 루틴 선정
           if (isBecomingCompleted) {
-            const nextTask = updatedTasks.find(t => 
-              !t.completed && 
-              !t.laterTimestamp &&
-              isTaskScheduledToday(t, chunk, effectiveDate, prev)
-            );
+            const getNext = (ts: Task[]) => {
+              const sched = ts.filter(t => 
+                t.id !== id && 
+                isTaskScheduledToday(t, chunk, effectiveDate, prev) && 
+                !t.completed
+              );
+              
+              // 1. 미실행
+              let n = sched.find(t => !t.startTime && !t.isPaused && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED));
+              if (n) return n;
+              // 2. 나중에
+              n = sched.find(t => t.laterTimestamp);
+              if (n) return n;
+              // 3. 일시정지
+              n = sched.find(t => t.isPaused || (t.accumulatedDuration || 0) > 0);
+              return n;
+            };
+
+            const nextTask = getNext(updatedTasks);
             
             // Check if all tasks in this chunk are now completed
-            const allCompleted = updatedTasks.every(t => t.completed);
+            const allCompleted = updatedTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
             let newCompletionDates = chunk.completionDates || [];
             if (allCompleted && !newCompletionDates.includes(todayStr)) {
               newCompletionDates = [...newCompletionDates, todayStr];
@@ -4180,20 +4235,25 @@ export default function App() {
               newCompletionDates = newCompletionDates.filter(d => d !== todayStr);
             }
 
-          if (nextTask) {
             return {
               ...chunk,
               completionDates: newCompletionDates,
-              tasks: updatedTasks.map(t => (t.id === nextTask.id && prev.nextRoutineAutoStart) ? { ...t, status: TaskStatus.IN_PROGRESS, startTime: nowStr, isPaused: false, laterTimestamp: undefined } : t)
-            };
-          }
-            return {
-              ...chunk,
-              completionDates: newCompletionDates,
-              tasks: updatedTasks
+              tasks: updatedTasks.map(t => {
+                if (nextTask && t.id === nextTask.id) {
+                  return { 
+                    ...t, 
+                    status: TaskStatus.IN_PROGRESS, 
+                    startTime: prev.nextRoutineAutoStart ? nowStr : undefined,
+                    isPaused: !prev.nextRoutineAutoStart,
+                    laterTimestamp: undefined 
+                  };
+                }
+                return t;
+              })
             };
           }
 
+          // If un-doing completion
           return {
             ...chunk,
             tasks: updatedTasks
@@ -4371,6 +4431,7 @@ export default function App() {
   };
 
   const toggleInactive = (chunkId: string) => {
+    voiceService.unlock();
     setUserData(prev => ({
       ...prev,
       routineChunks: prev.routineChunks.map(chunk => {
@@ -4949,6 +5010,20 @@ export default function App() {
               </div>
               
               <div className="space-y-4 pt-1">
+                {/* 실행중인 그룹 자동 정렬 */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <h4 className="text-sm font-black text-slate-700">실행중인 그룹 자동 정렬</h4>
+                    <p className="text-[11px] font-bold text-slate-400 leading-tight">실행중인 그룹은 자동으로 목록 상단으로 이동합니다.</p>
+                  </div>
+                  <button 
+                    onClick={() => setUserData(prev => ({ ...prev, autoReorderInProgressGroups: !prev.autoReorderInProgressGroups }))}
+                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.autoReorderInProgressGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderInProgressGroups ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
+
                 {/* 완료된 그룹 자동 정렬 */}
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex flex-col gap-1">

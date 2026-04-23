@@ -124,6 +124,7 @@ export interface UserData {
   resetTime: string; // HH:mm format
   autoReorderInactiveGroups: boolean;
   autoReorderCompletedGroups: boolean;
+  autoReorderInProgressGroups: boolean;
   lastCheckCheckTime: number; // timestamp
   lastResetDate: string | null;
   dailyCheckCheckCounts: { [date: string]: number };

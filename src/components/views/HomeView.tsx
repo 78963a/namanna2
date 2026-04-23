@@ -13,6 +13,8 @@ import { timeToMinutes, isTaskScheduledToday } from '../../utils';
 import { RoutineTitle } from '../routine/RoutineTitle';
 import { RoutineTitleLine } from '../routine/RoutineTitleLine';
 
+import { voiceService } from '../../services/voiceService';
+
 export const HomeView: React.FC<HomeViewProps> = ({ 
   userData, 
   setUserData,
@@ -147,23 +149,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
             status: getChunkStatus(chunk)
           }))
           .sort((a, b) => {
-            const aInactive = a.status === '비활성';
-            const bInactive = b.status === '비활성';
-            const aCompleted = a.status === '완료' || a.status === '완벽' || a.status === '전체완료';
-            const bCompleted = b.status === '완료' || b.status === '완벽' || b.status === '전체완료';
+            const getSortPriority = (status: string) => {
+              const isInactive = status === '비활성';
+              const isCompleted = status === '완료' || status === '완벽' || status === '전체완료';
+              const isInProgress = status === '실행중';
 
-            const getSortPriority = (completed: boolean, inactive: boolean) => {
-                let priority = 0;
-                if (userData.autoReorderInactiveGroups && inactive) {
-                    priority = 2;
-                } else if (userData.autoReorderCompletedGroups && completed) {
-                    priority = 1;
-                }
-                return priority;
+              if (userData.autoReorderInactiveGroups && isInactive) return 2;
+              if (userData.autoReorderCompletedGroups && isCompleted) return 1;
+              if (userData.autoReorderInProgressGroups && isInProgress) return -1;
+              return 0;
             };
 
-            const pA = getSortPriority(aCompleted, aInactive);
-            const pB = getSortPriority(bCompleted, bInactive);
+            const pA = getSortPriority(a.status);
+            const pB = getSortPriority(b.status);
 
             if (pA !== pB) return pA - pB;
             return 0; // Keep original order within same priority
@@ -204,6 +202,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <section 
               key={chunk.id} 
               onClick={() => {
+                voiceService.unlock();
                 if (isInactive) return;
                 if (globalActiveTask && globalActiveTask.chunkId !== chunk.id) {
                   setConfirmModal({
