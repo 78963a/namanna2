@@ -270,26 +270,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
               {isExpanded && (
                 <div className="pb-[15px]">
-                  {chunk.tasks.map(t => ({
-                    task: t,
-                    isScheduled: isTaskScheduledToday(t, chunk, effectiveDate, userData)
-                  }))
-                  .sort((a, b) => {
-                    if (a.isScheduled && !b.isScheduled) return -1;
-                    if (!a.isScheduled && b.isScheduled) return 1;
-
-                    const getPriority = (t: Task) => {
-                      if (t.status === TaskStatus.SKIP) return 4;
-                      if (t.completed) return 3;
-                      if (t.laterTimestamp) return 2;
-                      return 1;
-                    };
-                    const pA = getPriority(a.task);
-                    const pB = getPriority(b.task);
-                    if (pA !== pB) return pA - pB;
-                    if (pA === 2 && a.task.laterTimestamp && b.task.laterTimestamp) return a.task.laterTimestamp - b.task.laterTimestamp;
-                    return 0;
-                  }).map(({ task, isScheduled }) => (
+                  {chunk.tasks.map(task => (
                     <div
                       key={task.id}
                       className="group flex items-center gap-3 py-1 px-[15px] transition-all"
@@ -299,7 +280,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         index={chunk.tasks.findIndex(t => t.id === task.id)} 
                         currentTime={currentTime}
                         chunkTasks={chunk.tasks}
-                        isScheduledToday={isScheduled}
+                        isScheduledToday={isTaskScheduledToday(task, chunk, effectiveDate, userData)}
                       />
                     </div>
                   ))}

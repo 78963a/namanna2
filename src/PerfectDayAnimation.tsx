@@ -183,14 +183,22 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
                       rotate: [0, 8, -8, 0]
                     }}
                     transition={{ duration: 3, repeat: Infinity }}
-                    className="text-6xl md:text-8xl mb-6 md:mb-8 flex justify-center"
+                    className="text-6xl md:text-8xl mb-4 md:mb-6 flex justify-center"
                   >
                     🤩
                   </motion.div>
+                  <div className="text-lg md:text-xl font-black text-indigo-500 mb-1 md:mb-2 uppercase tracking-wider whitespace-nowrap opacity-90">
+                    {new Date().toLocaleDateString('ko-KR', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric', 
+                      weekday: 'long' 
+                    })}
+                  </div>
                   <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tighter leading-tight whitespace-nowrap">
                     완벽한 하루!
                   </h1>
-                  <p className="text-sm md:text-lg lg:text-xl font-black text-indigo-600 mt-2 md:mt-3 uppercase tracking-widest whitespace-nowrap">
+                  <p className="text-sm md:text-xl lg:text-xl font-black text-indigo-700 mt-2 md:mt-3 uppercase tracking-widest whitespace-nowrap">
                     모든 루틴을 완료했습니다!
                   </p>
                   
