@@ -4743,28 +4743,30 @@ export default function App() {
   };
   
   const handleExportData = () => {
+    // Current logical date for this session
+    const currentTodayStr = todayStr;
+
     // Collect all data elements
     // 1. Base userData from state
-    // 2. Activity log from state
-    const fullData: Record<string, any> = {
-      [STORAGE_KEY]: userData,
-      'routine_activity_log': activityLog,
-      'WakeUpTimeHistory': userData.wakeUpTimeHistory || JSON.parse(localStorage.getItem('WakeUpTimeHistory') || '[]'),
-      'RoutineGroupHistory': userData.routineGroupHistory || JSON.parse(localStorage.getItem('RoutineGroupHistory') || '[]'),
-      'TaskHistory': userData.taskHistory || JSON.parse(localStorage.getItem('TaskHistory') || '[]'),
-      'routine_last_activity_sync': localStorage.getItem('routine_last_activity_sync') || Date.now().toString(),
-      'backup_version': '2.0',
-      'backup_date': new Date().toISOString()
+    const mainData = { 
+      ...userData, 
+      lastResetDate: currentTodayStr, // Ensure export has the correct date stamp
+      wakeUpTimeHistory: userData.wakeUpTimeHistory || JSON.parse(localStorage.getItem('WakeUpTimeHistory') || '[]'),
+      routineGroupHistory: userData.routineGroupHistory || JSON.parse(localStorage.getItem('RoutineGroupHistory') || '[]'),
+      taskHistory: userData.taskHistory || JSON.parse(localStorage.getItem('TaskHistory') || '[]'),
+      dailyActivityLog: activityLog
     };
 
-    // Ensure all history fields are explicitly in the main STORAGE_KEY object too
-    const mainData = { ...userData };
-    if (!mainData.wakeUpTimeHistory) mainData.wakeUpTimeHistory = fullData.WakeUpTimeHistory;
-    if (!mainData.routineGroupHistory) mainData.routineGroupHistory = fullData.RoutineGroupHistory;
-    if (!mainData.taskHistory) mainData.taskHistory = fullData.TaskHistory;
-    if (!mainData.dailyActivityLog) mainData.dailyActivityLog = fullData.routine_activity_log;
-    
-    fullData[STORAGE_KEY] = mainData;
+    const fullData: Record<string, any> = {
+      [STORAGE_KEY]: mainData,
+      'routine_activity_log': activityLog,
+      'WakeUpTimeHistory': mainData.wakeUpTimeHistory,
+      'RoutineGroupHistory': mainData.routineGroupHistory,
+      'TaskHistory': mainData.taskHistory,
+      'routine_last_activity_sync': localStorage.getItem('routine_last_activity_sync') || Date.now().toString(),
+      'backup_version': '2.1',
+      'backup_date': new Date().toISOString()
+    };
 
     // Create backup file
     const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
@@ -4797,28 +4799,29 @@ export default function App() {
         setConfirmModal({
           isOpen: true,
           title: '데이터 복구',
-          message: '선택한 백업 파일로 기존 데이터를 모두 덮어씌웁니다. 이 작업은 되돌릴 수 없으며 앱이 새로고침됩니다. 계속하시겠습니까?',
+          message: '선택한 백업 파일로 기존 데이터를 모두 덮어씌웁니다. 루틴 진행 상황과 모든 기록이 복원되며 앱이 새로고침됩니다. 계속하시겠습니까?',
           confirmLabel: '덮어쓰기',
           onConfirm: () => {
+            // Clear existing keys that might conflict
+            const keysToKeep = ['service-worker-last-updated']; // Examples
+            // Actually, we usually want to keep everything else but overwrite the routine data
+            
             // Restore each key
             Object.entries(rawData).forEach(([key, value]) => {
-              if (value !== null && typeof value === 'object') {
+              if (value === null) return;
+
+              if (typeof value === 'object') {
                 localStorage.setItem(key, JSON.stringify(value));
-              } else if (value !== null) {
-                // If it's already a string (old backup format), use it as is
-                // But try parsing it just in case it's a double-stringified JSON
-                try {
-                  const inner = JSON.parse(value.toString());
-                  if (typeof inner === 'object') {
-                     localStorage.setItem(key, value.toString());
-                  } else {
-                     localStorage.setItem(key, value.toString());
-                  }
-                } catch (e) {
-                   localStorage.setItem(key, value.toString());
-                }
+              } else {
+                localStorage.setItem(key, value.toString());
               }
             });
+            
+            // Special handling for the main storage key to ensure it's not double-stringified
+            if (typeof rawData[STORAGE_KEY] === 'object') {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(rawData[STORAGE_KEY]));
+            }
+
             window.location.reload();
           }
         });

@@ -1,13 +1,15 @@
-const CACHE_NAME = 'namanna-20260406-cache-v2';
+const CACHE_NAME = 'danharu-20260423-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './logo512.png',
+  './apple-touch-icon.png'
 ];
 
 // 서비스 워커 설치: 자산 캐싱
 self.addEventListener('install', (event) => {
-  // self.skipWaiting(); // 사용자에게 알림을 주기 위해 즉시 활성화를 주석 처리하거나 제거합니다.
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
@@ -41,11 +43,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 페치 이벤트: 네트워크 우선 전략 (Network First)
-// 특히 index.html 같은 탐색 요청에 대해 항상 최신 버전을 시도합니다.
+// 페치 이벤트
 self.addEventListener('fetch', (event) => {
-  // 탐색 요청(페이지 이동/새로고침)의 경우 네트워크 우선
-  if (event.request.mode === 'navigate') {
+  const url = new URL(event.request.url);
+
+  // 탐색 요청(페이지 이동/새로고침) 및 메니페스트/아이콘은 네트워크 우선 전략 (Network First)
+  if (event.request.mode === 'navigate' || 
+      url.pathname.endsWith('manifest.json') || 
+      url.pathname.endsWith('apple-touch-icon.png')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
