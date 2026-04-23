@@ -4743,20 +4743,31 @@ export default function App() {
   };
   
   const handleExportData = () => {
-    const keys = [
-      STORAGE_KEY,
-      'WakeUpTimeHistory',
-      'RoutineGroupHistory',
-      'TaskHistory',
-      'routine_activity_log',
-      'routine_last_activity_sync'
-    ];
-    const data: Record<string, string | null> = {};
-    keys.forEach(key => {
-      data[key] = localStorage.getItem(key);
-    });
+    // Collect all data elements
+    // 1. Base userData from state
+    // 2. Activity log from state
+    const fullData: Record<string, any> = {
+      [STORAGE_KEY]: userData,
+      'routine_activity_log': activityLog,
+      'WakeUpTimeHistory': userData.wakeUpTimeHistory || JSON.parse(localStorage.getItem('WakeUpTimeHistory') || '[]'),
+      'RoutineGroupHistory': userData.routineGroupHistory || JSON.parse(localStorage.getItem('RoutineGroupHistory') || '[]'),
+      'TaskHistory': userData.taskHistory || JSON.parse(localStorage.getItem('TaskHistory') || '[]'),
+      'routine_last_activity_sync': localStorage.getItem('routine_last_activity_sync') || Date.now().toString(),
+      'backup_version': '2.0',
+      'backup_date': new Date().toISOString()
+    };
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    // Ensure all history fields are explicitly in the main STORAGE_KEY object too
+    const mainData = { ...userData };
+    if (!mainData.wakeUpTimeHistory) mainData.wakeUpTimeHistory = fullData.WakeUpTimeHistory;
+    if (!mainData.routineGroupHistory) mainData.routineGroupHistory = fullData.RoutineGroupHistory;
+    if (!mainData.taskHistory) mainData.taskHistory = fullData.TaskHistory;
+    if (!mainData.dailyActivityLog) mainData.dailyActivityLog = fullData.routine_activity_log;
+    
+    fullData[STORAGE_KEY] = mainData;
+
+    // Create backup file
+    const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -4776,10 +4787,10 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const data = JSON.parse(event.target?.result as string);
+        const rawData = JSON.parse(event.target?.result as string);
         
-        // Basic validation: must contain at least the main storage key
-        if (!data[STORAGE_KEY]) {
+        // Basic validation
+        if (!rawData[STORAGE_KEY]) {
           throw new Error('유효한 백업 파일이 아닙니다.');
         }
 
@@ -4789,9 +4800,23 @@ export default function App() {
           message: '선택한 백업 파일로 기존 데이터를 모두 덮어씌웁니다. 이 작업은 되돌릴 수 없으며 앱이 새로고침됩니다. 계속하시겠습니까?',
           confirmLabel: '덮어쓰기',
           onConfirm: () => {
-            Object.entries(data).forEach(([key, value]) => {
-              if (value !== null) {
-                localStorage.setItem(key, value as string);
+            // Restore each key
+            Object.entries(rawData).forEach(([key, value]) => {
+              if (value !== null && typeof value === 'object') {
+                localStorage.setItem(key, JSON.stringify(value));
+              } else if (value !== null) {
+                // If it's already a string (old backup format), use it as is
+                // But try parsing it just in case it's a double-stringified JSON
+                try {
+                  const inner = JSON.parse(value.toString());
+                  if (typeof inner === 'object') {
+                     localStorage.setItem(key, value.toString());
+                  } else {
+                     localStorage.setItem(key, value.toString());
+                  }
+                } catch (e) {
+                   localStorage.setItem(key, value.toString());
+                }
               }
             });
             window.location.reload();
