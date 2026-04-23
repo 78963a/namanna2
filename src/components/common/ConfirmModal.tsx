@@ -36,12 +36,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   confirmColor = 'rose'
 }) => {
   const [inputValue, setInputValue] = React.useState('');
-  const [isFocused, setIsFocused] = React.useState(false);
 
   React.useEffect(() => {
     if (isOpen) {
       setInputValue('');
-      setIsFocused(false);
     }
   }, [isOpen]);
 
@@ -74,16 +72,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60]"
           />
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95, x: '-50%', y: '-40%' }}
-            animate={{ 
-              opacity: 1, 
-              scale: 1, 
-              x: '-50%',
-              y: isFocused ? '-85%' : '-50%' 
-            }}
-            exit={{ opacity: 0, scale: 0.95, x: '-50%', y: '-40%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed top-1/2 left-1/2 bg-white rounded-[10px] p-6 z-[70] shadow-2xl w-[90%] max-w-sm"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className={`fixed left-1/2 -translate-x-1/2 bg-white rounded-[10px] p-6 z-[70] shadow-2xl w-[90%] max-w-sm ${
+              validationValue 
+                ? 'top-[15%] translate-y-0 sm:top-1/2 sm:-translate-y-1/2' 
+                : 'top-1/2 -translate-y-1/2'
+            }`}
           >
             <div className="flex flex-col items-center text-center space-y-4">
               <div className={`w-12 h-12 ${iconBgClasses[confirmColor]} rounded-[10px] flex items-center justify-center`}>
@@ -102,8 +98,6 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                       type="text"
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
-                      onFocus={() => setIsFocused(true)}
-                      onBlur={() => setIsFocused(false)}
                       placeholder={validationPlaceholder}
                       className="w-full p-3 bg-slate-50 border border-slate-100 rounded-[10px] text-sm font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all"
                       autoFocus

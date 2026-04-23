@@ -110,31 +110,31 @@ export const CheckCheckIcon: React.FC<PixelArtProps> = ({ iconId, size = 32 }) =
 },    
 
 
- chick_hat_shell: {
-      pixels: [
-        "                   ",
-        "        hhhh       ",
-        "      hhHHHHhh     ",
-        "     hHHHHHHHHh    ",
-        "    hHHHHHHHHHHh    ",
-        "    hhhhhhhhhhhh    ",
-        "     yyEyyyyEyy    ",
-        "     yyyyyyyyyy    ",
-        "     yyyyBBByyy    ",
-        "     yyyyyyyyyy    ",
-        "      yyyyyyyy     ",
-        "     yyyyyyyyyy    ",
-        "    yyyyyyyyyyyy   ",
-        "   yyyyyyyyyyyyyy  ",
-        "    yyyyyyyyyyyy   ",
-        "      yyyyyyyy     ",
-        "     yyy    yyy    ",
-        "                   ",
-        "                   ",
-        "                   "
-      ],
-      colors: { H: '#F8FAFC', h: '#CBD5E1', y: '#FDE047', E: '#000000', B: '#F97316' }
-    },
+chick_hat_shell: {
+  pixels: [
+        "                    ",
+        "       hhhhhh       ",
+        "     hhhHHHHHhh     ",
+        "    hhHHHHHHHHhh    ",
+        "    hHHHHHHHHHHH    ",
+        "   hHHHHHHHHHHHHhh  ",
+        "    hhhhhhhhhhhhh   ",
+        "     yyEyyyyEyy     ",
+        "    yyyyyyyyyyyy    ",
+        "    yyyyBBBByyyy    ",
+        "    yyyyyyyyyyyy    ",
+        "     yyyyyyyyyy     ",
+        "      yyyyyyyy      ",
+        "     yyyyyyyyyyyy   ",
+        "    yyyyyyyyyyyyyy  ",
+        "   yyyyyyyyyyyyyyyy ",
+        "     yyyyyyyyyyyy   ",
+        "      yyyyyyyyy     ",
+        "       yyyyyyy      ",
+        "     yyyy  yyyyy    "
+  ],
+  colors: { H: '#F8FAFC', h: '#CBD5E1', y: '#FDE047', E: '#000000', B: '#F97316' }
+},
     yellow_chick: {
       pixels: [
         "                   ",
