@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { RoutineChunk } from '../../types';
+import { RoutineChunk, UserData } from '../../types';
 import { getJosa } from '../../utils';
 import phrases from '../../phrases.json';
 
@@ -12,6 +12,7 @@ interface RoutineTitleProps {
   startTime?: string | null;
   endTime?: string | null;
   isExecutionTitle?: boolean;
+  userData?: UserData;
 }
 
 export const RoutineTitle: React.FC<RoutineTitleProps> = ({ 
@@ -22,7 +23,8 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
   userName,
   startTime,
   endTime,
-  isExecutionTitle = false
+  isExecutionTitle = false,
+  userData
 }) => {
   const processedMessage = useMemo(() => {
     const context = isExecutionTitle ? (phrases.settings as any).execution_settings : phrases.settings;
@@ -57,6 +59,27 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     let baseMessage = selectedPhrase;
     if (!baseMessage && isExecutionTitle) {
       baseMessage = phrases.routine_messages.EXECUTION_TITLE;
+    }
+
+    if (!baseMessage && status === '비활성' && userData) {
+      // Differentiate between "Inactive due to schedule" and "Inactive due to user action"
+      const day = new Date().getDay();
+      const isScheduledTodayNaturally = chunk.scheduledDays.includes(day);
+      
+      const todayStr = new Date().toISOString().split('T')[0];
+      const isExplicitlyInactive = chunk.inactiveDates?.includes(todayStr);
+
+      if (!isScheduledTodayNaturally) {
+        // Condition: Today is a disabled day in schedule
+        const offDayMessages = phrases.routine_messages.INACTIVE_OFF_DAY;
+        const msgIdx = Math.abs(chunk.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % offDayMessages.length;
+        baseMessage = offDayMessages[msgIdx];
+      } else if (isExplicitlyInactive) {
+        // Condition: Scheduled today, but user chose "Take a break today"
+        const inactiveMessages = phrases.routine_messages.INACTIVE;
+        const msgIdx = Math.abs(chunk.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % inactiveMessages.length;
+        baseMessage = inactiveMessages[msgIdx];
+      }
     }
 
     if (baseMessage) {

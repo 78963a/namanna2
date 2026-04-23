@@ -254,6 +254,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           userName={userData.userName}
                           startTime={entry?.firstTaskStartTime}
                           endTime={entry?.completedAt}
+                          userData={userData}
                         />
                       );
                     })()}
