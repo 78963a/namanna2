@@ -84,9 +84,10 @@
       "오늘은 {{title}}을 하지 않는 날"
     ],
     "NOT_STARTED": [
-      "{{triggerTask}}만해내면 {{title}} 끝내는 건 금방이고 그럼 나도 {{purpose}}",
-      "{{triggerTask}}부터 시작하는 {{purpose}}되기",
-      "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}} {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다"
+      "{{start_info}} {{triggerTask}}만해내면 {{title}} 끝내는 건 금방이고 그럼 나도 {{purpose}}",
+      "{{title}}을/를 {{totalTargetDuration}}동안 수행함으로서 {{purpose}} 되기",
+      "{{start_info}} {{triggerTask}}부터 시작하는 {{purpose}}되기",
+      "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}}, {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다"
     ],
     "IN_PROGRESS": [
       "{{purpose}}이/가 되기 위해 {{title}}을/를 실천하는 중"

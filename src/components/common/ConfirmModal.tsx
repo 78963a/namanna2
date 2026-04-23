@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertCircle } from 'lucide-react';
+import { getJosa } from '../../utils';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -92,7 +93,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 {validationValue && (
                   <div className="mt-4 space-y-2">
                     <p className="text-sm font-bold text-rose-500 text-left">
-                      삭제하려면 "{validationValue}"을(를) 정확히 입력해주세요.
+                      삭제하려면 "{validationValue}"{getJosa(validationValue, '을/를')} 정확히 입력해주세요.
                     </p>
                     <input
                       type="text"

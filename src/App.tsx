@@ -684,7 +684,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
                   // Resolve particles but keep the placeholder for RoutineTitle to style
                   const resolveParticles = (msg: string, tag: string, value: string) => {
-                    const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는)`, 'g');
+                    const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이|가|을|를|은|는|으로|로)`, 'g');
                     return msg.replace(regex, (_, p1) => {
                       return `{{${tag}}}` + getJosa(value, p1 as any);
                     });
@@ -4595,7 +4595,7 @@ export default function App() {
     setConfirmModal({
       isOpen: true,
       title: '사용자 이름 변경',
-      message: `사용자 이름을 '${finalName}'으로 변경하시겠습니까?`,
+      message: `사용자 이름을 '${finalName}'${getJosa(finalName, '으로/로')} 변경하시겠습니까?`,
       onConfirm: () => {
         setUserData(prev => ({ ...prev, userName: finalName }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -4607,7 +4607,7 @@ export default function App() {
     setConfirmModal({
       isOpen: true,
       title: '기상 시각 변경',
-      message: `기상 목표 시각을 ${time}으로 변경하시겠습니까?`,
+      message: `기상 목표 시각을 ${time}${getJosa(time, '으로/로')} 변경하시겠습니까?`,
       onConfirm: () => {
           setUserData(prev => {
             const hasCheckedInToday = prev.lastCheckInDate === todayStr;
@@ -4636,7 +4636,7 @@ export default function App() {
     setConfirmModal({
       isOpen: true,
       title: '리셋 시각 변경',
-      message: `하루 리셋 시각을 ${time}으로 변경하시겠습니까?`,
+      message: `하루 리셋 시각을 ${time}${getJosa(time, '으로/로')} 변경하시겠습니까?`,
       onConfirm: () => {
         const h = parseInt(time.split(':')[0]);
         setUserData(prev => ({ ...prev, resetTime: time, dailyResetHour: h }));

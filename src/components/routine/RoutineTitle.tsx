@@ -37,13 +37,13 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
 
     const replaceWithJosa = (msg: string, tag: 'title' | 'purpose' | 'userName' | 'triggerTask', value: string, html: string) => {
       // 1. Handle standard particles attached to placeholders
-      const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|이/가)`, 'g');
+      const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이|가|을|를|은|는|으로|로)`, 'g');
       let result = msg.replace(regex, (_, p1) => {
         return html + getJosa(value, p1 as any);
       });
 
       // 2. Handle specific particle tags following the placeholder
-      const particleRegex = new RegExp(`\\{\\{${tag}\\}\\}\\{\\{particle:(이/가|을/를|은/는|이/가)\\}\\}(\\s|$)`, 'g');
+      const particleRegex = new RegExp(`\\{\\{${tag}\\}\\}\\{\\{particle:(이/가|을/를|은/는|으로/로|이|가|을|를|은|는|으로|로)\\}\\}(\\s|$)`, 'g');
       result = result.replace(particleRegex, (_, p1, trailing) => {
         return html + getJosa(value, p1 as any) + trailing;
       });

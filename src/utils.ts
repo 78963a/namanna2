@@ -195,16 +195,53 @@ export const formatDurationPrecise = (seconds: number): string => {
  * Returns the appropriate Korean postposition based on the final consonant of the input text.
  * 
  * @param {string} text - The input text to check
- * @param {string} type - The type of particle ('이/가', '을/를', '은/는')
+ * @param {string} type - The type of particle ('이/가', '을/를', '은/는', '으로/로', etc.)
  * @returns {string} The correct particle
  */
-export const getJosa = (text: string, type: '이/가' | '을/를' | '은/는'): string => {
-  if (!text) return type.split('/')[1];
-  const lastChar = text.charCodeAt(text.length - 1);
-  if (lastChar < 0xAC00 || lastChar > 0xD7A3) return type.split('/')[1]; // Not a Korean character
-  const hasBatchim = (lastChar - 0xAC00) % 28 > 0;
+export const getJosa = (text: string, type: '이/가' | '을/를' | '은/는' | '으로/로' | '이' | '가' | '을' | '를' | '은' | '는' | '으로' | '로'): string => {
+  if (!text) return type.split('/')[1] || type;
   
-  const [withBatchim, withoutBatchim] = type.split('/');
+  // Mapping for single particle inputs
+  const map: Record<string, string> = {
+    '이': '이/가', '가': '이/가',
+    '을': '을/를', '를': '을/를',
+    '은': '은/는', '는': '은/는',
+    '으로': '으로/로', '로': '으로/로'
+  };
+  
+  const targetType = map[type] || type;
+  const lastChar = text.charCodeAt(text.length - 1);
+  
+  // Handle numbers ending
+  const isNumber = /[0-9]$/.test(text);
+  let hasBatchim = false;
+  
+  if (isNumber) {
+    const lastDigit = text[text.length - 1];
+    // Numbers ending in 2, 4, 5, 9 (and English names for 1, 3, 6, 7, 8, 0 if treated as digits)
+    // In Korean: 0(영), 1(일), 2(이), 3(삼), 4(사), 5(오), 6(육), 7(칠), 8(팔), 9(구)
+    // Batchim: 0(ㅇ), 1(ㄹ), 3(ㅁ), 6(ㄱ), 7(ㄹ), 8(ㄹ)
+    hasBatchim = ['0', '1', '3', '6', '7', '8'].includes(lastDigit);
+  } else if (lastChar >= 0xAC00 && lastChar <= 0xD7A3) {
+    hasBatchim = (lastChar - 0xAC00) % 28 > 0;
+  } else {
+    // Fallback for non-Korean/non-number characters
+    return targetType.split('/')[1] || targetType;
+  }
+  
+  const [withBatchim, withoutBatchim] = targetType.split('/');
+  
+  // Special case for '으로/로': 'ㄹ' batchim follows the 'withoutBatchim' rule
+  if (targetType === '으로/로') {
+    if (isNumber) {
+      // 1(일), 7(칠), 8(팔) end in 'ㄹ'
+      const isL = ['1', '7', '8'].includes(text[text.length - 1]);
+      return isL ? withoutBatchim : (hasBatchim ? withBatchim : withoutBatchim);
+    }
+    const jong = (lastChar - 0xAC00) % 28;
+    if (jong === 8) return withoutBatchim; // 'ㄹ'
+  }
+  
   return hasBatchim ? withBatchim : withoutBatchim;
 };
 
