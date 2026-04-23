@@ -4743,33 +4743,20 @@ export default function App() {
   };
   
   const handleExportData = () => {
-    // Current logical date for this session
-    const currentTodayStr = todayStr;
+    const keys = [
+      STORAGE_KEY,
+      'WakeUpTimeHistory',
+      'RoutineGroupHistory',
+      'TaskHistory',
+      'routine_activity_log',
+      'routine_last_activity_sync'
+    ];
+    const data: Record<string, string | null> = {};
+    keys.forEach(key => {
+      data[key] = localStorage.getItem(key);
+    });
 
-    // Collect all data elements
-    // 1. Base userData from state
-    const mainData = { 
-      ...userData, 
-      lastResetDate: currentTodayStr, // Ensure export has the correct date stamp
-      wakeUpTimeHistory: userData.wakeUpTimeHistory || JSON.parse(localStorage.getItem('WakeUpTimeHistory') || '[]'),
-      routineGroupHistory: userData.routineGroupHistory || JSON.parse(localStorage.getItem('RoutineGroupHistory') || '[]'),
-      taskHistory: userData.taskHistory || JSON.parse(localStorage.getItem('TaskHistory') || '[]'),
-      dailyActivityLog: activityLog
-    };
-
-    const fullData: Record<string, any> = {
-      [STORAGE_KEY]: mainData,
-      'routine_activity_log': activityLog,
-      'WakeUpTimeHistory': mainData.wakeUpTimeHistory,
-      'RoutineGroupHistory': mainData.routineGroupHistory,
-      'TaskHistory': mainData.taskHistory,
-      'routine_last_activity_sync': localStorage.getItem('routine_last_activity_sync') || Date.now().toString(),
-      'backup_version': '2.1',
-      'backup_date': new Date().toISOString()
-    };
-
-    // Create backup file
-    const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -4789,39 +4776,24 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const rawData = JSON.parse(event.target?.result as string);
+        const data = JSON.parse(event.target?.result as string);
         
-        // Basic validation
-        if (!rawData[STORAGE_KEY]) {
+        // Basic validation: must contain at least the main storage key
+        if (!data[STORAGE_KEY]) {
           throw new Error('유효한 백업 파일이 아닙니다.');
         }
 
         setConfirmModal({
           isOpen: true,
           title: '데이터 복구',
-          message: '선택한 백업 파일로 기존 데이터를 모두 덮어씌웁니다. 루틴 진행 상황과 모든 기록이 복원되며 앱이 새로고침됩니다. 계속하시겠습니까?',
+          message: '선택한 백업 파일로 기존 데이터를 모두 덮어씌웁니다. 이 작업은 되돌릴 수 없으며 앱이 새로고침됩니다. 계속하시겠습니까?',
           confirmLabel: '덮어쓰기',
           onConfirm: () => {
-            // Clear existing keys that might conflict
-            const keysToKeep = ['service-worker-last-updated']; // Examples
-            // Actually, we usually want to keep everything else but overwrite the routine data
-            
-            // Restore each key
-            Object.entries(rawData).forEach(([key, value]) => {
-              if (value === null) return;
-
-              if (typeof value === 'object') {
-                localStorage.setItem(key, JSON.stringify(value));
-              } else {
-                localStorage.setItem(key, value.toString());
+            Object.entries(data).forEach(([key, value]) => {
+              if (value !== null) {
+                localStorage.setItem(key, value as string);
               }
             });
-            
-            // Special handling for the main storage key to ensure it's not double-stringified
-            if (typeof rawData[STORAGE_KEY] === 'object') {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(rawData[STORAGE_KEY]));
-            }
-
             window.location.reload();
           }
         });
