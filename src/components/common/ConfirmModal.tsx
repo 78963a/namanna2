@@ -69,13 +69,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onCancel}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60]"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200]"
           />
           <motion.div 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className={`fixed left-1/2 -translate-x-1/2 bg-white rounded-[10px] p-6 z-[70] shadow-2xl w-[90%] max-w-sm ${
+            className={`fixed left-1/2 -translate-x-1/2 bg-white rounded-[10px] p-6 z-[210] shadow-2xl w-[90%] max-w-sm ${
               validationValue 
                 ? 'top-[15%] translate-y-0 sm:top-1/2 sm:-translate-y-1/2' 
                 : 'top-1/2 -translate-y-1/2'

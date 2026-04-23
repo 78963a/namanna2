@@ -2219,14 +2219,20 @@ const RoutineGroupFormView: React.FC<{
     title: string;
     message: string;
     onConfirm: () => void;
+    onCancel?: () => void;
     confirmLabel?: string;
     cancelLabel?: string;
+    showCancel?: boolean;
+    validationValue?: string;
+    validationPlaceholder?: string;
+    confirmColor?: 'rose' | 'indigo';
   }>({
     isOpen: false,
     title: '',
     message: '',
     confirmLabel: '확인',
     cancelLabel: '취소',
+    showCancel: true,
     onConfirm: () => {}
   });
   
@@ -2312,6 +2318,7 @@ const RoutineGroupFormView: React.FC<{
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
   const [activeChecklistTarget, setActiveChecklistTarget] = useState<'trigger' | 'current' | null>(null);
   const [routineAddedMessage, setRoutineAddedMessage] = useState<string | null>(null);
+  const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (routineAddedMessage) {
@@ -2319,6 +2326,13 @@ const RoutineGroupFormView: React.FC<{
       return () => clearTimeout(timer);
     }
   }, [routineAddedMessage]);
+
+  useEffect(() => {
+    if (deletionMessage) {
+      const timer = setTimeout(() => setDeletionMessage(null), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [deletionMessage]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -2372,13 +2386,15 @@ const RoutineGroupFormView: React.FC<{
         setConfirmModal({
           isOpen: true,
           title: '루틴 삭제',
-          message: '이 루틴을 삭제하시겠습니까?',
+          message: `'${routine.text}' 루틴을 삭제하시겠습니까?`,
           confirmLabel: '삭제',
+          confirmColor: 'rose',
           onConfirm: () => {
-            setRoutineList(routineList.filter((_, i) => i !== idx));
+            setRoutineList(prev => prev.filter((_, i) => i !== idx));
             setEditingRoutineIndex(null);
             setIsEditModalOpen(false);
             setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            setDeletionMessage('루틴이 삭제되었습니다');
           }
         });
       }
@@ -2495,20 +2511,26 @@ const RoutineGroupFormView: React.FC<{
 
   return (
     <div className="space-y-5 pb-20">
-      {/* 루틴 추가 알림 팝업 */}
+      {/* 루틴 추가/삭제 알림 팝업 */}
       <AnimatePresence>
-        {routineAddedMessage && (
+        {(routineAddedMessage || deletionMessage) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 10 }}
             className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[300] pointer-events-none"
           >
-            <div className="bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-[20px] shadow-2xl flex flex-col items-center gap-2 border border-white/10 min-w-[200px]">
-              <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center mb-1">
-                <Check className="w-6 h-6 text-emerald-400" />
+            <div className={`bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-[20px] shadow-2xl flex flex-col items-center gap-2 border border-white/10 min-w-[200px] ${deletionMessage ? 'border-rose-500/30' : 'border-emerald-500/30'}`}>
+              <div className={`w-10 h-10 ${deletionMessage ? 'bg-rose-500/20' : 'bg-emerald-500/20'} rounded-full flex items-center justify-center mb-1`}>
+                {deletionMessage ? (
+                  <Trash2 className="w-6 h-6 text-rose-400" />
+                ) : (
+                  <Check className="w-6 h-6 text-emerald-400" />
+                )}
               </div>
-              <span className="text-sm font-black tracking-tight text-center">{routineAddedMessage}</span>
+              <span className="text-sm font-black tracking-tight text-center">
+                {deletionMessage || routineAddedMessage}
+              </span>
             </div>
           </motion.div>
         )}
@@ -2738,34 +2760,38 @@ const RoutineGroupFormView: React.FC<{
                     collisionDetection={closestCenter}
                     onDragEnd={handleRoutineDragEnd}
                   >
-                    <SortableContext 
-                      items={routineList.map(rt => rt.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="space-y-2">
-                        {routineList.map((rt, idx) => (
-                          <SortableRoutineItem 
-                            key={rt.id} 
-                            rt={rt} 
-                            idx={idx} 
-                            onEdit={() => startEditing(idx)}
-                            onDelete={() => {
-                              setConfirmModal({
-                                isOpen: true,
-                                title: '루틴 삭제',
-                                message: '이 루틴을 삭제하시겠습니까?',
-                                confirmLabel: '삭제',
-                                onConfirm: () => {
-                                  setRoutineList(routineList.filter((_, i) => i !== idx));
-                                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                                }
-                              });
-                            }}
-                            groupScheduledDays={scheduledDays}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
+              <div className="space-y-4">
+                <SortableContext 
+                  items={routineList.map(rt => rt.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {routineList.map((rt, idx) => (
+                      <SortableRoutineItem 
+                        key={rt.id} 
+                        rt={rt} 
+                        idx={idx} 
+                        onEdit={() => startEditing(idx)}
+                        onDelete={() => {
+                          setConfirmModal({
+                            isOpen: true,
+                            title: '루틴 삭제',
+                            message: `'${rt.text}' 루틴을 삭제하시겠습니까?`,
+                            confirmLabel: '삭제',
+                            confirmColor: 'rose',
+                            onConfirm: () => {
+                              setRoutineList(prev => prev.filter(item => item.id !== rt.id));
+                              setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                              setDeletionMessage('루틴이 삭제되었습니다');
+                            }
+                          });
+                        }}
+                        groupScheduledDays={scheduledDays}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </div>
                   </DndContext>
                 </div>
               )}
@@ -2807,6 +2833,7 @@ const RoutineGroupFormView: React.FC<{
                 if (setIsSettingsOpen) setIsSettingsOpen(false);
                 if (setSettingsSubView) setSettingsSubView({ type: 'main' });
               } else {
+                onDirtyChange?.(false);
                 setActiveTab('home');
               }
             }}
@@ -2822,6 +2849,27 @@ const RoutineGroupFormView: React.FC<{
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal for routine deletion */}
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => {
+          if (confirmModal.onCancel) {
+            confirmModal.onCancel();
+          } else {
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          }
+        }}
+        confirmLabel={confirmModal.confirmLabel}
+        cancelLabel={confirmModal.cancelLabel}
+        showCancel={confirmModal.showCancel}
+        validationValue={confirmModal.validationValue}
+        validationPlaceholder={confirmModal.validationPlaceholder}
+        confirmColor={confirmModal.confirmColor}
+      />
     </div>
   );
 };
@@ -3055,10 +3103,10 @@ export default function App() {
     if (activeTab === 'add' && targetTab !== 'add' && isAddRoutineDirty) {
       setConfirmModal({
         isOpen: true,
-        title: '알림',
-        message: '입력 내용이 저장되지 않았습니다. 루틴 그룹 만들기를 취소하고 다른 화면으로 이동하시겠습니까?',
-        confirmLabel: '루틴 그룹 만들기를\n취소하고 나가기',
-        cancelLabel: '루틴 그룹 만들기로\n 돌아가기',
+        title: '입력 취소 확인',
+        message: '작성 중인 내용이 있습니다. 저장하지 않고 나가시겠습니까?',
+        confirmLabel: '저장하지 않고 나가기',
+        cancelLabel: '계속 작성하기',
         confirmColor: 'indigo',
         showCancel: true,
         onConfirm: () => {
@@ -4308,6 +4356,8 @@ export default function App() {
       isOpen: true,
       title: '그룹 삭제',
       message: '이 그룹과 포함된 모든 루틴이 삭제됩니다. 계속하시겠습니까?',
+      confirmLabel: '삭제',
+      confirmColor: 'rose',
       onConfirm: () => {
         setUserData(prev => ({
           ...prev,
@@ -4610,6 +4660,7 @@ export default function App() {
       title: '루틴 전체 삭제',
       message: '지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다. 계속하시겠습니까?',
       confirmLabel: '전체 삭제',
+      confirmColor: 'rose',
       validationValue: userData.userName || '나',
       onConfirm: () => {
         setUserData(prev => ({
