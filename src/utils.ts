@@ -198,7 +198,7 @@ export const formatDurationPrecise = (seconds: number): string => {
  * @param {string} type - The type of particle ('이/가', '을/를', '은/는', '으로/로', etc.)
  * @returns {string} The correct particle
  */
-export const getJosa = (text: string, type: '이/가' | '을/를' | '은/는' | '으로/로' | '이' | '가' | '을' | '를' | '은' | '는' | '으로' | '로'): string => {
+export const getJosa = (text: string, type: '이/가' | '을/를' | '은/는' | '으로/로' | '이죠/죠' | '이' | '가' | '을' | '를' | '은' | '는' | '으로' | '로' | '이죠' | '죠'): string => {
   if (!text) return type.split('/')[1] || type;
   
   // Mapping for single particle inputs
@@ -206,7 +206,8 @@ export const getJosa = (text: string, type: '이/가' | '을/를' | '은/는' | 
     '이': '이/가', '가': '이/가',
     '을': '을/를', '를': '을/를',
     '은': '은/는', '는': '은/는',
-    '으로': '으로/로', '로': '으로/로'
+    '으로': '으로/로', '로': '으로/로',
+    '이죠': '이죠/죠', '죠': '이죠/죠'
   };
   
   const targetType = map[type] || type;

@@ -185,27 +185,30 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const avgRate30 = getAvgRateForPeriod(last30Days);
 
     const groupStats = userData.routineChunks.map(group => {
-      const groupHistory = (userData.routineGroupHistory || []).filter(h => h.groupId === group.id && last7Days.includes(h.date));
+      const groupHistory7 = (userData.routineGroupHistory || []).filter(h => h.groupId === group.id && last7Days.includes(h.date));
+      const groupHistory30 = (userData.routineGroupHistory || []).filter(h => h.groupId === group.id && last30Days.includes(h.date));
       
-      const startTimes = groupHistory.filter(h => h.firstTaskStartTime).map(h => timeToMinutes(h.firstTaskStartTime!));
+      const startTimes = groupHistory7.filter(h => h.firstTaskStartTime).map(h => timeToMinutes(h.firstTaskStartTime!));
       const avgStartMinutes = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
       
-      const endTimes = groupHistory.filter(h => h.completedAt).map(h => timeToMinutes(h.completedAt!));
+      const endTimes = groupHistory7.filter(h => h.completedAt).map(h => timeToMinutes(h.completedAt!));
       const avgEndMinutes = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
 
-      const durations = groupHistory.map(h => h.totalDuration);
-      const avgDurationSeconds = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+      const durations7 = groupHistory7.map(h => h.totalDuration);
+      const avgDurationSeconds7 = durations7.length > 0 ? durations7.reduce((a, b) => a + b, 0) / durations7.length : 0;
+      const totalDurationSeconds7 = durations7.reduce((a, b) => a + b, 0);
 
-      const completionCount = groupHistory.filter(h => h.completionStatus === '전체완료').length;
-      const rate = groupHistory.length > 0 ? (completionCount / groupHistory.length) * 100 : null;
+      const completionCount7 = groupHistory7.filter(h => h.completionStatus === '전체완료').length;
+      const rate7 = groupHistory7.length > 0 ? (completionCount7 / groupHistory7.length) * 100 : null;
 
       return {
         id: group.id,
         name: group.name,
         avgStartTime: avgStartMinutes !== null ? minutesToTime(avgStartMinutes) : 'N/A',
         avgEndTime: avgEndMinutes !== null ? minutesToTime(avgEndMinutes) : 'N/A',
-        avgDuration: formatDurationPrecise(avgDurationSeconds),
-        rate: rate !== null ? Math.floor(rate).toString() : '-'
+        avgDuration7: formatDurationPrecise(avgDurationSeconds7),
+        totalDuration7: formatDurationPrecise(totalDurationSeconds7),
+        rate: rate7 !== null ? Math.floor(rate7).toString() : '-'
       };
     });
 
@@ -279,11 +282,13 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const avgStart = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
       const avgEnd = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
       const avgDur = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+      const totalDur = durations.reduce((a, b) => a + b, 0);
 
       return {
         avgStart: avgStart !== null ? minutesToTime(avgStart) : '--:--',
         avgEnd: avgEnd !== null ? minutesToTime(avgEnd) : '--:--',
-        avgDuration: formatDurationPrecise(avgDur)
+        avgDuration: formatDurationPrecise(avgDur),
+        totalDuration: formatDurationPrecise(totalDur)
       };
     };
 
@@ -296,9 +301,11 @@ export const StatsView: React.FC<StatsViewProps> = ({
       avgStart7: overall7.avgStart,
       avgEnd7: overall7.avgEnd,
       avgDuration7: overall7.avgDuration,
+      totalDuration7: overall7.totalDuration,
       avgStart30: overall30.avgStart,
       avgEnd30: overall30.avgEnd,
       avgDuration30: overall30.avgDuration,
+      totalDuration30: overall30.totalDuration,
       groups: groupStats,
       dailyHistory7,
       dailyHistory40
@@ -375,12 +382,14 @@ export const StatsView: React.FC<StatsViewProps> = ({
         const durations = durationEntries.map(e => e.duration);
         
         const avg = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+        const total = durations.reduce((a, b) => a + b, 0);
         const min = durations.length > 0 ? Math.min(...durations) : 0;
         const max = durations.length > 0 ? Math.max(...durations) : 0;
 
         return {
           rate: Math.floor(rate) + '%',
           avg: formatDurationPrecise(avg),
+          total: formatDurationPrecise(total),
           min: formatDurationPrecise(min),
           max: formatDurationPrecise(max)
         };
@@ -405,11 +414,13 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const avgStart = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
       const avgEnd = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
       const avgDur = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+      const totalDur = durations.reduce((a, b) => a + b, 0);
 
       return {
         avgStart: avgStart !== null ? minutesToTime(avgStart) : '--:--',
         avgEnd: avgEnd !== null ? minutesToTime(avgEnd) : '--:--',
-        avgDuration: formatDurationPrecise(avgDur)
+        avgDuration: formatDurationPrecise(avgDur),
+        totalDuration: formatDurationPrecise(totalDur)
       };
     };
 
@@ -428,9 +439,11 @@ export const StatsView: React.FC<StatsViewProps> = ({
       avgStart7: metrics7.avgStart,
       avgEnd7: metrics7.avgEnd,
       avgDuration7: metrics7.avgDuration,
+      totalDuration7: metrics7.totalDuration,
       avgStart30: metrics30.avgStart,
       avgEnd30: metrics30.avgEnd,
-      avgDuration30: metrics30.avgDuration
+      avgDuration30: metrics30.avgDuration,
+      totalDuration30: metrics30.totalDuration
     };
   }, [selectedGroupId, userData, last7Days, last30Days, last40Days]);
 
@@ -492,11 +505,13 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const avgStart = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
       const avgEnd = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
       const avgDur = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+      const totalDur = durations.reduce((a, b) => a + b, 0);
 
       return {
         avgStart: avgStart !== null ? minutesToTime(avgStart) : '--:--',
         avgEnd: avgEnd !== null ? minutesToTime(avgEnd) : '--:--',
-        avgDuration: formatDurationPrecise(avgDur)
+        avgDuration: formatDurationPrecise(avgDur),
+        totalDuration: formatDurationPrecise(totalDur)
       };
     };
 
@@ -514,9 +529,11 @@ export const StatsView: React.FC<StatsViewProps> = ({
       avgStart7: metrics7.avgStart,
       avgEnd7: metrics7.avgEnd,
       avgDuration7: metrics7.avgDuration,
+      totalDuration7: metrics7.totalDuration,
       avgStart30: metrics30.avgStart,
       avgEnd30: metrics30.avgEnd,
-      avgDuration30: metrics30.avgDuration
+      avgDuration30: metrics30.avgDuration,
+      totalDuration30: metrics30.totalDuration
     };
   }, [selectedTaskId, userData, last7Days, last30Days, last40Days]);
 
@@ -631,6 +648,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                 <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                   <div>{taskDetailData.avgStart7} ~ {taskDetailData.avgEnd7}</div>
                   <div className="text-slate-400">(평균 {taskDetailData.avgDuration7})</div>
+                  <div className="text-slate-400">(누적 {taskDetailData.totalDuration7})</div>
                 </div>
               </div>
               <div className="text-center space-y-1 border-l border-slate-100">
@@ -640,6 +658,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                 <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                   <div>{taskDetailData.avgStart30} ~ {taskDetailData.avgEnd30}</div>
                   <div className="text-slate-400">(평균 {taskDetailData.avgDuration30})</div>
+                  <div className="text-slate-400">(누적 {taskDetailData.totalDuration30})</div>
                 </div>
               </div>
             </div>
@@ -758,6 +777,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                 <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                   <div>{detailData.avgStart7} ~ {detailData.avgEnd7}</div>
                   <div className="text-slate-400">(평균 {detailData.avgDuration7})</div>
+                  <div className="text-slate-400">(누적 {detailData.totalDuration7})</div>
                 </div>
               </div>
               <div className="text-center space-y-1 border-l border-slate-100">
@@ -767,6 +787,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                 <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                   <div>{detailData.avgStart30} ~ {detailData.avgEnd30}</div>
                   <div className="text-slate-400">(평균 {detailData.avgDuration30})</div>
+                  <div className="text-slate-400">(누적 {detailData.totalDuration30})</div>
                 </div>
               </div>
             </div>
@@ -850,6 +871,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                       <div className="text-slate-600 font-bold whitespace-nowrap">
                         평균: {task.last7.avg} (최단: {task.last7.min} / 최장: {task.last7.max})
                       </div>
+                      <div className="text-slate-400 font-bold whitespace-nowrap">누적: {task.last7.total}</div>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] bg-slate-50 p-2 rounded-[10px]">
                       <div className="font-black text-slate-400 whitespace-nowrap">30일</div>
@@ -857,6 +879,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                       <div className="text-slate-600 font-bold whitespace-nowrap">
                         평균: {task.last30.avg} (최단: {task.last30.min} / 최장: {task.last30.max})
                       </div>
+                      <div className="text-slate-400 font-bold whitespace-nowrap">누적: {task.last30.total}</div>
                     </div>
                   </div>
                 </button>
@@ -1012,6 +1035,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                       <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                         <div>{achievementStats.avgStart7} ~ {achievementStats.avgEnd7}</div>
                         <div className="text-slate-400">(평균 {achievementStats.avgDuration7})</div>
+                        <div className="text-slate-400">(누적 {achievementStats.totalDuration7})</div>
                       </div>
                     </div>
                     <div className="text-center space-y-1 border-l border-slate-100">
@@ -1021,6 +1045,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                       <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                         <div>{achievementStats.avgStart30} ~ {achievementStats.avgEnd30}</div>
                         <div className="text-slate-400">(평균 {achievementStats.avgDuration30})</div>
+                        <div className="text-slate-400">(누적 {achievementStats.totalDuration30})</div>
                       </div>
                     </div>
                   </div>
@@ -1131,7 +1156,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             </div>
                             <div className="space-y-0.5">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 소요 시간</p>
-                              <p className="text-xs font-black text-slate-700">{group.avgDuration}</p>
+                              <p className="text-xs font-black text-slate-700">{group.avgDuration7}</p>
+                              <p className="text-[9px] font-bold text-slate-400">누적: {group.totalDuration7}</p>
                             </div>
                             <div className="space-y-0.5">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">달성률</p>

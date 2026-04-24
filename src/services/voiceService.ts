@@ -133,8 +133,8 @@ class VoiceService {
           
           let msg = rule.message;
           // Apply title and particle rules
-          const josaRegex = /\{\{title\}\}(이\/가|을\/를|은\/는|으로\/로|이|가|을|를|은|는|으로|로)/g;
-          const particleTagRegex = /\{\{title\}\}\{\{particle:(이\/가|을\/를|은\/는|으로\/로|이|가|을|를|은|는|으로|로)\}\}/g;
+          const josaRegex = /\{\{title\}\}(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이|가|을|를|은|는|으로|로|이죠|죠)/g;
+          const particleTagRegex = /\{\{title\}\}\{\{particle:(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이|가|을|를|은|는|으로|로|이죠|죠)\}\}/g;
           
           msg = msg.replace(josaRegex, (_: string, p1: string) => {
             return title + getJosa(title, p1 as any);

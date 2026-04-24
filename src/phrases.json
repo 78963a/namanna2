@@ -70,11 +70,13 @@
 
 
     "COMPLETION_SELECTION_TEMPLATES": [
-      "나는 {{title}}을 완료한 {{purpose}}이다. {{startTime}}{{endTime}}{{duration}}",
+      "나는 {{startTime}}부터 {{endTime}}에 걸쳐, {{duration}}간 {{title}}을 완료한 {{purpose}}이다. ",
       "내가 {{title}} 해냄",
       "{{title}}을 완료하다니, 정말 훌륭해!",
+      "네가 바로 {{title}}을 완료한 {{userName}}이구나!",
       "오늘도 나는 {{title}}을/를 모두 완수한 {{purpose}}!!!",
       "{{userName}}님이 {{purpose}} 타이틀을 획득하셨습니다",
+      "내 이름은 {{userName}}, {{purpose}}이죠/죠.",
       "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
     ],
     "INACTIVE": [
@@ -84,9 +86,10 @@
       "오늘은 {{title}}을 하지 않는 날"
     ],
     "NOT_STARTED": [
-      "{{start_info}} {{triggerTask}}만해내면 {{title}} 끝내는 건 금방이고 그럼 나도 {{purpose}}",
+      "{{start_info}} {{triggerTask}}만 해내면 {{title}} 끝내는 건 금방이고 그럼 내가 바로 {{purpose}}",
       "{{title}}을/를 {{totalTargetDuration}}동안 수행함으로서 {{purpose}} 되기",
-      "{{start_info}} {{triggerTask}}부터 시작하는 {{purpose}}되기",
+      "{{start_info}}, {{triggerTask}}부터 시작하는 {{purpose}}되기",
+      "{{userName}}! 너의 오늘 목표는 {{title}}을 완료하는거야. 일단 {{triggerTask}}부터 시작해볼까?",
       "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}}, {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다"
     ],
     "IN_PROGRESS": [

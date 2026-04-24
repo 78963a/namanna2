@@ -40,7 +40,8 @@ import {
   Volume2,
   VolumeX,
   Download,
-  Upload
+  Upload,
+  Save
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -684,7 +685,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
                   // Resolve particles but keep the placeholder for RoutineTitle to style
                   const resolveParticles = (msg: string, tag: string, value: string) => {
-                    const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이|가|을|를|은|는|으로|로)`, 'g');
+                    const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|이|가|을|를|은|는|으로|로|이죠|죠)`, 'g');
                     return msg.replace(regex, (_, p1) => {
                       return `{{${tag}}}` + getJosa(value, p1 as any);
                     });
@@ -3035,6 +3036,7 @@ export default function App() {
   const [showPerfectDay, setShowPerfectDay] = useState(false);
   const [perfectDayGroups, setPerfectDayGroups] = useState<{ name: string, status: string }[]>([]);
   const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (deletionMessage) {
@@ -3044,6 +3046,15 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [deletionMessage]);
+
+  useEffect(() => {
+    if (backupMessage) {
+      const timer = setTimeout(() => {
+        setBackupMessage(null);
+      }, 5000); // 5 seconds for backup message
+      return () => clearTimeout(timer);
+    }
+  }, [backupMessage]);
 
   // Initialize/Sync chunk time inputs when settings open or routineChunks change
   useEffect(() => {
@@ -4747,6 +4758,9 @@ export default function App() {
     const resetHour = userData.dailyResetHour || 0;
     const currentTodayStr = getEffectiveDate(now, resetHour);
 
+    // 0. Show guidance message immediately for iOS/PWA users
+    setBackupMessage('파일을 생성하였습니다. 저장을 완료해주세요.');
+    
     // 1. Snapshot the current state to ensure all in-memory changes are captured
     let snapshot: UserData = JSON.parse(JSON.stringify(userData));
 
@@ -4793,15 +4807,20 @@ export default function App() {
     // 6. iPhone/PWA optimization: Use Web Share API if available
     const file = new File([blob], fileName, { type: 'application/json' });
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      // Small wait to ensure backupMessage is rendered before blocking share sheet
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
       try {
         await navigator.share({
           files: [file],
           title: '단하루 데이터 백업',
           text: '루틴 설정과 기록이 포함된 백업 파일입니다.'
         });
-        setDeletionMessage('백업 파일이 생성되었습니다. 공유 창에서 저장을 완료해주세요.');
+        setBackupMessage(null);
+        setDeletionMessage('백업이 완료되었습니다.');
         return;
       } catch (error) {
+        setBackupMessage(null);
         if ((error as Error).name === 'AbortError') return;
       }
     }
@@ -4816,6 +4835,7 @@ export default function App() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
+    setBackupMessage(null);
     setDeletionMessage('데이터가 파일로 저장되었습니다');
   };
 
@@ -5776,6 +5796,23 @@ export default function App() {
 
       {/* Deletion Message Toast */}
       <AnimatePresence>
+        {backupMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-20 left-4 right-4 flex justify-center z-[10000] pointer-events-none"
+          >
+            <div className="bg-indigo-600 text-white px-6 py-4 rounded-[20px] shadow-2xl flex flex-col items-center gap-1 border border-white/20 text-center backdrop-blur-md">
+              <div className="flex items-center gap-2">
+                <Save className="w-5 h-5 text-white animate-pulse" />
+                <span className="text-sm font-black tracking-tight leading-tight">
+                  {backupMessage}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        )}
         {deletionMessage && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
