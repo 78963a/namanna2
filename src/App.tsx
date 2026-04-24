@@ -4742,21 +4742,18 @@ export default function App() {
     });
   };
   
-  const handleExportData = () => {
+  const handleExportData = async () => {
     const now = new Date();
     const resetHour = userData.dailyResetHour || 0;
     const currentTodayStr = getEffectiveDate(now, resetHour);
 
     // 1. Snapshot the current state to ensure all in-memory changes are captured
-    // We deep clone to avoid modifying the active app state during backup
     let snapshot: UserData = JSON.parse(JSON.stringify(userData));
 
     // 2. Meticulously update running task durations into the snapshot
-    // This ensures "just before" execution info is captured correctly.
     snapshot.routineChunks = snapshot.routineChunks.map(chunk => ({
       ...chunk,
       tasks: chunk.tasks.map(task => {
-        // If task is running, calculate current elapsed time
         if (task.startTime && !task.isPaused && !task.completed && task.status !== TaskStatus.SKIP) {
           const currentDuration = calculateTaskDuration(task, now);
           return {
@@ -4771,7 +4768,7 @@ export default function App() {
     // 3. Ensure the snapshot's histories are synced for today
     snapshot = syncHistory(snapshot, currentTodayStr);
 
-    // 4. Construct the export structure including all mirrored and separate keys
+    // 4. Construct the export structure
     const exportPayload: Record<string, any> = {
       [STORAGE_KEY]: snapshot,
       'WakeUpTimeHistory': snapshot.wakeUpTimeHistory || [],
@@ -4781,21 +4778,39 @@ export default function App() {
       'routine_last_activity_sync': now.getTime().toString()
     };
 
-    // 5. Stringify for export consistency (matching handleImportData expectation of strings)
+    // 5. Stringify for export consistency
     const finalData: Record<string, string> = {};
     Object.entries(exportPayload).forEach(([key, value]) => {
       finalData[key] = typeof value === 'string' ? value : JSON.stringify(value);
     });
 
-    const blob = new Blob([JSON.stringify(finalData, null, 2)], { type: 'application/json' });
+    const jsonString = JSON.stringify(finalData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const dateStr = formatDate(now).replace(/-/g, '');
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+    const fileName = `danharu_backup_${dateStr}_${timeStr}.json`;
+
+    // 6. iPhone/PWA optimization: Use Web Share API if available
+    const file = new File([blob], fileName, { type: 'application/json' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: '단하루 데이터 백업',
+          text: '루틴 설정과 기록이 포함된 백업 파일입니다.'
+        });
+        setDeletionMessage('백업 파일이 생성되었습니다. 공유 창에서 저장을 완료해주세요.');
+        return;
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
+      }
+    }
+
+    // Standard download fallback
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    
-    const dateStr = formatDate(now).replace(/-/g, '');
-    const timeStr = `${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
-    link.download = `danharu_backup_${dateStr}_${timeStr}.json`;
-    
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
