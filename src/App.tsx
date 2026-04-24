@@ -2588,6 +2588,9 @@ const RoutineGroupFormView: React.FC<{
           {/* Schedule Settings */}
           <div className="space-y-3">
             <SectionTitle>3. 요일 설정</SectionTitle>
+            <p className="text-[11px] font-bold text-slate-400 -mt-3 ml-1 mb-2 leading-tight">
+              모든 요일을 해제하여 비정기적인 루틴을 수행할 수 있습니다
+            </p>
             <div className="flex flex-wrap gap-2">
               {[
                 { label: '월', value: 1 },
