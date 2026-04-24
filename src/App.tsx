@@ -4743,29 +4743,64 @@ export default function App() {
   };
   
   const handleExportData = () => {
-    const keys = [
-      STORAGE_KEY,
-      'WakeUpTimeHistory',
-      'RoutineGroupHistory',
-      'TaskHistory',
-      'routine_activity_log',
-      'routine_last_activity_sync'
-    ];
-    const data: Record<string, string | null> = {};
-    keys.forEach(key => {
-      data[key] = localStorage.getItem(key);
+    const now = new Date();
+    const resetHour = userData.dailyResetHour || 0;
+    const currentTodayStr = getEffectiveDate(now, resetHour);
+
+    // 1. Snapshot the current state to ensure all in-memory changes are captured
+    // We deep clone to avoid modifying the active app state during backup
+    let snapshot: UserData = JSON.parse(JSON.stringify(userData));
+
+    // 2. Meticulously update running task durations into the snapshot
+    // This ensures "just before" execution info is captured correctly.
+    snapshot.routineChunks = snapshot.routineChunks.map(chunk => ({
+      ...chunk,
+      tasks: chunk.tasks.map(task => {
+        // If task is running, calculate current elapsed time
+        if (task.startTime && !task.isPaused && !task.completed && task.status !== TaskStatus.SKIP) {
+          const currentDuration = calculateTaskDuration(task, now);
+          return {
+            ...task,
+            accumulatedDuration: currentDuration
+          };
+        }
+        return task;
+      })
+    }));
+
+    // 3. Ensure the snapshot's histories are synced for today
+    snapshot = syncHistory(snapshot, currentTodayStr);
+
+    // 4. Construct the export structure including all mirrored and separate keys
+    const exportPayload: Record<string, any> = {
+      [STORAGE_KEY]: snapshot,
+      'WakeUpTimeHistory': snapshot.wakeUpTimeHistory || [],
+      'RoutineGroupHistory': snapshot.routineGroupHistory || [],
+      'TaskHistory': snapshot.taskHistory || [],
+      'routine_activity_log': activityLog,
+      'routine_last_activity_sync': now.getTime().toString()
+    };
+
+    // 5. Stringify for export consistency (matching handleImportData expectation of strings)
+    const finalData: Record<string, string> = {};
+    Object.entries(exportPayload).forEach(([key, value]) => {
+      finalData[key] = typeof value === 'string' ? value : JSON.stringify(value);
     });
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(finalData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const dateStr = formatDate(currentTime).replace(/-/g, '');
-    link.download = `danharu_backup_${dateStr}.json`;
+    
+    const dateStr = formatDate(now).replace(/-/g, '');
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+    link.download = `danharu_backup_${dateStr}_${timeStr}.json`;
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    
     setDeletionMessage('데이터가 파일로 저장되었습니다');
   };
 
