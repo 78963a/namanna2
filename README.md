@@ -1,54 +1,54 @@
-# Routine Management App
+# 단하루 (Danharu) - Premium Routine Management
 
-A sophisticated, production-grade routine management application built with React, TypeScript, and Tailwind CSS. This app is designed to help users build and maintain healthy habits through structured routine groups, real-time tracking, and gamified progress.
+**단하루 (Danharu)** is a sophisticated, production-grade routine management application designed to help users build and maintain life-changing habits. Built with a focus on precision, motivation, and seamless user experience, it transforms abstract goals into actionable, timed sequences.
 
 ## 🌟 Key Features
 
-- **Routine Grouping**: Organize tasks into logical groups (e.g., Morning Routine, Evening Routine) with specific purposes and schedules.
-- **Real-time Execution**: Interactive timer-based task execution with pause, resume, and "later" functionality.
-- **Visual Progress**: Comprehensive statistics view with charts (using Recharts) to track wake-up times and point accumulation.
-- **Responsive Design**: Polished, mobile-first UI with smooth animations (using Framer Motion).
-- **Check-in System**: Daily wake-up check-in for consistency.
-- **Checklists**: Support for sub-tasks within individual routines.
-- **Alarms**: Integrated alarm system to notify users when it's time to start a routine.
+### 1. Smart Routine Grouping
+- **Logical Organization**: Group tasks into focused blocks like "Morning Routine," "Work Focus," or "Evening Wind-down."
+- **Flexible Scheduling**: Assign routines to specific days of the week.
+- **Contextual Starts**: Choose between fixed-time starts, situational triggers, or anytime execution.
 
-## 🛠️ Technical Architecture
+### 2. Interactive Execution Engine
+- **Active Timer Tracking**: Real-time monitoring of task duration with a polish focused on the "now."
+- **Dynamic Task Control**: Pause, resume, skip, or defer ("later") tasks on the fly.
+- **Checklist Support**: Manage sub-tasks within any routine for granular control.
 
-The application follows a modular architecture for improved maintainability and scalability:
+### 3. Data-Driven Insights
+- **Performance Analytics**: Track 7-day and 30-day success averages for groups and individual tasks.
+- **Time Analysis**: Monitor accumulated time spent on habits versus target durations.
+- **Visual Activity Log**: A unique "TimeBar" visualizes your daily rhythm and task density.
+- **Wake-up Consistency**: Dedicated tracking for wake-up times and window-based rewards.
 
-- **`src/types.ts`**: Centralized TypeScript interfaces and enums.
-- **`src/constants.ts`**: Global configuration values and initial state.
-- **`src/utils/`**: Modular utility functions for time calculations and task logic.
-- **`src/components/common/`**: Reusable UI components (Header, Buttons, Modals).
-- **`src/components/views/`**: Main application views (Home, Stats, Execution, Settings, Add).
-- **`src/App.tsx`**: Main entry point managing global state and navigation.
+### 4. Advanced Motivation & UX
+- **Gamified Progress**: Earn streaks and celebrate milestones with high-quality animations and confetti.
+- **Dynamic Phrases**: Context-aware motivational messages that use complex Korean particle (Josa) logic for natural sounding encouragement.
+- **Voice Guidance**: Integrated Text-to-Speech (TTS) to guide you through tasks hands-free.
+- **Modern UI**: A responsive, mobile-first design powered by Framer Motion for smooth transitions and gesture-based interactions (like "Slide to Reset").
 
-## 🚀 Getting Started
+### 5. Robust Infrastructure
+- **PWA Ready**: Optimized for mobile usage and home screen installation.
+- **Cloud Sync**: Optional Firebase integration for cross-device data persistence.
+- **Secure Backups**: Advanced export/import functionality featuring iOS Web Share API support for seamless data portability.
 
-### Prerequisites
+## 🛠️ Tech Stack
 
-- Node.js (v18 or higher)
-- npm or yarn
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS
+- **Animation**: motion (Framer Motion)
+- **Data Viz**: Recharts, D3
+- **Icons**: Lucide React
+- **Persistence**: LocalStorage / Firebase (Cloud Firestore & Auth)
+- **State Management**: React Hooks (useState, useMemo, useEffect)
+- **Drag & Drop**: @dnd-kit
 
-### Installation
+## 📖 Usage Guide
 
-1. Clone the repository.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-## 📖 Usage
-
-1. **Setup**: Go to the **Settings** tab to configure your target wake-up time and reset time.
-2. **Create Routines**: Use the **Add** tab to create your first routine group. Start with a "Trigger" task (something very easy).
-3. **Daily Check-in**: Check in every morning within your target window to earn bonus points and build your streak.
-4. **Execute**: When it's time for a routine, go to the **Home** tab and click on a routine group to start the execution timer.
-5. **Track**: Monitor your progress in the **Stats** tab.
+1. **Initialize**: Set your target wake-up time and the hour your day "resets" in the Settings.
+2. **Design**: Create your first routine group in the **Add** tab. We recommend starting with a small "Trigger" task.
+3. **Check-In**: Start your day by checking in to log your wake-up time.
+4. **Execute**: Launch a routine from the Home dashboard. Follow the timer and checklists to completion.
+5. **Analyze**: Use the Stats tab to identify patterns and optimize your time allocation.
 
 ## 📝 License
 

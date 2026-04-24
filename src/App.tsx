@@ -1869,11 +1869,7 @@ const TaskInputSection = ({
                     const currentDays = task.scheduledDays || [];
                     let nextDays;
                     if (currentDays.includes(i)) {
-                      if (currentDays.length > 1) {
-                        nextDays = currentDays.filter((d: number) => d !== i);
-                      } else {
-                        nextDays = currentDays;
-                      }
+                      nextDays = currentDays.filter((d: number) => d !== i);
                     } else {
                       nextDays = [...currentDays, i].sort();
                     }
@@ -2610,9 +2606,7 @@ const RoutineGroupFormView: React.FC<{
                     key={i}
                     onClick={() => {
                       if (scheduledDays.includes(i)) {
-                        if (scheduledDays.length > 1) {
-                          setScheduledDays(scheduledDays.filter(d => d !== i));
-                        }
+                        setScheduledDays(scheduledDays.filter(d => d !== i));
                       } else {
                         setScheduledDays([...scheduledDays, i].sort());
                       }
