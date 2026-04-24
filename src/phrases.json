@@ -70,10 +70,8 @@
 
 
     "COMPLETION_SELECTION_TEMPLATES": [
-      "내가 {{title}} 해냄 ({{startTime}}~{{endTime}}, {{duration}})",
-      "{{title}}을 완료하다니, 정말 훌륭해!",
-      "내가 바로 {{title}}을/를 완수한 {{purpose}}이다!!!",
-      "{{userName}}님이 {{purpose}} 타이틀을 획득하셨습니다",
+      "내가 {{title}} 해냄.",
+      "{{userName}}님이 {{purpose}} 타이틀을 획득하였습니다.",
       "내 이름은 {{userName}}, {{purpose}}이죠/죠.",
       "{{duration}}만에 {{purpose}}이/가 된 {{userName}}",
       "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
@@ -88,7 +86,7 @@
       "{{start_info}} {{triggerTask}}만 해내면 {{title}} 끝내는 건 금방이고 그럼 내가 바로 {{purpose}}",
       "{{title}}을/를 {{totalTargetDuration}}동안 수행함으로서 {{purpose}} 되기",
       "{{start_info}}, {{triggerTask}}부터 시작하는 {{purpose}}되기",
-      "{{userName}}님께서 {{titl}} 미션을 시작합니다. 목표 타이틀:{{purpose}} 시작:{{start_info}}",
+      "{{userName}}님께서 {{title}} 미션을 시작합니다. 목표 타이틀:{{purpose}} 시작:{{start_info}}",
       "{{userName}}! 너의 오늘 목표는 {{title}}을 완료하는거야. 일단 {{triggerTask}}부터 시작해볼까?",
       "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}}, {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다"
     ],
