@@ -50,24 +50,30 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
   }, [isOpen]);
 
   const triggerGiantConfetti = () => {
-    const duration = 5 * 1000; // Confetti for longer
-    const animationEnd = Date.now() + duration;
-    const defaults = { startVelocity: 35, spread: 360, ticks: 150, zIndex: 10000 };
+    if (typeof confetti !== 'function') return;
 
-    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+    try {
+      const duration = 5 * 1000; // Confetti for longer
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 35, spread: 360, ticks: 150, zIndex: 10000 };
 
-    const interval: any = setInterval(function() {
-      const timeLeft = animationEnd - Date.now();
+      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
-      if (timeLeft <= 0) {
-        return clearInterval(interval);
-      }
+      const interval: any = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
 
-      const particleCount = 150 * (timeLeft / duration);
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.4, 0.6), y: Math.random() - 0.1 } });
-    }, 250);
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 150 * (timeLeft / duration);
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.4, 0.6), y: Math.random() - 0.1 } });
+      }, 250);
+    } catch (e) {
+      console.warn('Giant confetti failed:', e);
+    }
   };
 
   if (!isOpen) return null;

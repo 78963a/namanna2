@@ -91,6 +91,7 @@ import {
   StatsViewProps,
   ExecutionViewProps
 } from './types';
+import phrases from './phrases.json';
 import { 
   STORAGE_KEY 
 } from './constants';
@@ -311,13 +312,16 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     if (activeTask?.id) {
       // Short delay to allow animations/layout to stabilize
       const timer = setTimeout(() => {
-        if (activeTaskRef.current) {
+        if (activeTaskRef.current && typeof activeTaskRef.current.getBoundingClientRect === 'function') {
           const headerHeight = 64; // Menu icon row height + padding
-          const elementPosition = activeTaskRef.current.getBoundingClientRect().top + window.pageYOffset;
-          window.scrollTo({
-            top: elementPosition - headerHeight,
-            behavior: 'smooth'
-          });
+          const rect = activeTaskRef.current.getBoundingClientRect();
+          if (rect) {
+            const elementPosition = rect.top + window.pageYOffset;
+            window.scrollTo({
+              top: elementPosition - headerHeight,
+              behavior: 'smooth'
+            });
+          }
         }
       }, 300);
       return () => clearTimeout(timer);
@@ -3599,14 +3603,20 @@ export default function App() {
     targetDate.setHours(targetH, targetM, 0, 0);
     
     const diffMinutes = (currentTime.getTime() - targetDate.getTime()) / (1000 * 60);
-    return diffMinutes >= -30 && diffMinutes <= 10;
+    // [코멘트] phrases.json의 wakeUpCheckInSettings 설정을 따름
+    const earlyLimit = phrases.wakeUpCheckInSettings?.earlyWindowMinutes || 30;
+    const lateLimit = phrases.wakeUpCheckInSettings?.lateWindowMinutes || 10;
+    
+    return diffMinutes >= -earlyLimit && diffMinutes <= lateLimit;
   }, [userData.targetWakeUpTime, userData.lastCheckInDate, currentTime, todayStr, effectiveDate]);
 
   const isLate = useMemo(() => {
     const [targetH, targetM] = userData.targetWakeUpTime.split(':').map(Number);
     const targetDate = new Date(effectiveDate);
     targetDate.setHours(targetH, targetM, 0, 0);
-    return currentTime.getTime() > targetDate.getTime() + (10 * 60 * 1000);
+    // [코멘트] phrases.json의 lateWindowMinutes 설정을 사용해서 지각 여부 판단
+    const lateLimit = phrases.wakeUpCheckInSettings?.lateWindowMinutes || 10;
+    return currentTime.getTime() > targetDate.getTime() + (lateLimit * 60 * 1000);
   }, [userData.targetWakeUpTime, currentTime, effectiveDate]);
 
   const sensors = useSensors(
@@ -3728,14 +3738,20 @@ export default function App() {
     setTimeout(() => setShowCheckInCelebration(false), 3000);
 
     // Special confetti for check-in
-    confetti({
-      particleCount: 100,
-      spread: 100,
-      origin: { y: 0.3 },
-      colors: ['#fbbf24', '#f59e0b', '#fcd34d', '#ffffff'],
-      shapes: ['star'],
-      scalar: 1.2
-    });
+    if (typeof confetti === 'function') {
+      try {
+        confetti({
+          particleCount: 100,
+          spread: 100,
+          origin: { y: 0.3 },
+          colors: ['#fbbf24', '#f59e0b', '#fcd34d', '#ffffff'],
+          shapes: ['star'],
+          scalar: 1.2
+        });
+      } catch (e) {
+        console.warn('Check-in confetti failed:', e);
+      }
+    }
   };
 
   const handleLateCheckIn = () => {
@@ -4283,14 +4299,18 @@ export default function App() {
         setLastCompletedTaskName(foundTask.text);
         setTimeout(() => setLastCompletedTaskName(null), 2000);
 
-        // Confetti
+        // Confetti - with extra safety check for canvas support
         if (typeof confetti === 'function') {
-          confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#6366f1', '#a855f7', '#ec4899', '#3b82f6', '#10b981']
-          });
+          try {
+            confetti({
+              particleCount: 150,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ['#6366f1', '#a855f7', '#ec4899', '#3b82f6', '#10b981']
+            });
+          } catch (e) {
+            console.warn('Confetti animation failed:', e);
+          }
         }
       }
 

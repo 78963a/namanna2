@@ -134,7 +134,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const getAvgForPeriod = (days: string[]) => {
       const periodHistory = days.map(date => {
         const entry = history.find(h => h.date === date);
-        const isLate = entry ? timeToMinutes(entry.wakeUpTime) > timeToMinutes(userData.targetWakeUpTime) : false;
+        const isLate = entry ? timeToMinutes(entry.wakeUpTime) > timeToMinutes(userData.targetWakeUpTime) + 10 : false;
         return {
           date,
           time: entry?.wakeUpTime || null,

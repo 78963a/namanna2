@@ -157,5 +157,10 @@
         "message": "{{title}}{{particle:이/가}} 5분 지났어요."
       }
     ]
+  },
+  "wakeUpCheckInSettings": {
+    "_comment": "기상 체크인 유예 시간 설정 (단위: 분)",
+    "earlyWindowMinutes": 30,
+    "lateWindowMinutes": 10
   }
 }

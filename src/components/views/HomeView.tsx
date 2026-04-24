@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { HomeViewProps, RoutineChunk, Task, TaskStatus } from '../../types';
 import { timeToMinutes, isTaskScheduledToday } from '../../utils';
+import phrases from '../../phrases.json';
 import { RoutineTitle } from '../routine/RoutineTitle';
 import { RoutineTitleLine } from '../routine/RoutineTitleLine';
 
@@ -85,8 +86,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
   targetDate.setHours(targetH, targetM, 0, 0);
 
   const diffMinutes = (currentTime.getTime() - targetDate.getTime()) / (1000 * 60);
-  const isTooEarly = diffMinutes < -30;
-  const isWithinWindow = diffMinutes >= -30 && diffMinutes <= 10;
+  // [코멘트] phrases.json의 wakeUpCheckInSettings 설정을 사용하여 버튼 표시 조건 결정
+  const earlyLimit = phrases.wakeUpCheckInSettings?.earlyWindowMinutes || 30;
+  const lateLimit = phrases.wakeUpCheckInSettings?.lateWindowMinutes || 10;
+
+  const isTooEarly = diffMinutes < -earlyLimit;
+  const isWithinWindow = diffMinutes >= -earlyLimit && diffMinutes <= lateLimit;
 
   const todayCheckIn = userData.history.find(h => h.date === todayStr);
 
@@ -108,7 +113,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <span className="font-bold text-[12px] whitespace-nowrap">
                     {(() => {
                       const checkInDiff = timeToMinutes(todayCheckIn.time) - timeToMinutes(userData.targetWakeUpTime);
-                      return checkInDiff >= -30 && checkInDiff <= 10 
+                      // 체크인 성공 판정 시에도 설정된 유예 시간 로직 적용
+                      return checkInDiff >= -earlyLimit && checkInDiff <= lateLimit 
                         ? `성공! (${todayCheckIn.time.slice(0, 5)})` 
                         : `지각(${todayCheckIn.time.slice(0, 5)})`;
                     })()}
