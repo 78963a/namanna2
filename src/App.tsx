@@ -4620,28 +4620,38 @@ export default function App() {
   };
 
   const updateWakeUpTime = (time: string) => {
+    const hasCheckedInToday = userData.lastCheckInDate === todayStr;
+    const warning = hasCheckedInToday ? '\n\n⚠️ 변경 시 오늘의 기상 체크인 기록이 삭제됩니다.' : '';
+
     setConfirmModal({
       isOpen: true,
       title: '기상 시각 변경',
-      message: `기상 목표 시각을 ${time}${getJosa(time, '으로/로')} 변경하시겠습니까?`,
+      message: `기상 목표 시각을 ${time}${getJosa(time, '으로/로')} 변경하시겠습니까?${warning}`,
+      confirmColor: 'indigo',
       onConfirm: () => {
           setUserData(prev => {
-            const hasCheckedInToday = prev.lastCheckInDate === todayStr;
-            let newHistory = [...prev.history];
-            let newLastCheckInDate = prev.lastCheckInDate;
-
-            if (hasCheckedInToday) {
-              // Remove today's history entry
-              newHistory = newHistory.filter(h => h.date !== todayStr);
-              newLastCheckInDate = null; // Allow re-check-in
-            }
-
-            return {
+            let next = {
               ...prev,
               targetWakeUpTime: time,
-              history: newHistory,
-              lastCheckInDate: newLastCheckInDate,
             };
+
+            if (prev.lastCheckInDate === todayStr) {
+              // Delete today's check-in records across all relevant fields
+              next.history = prev.history.filter(h => h.date !== todayStr);
+              next.lastCheckInDate = null;
+              
+              if (next.dailyCheckIn) {
+                const nextDailyCheckIn = { ...next.dailyCheckIn };
+                delete nextDailyCheckIn[todayStr];
+                next.dailyCheckIn = nextDailyCheckIn;
+              }
+              
+              if (next.wakeUpTimeHistory) {
+                next.wakeUpTimeHistory = next.wakeUpTimeHistory.filter(h => h.date !== todayStr);
+              }
+            }
+
+            return next;
           });
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
