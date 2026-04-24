@@ -70,10 +70,8 @@
 
 
     "COMPLETION_SELECTION_TEMPLATES": [
-      "나는 {{startTime}}부터 {{endTime}}에 걸쳐, {{duration}}간 {{title}}을 완료한 {{purpose}}이다. ",
-      "내가 {{title}} 해냄",
+      "내가 {{title}} 해냄 ({{startTime}}~{{endTime}}, {{duration}})",
       "{{title}}을 완료하다니, 정말 훌륭해!",
-      "네가 바로 {{title}}을/를 완료한 {{userName}}이구나!",
       "내가 바로 {{title}}을/를 완수한 {{purpose}}이다!!!",
       "{{userName}}님이 {{purpose}} 타이틀을 획득하셨습니다",
       "내 이름은 {{userName}}, {{purpose}}이죠/죠.",

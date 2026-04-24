@@ -2049,7 +2049,15 @@ const SortableRoutineItem = ({
           <GripVertical className="w-4 h-4" />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-slate-700">{idx + 2}. {rt.text}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-700">{idx + 2}. {rt.text}</span>
+            {rt.checklist && rt.checklist.length > 0 && (
+              <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter flex-shrink-0">
+                <CheckCircle2 className="w-2 h-2" />
+                <span>체크리스트</span>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2 mt-0.5">
             <div className="flex items-center gap-1">
               {rt.type === TaskType.TIME_INDEPENDENT ? (
