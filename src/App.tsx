@@ -110,7 +110,6 @@ import {
   getJosa,
   calculateTaskDuration
 } from './utils';
-import phrases from './phrases.json';
 import { CheckCheckIcon } from './components/CheckCheckIcon';
 import { voiceService } from './services/voiceService';
 
@@ -3102,6 +3101,10 @@ export default function App() {
   const [isAddRoutineDirty, setIsAddRoutineDirty] = useState(false);
 
   const handleTabTransition = (targetTab: 'home' | 'stats' | 'execution' | 'settings' | 'add', extraAction?: () => void) => {
+    // [코멘트] 탭 전환 시 포커스 해제하여 아이폰 '흔들어서 실행취소'Prompt 방지 시도
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     if (activeTab === 'add' && targetTab !== 'add' && isAddRoutineDirty) {
       setConfirmModal({
         isOpen: true,
@@ -3124,6 +3127,35 @@ export default function App() {
     setActiveTab(targetTab);
     if (extraAction) extraAction();
   };
+
+  useEffect(() => {
+    // [코멘트] 아이폰 '흔들어서 실행취소'Prompt를 방지하기 위해 전역 undo/redo 이벤트를 막음
+    const handleUndoRedo = (e: any) => {
+      if (e.type === 'beforeinput' && (e.inputType === 'historyUndo' || e.inputType === 'historyRedo')) {
+        e.preventDefault();
+      } else if (e.type === 'undo' || e.type === 'redo') {
+        e.preventDefault();
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('undo', handleUndoRedo, { capture: true });
+    document.addEventListener('redo', handleUndoRedo, { capture: true });
+    document.addEventListener('beforeinput', handleUndoRedo, { capture: true });
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+
+    return () => {
+      document.removeEventListener('undo', handleUndoRedo, { capture: true });
+      document.removeEventListener('redo', handleUndoRedo, { capture: true });
+      document.removeEventListener('beforeinput', handleUndoRedo, { capture: true });
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
+  }, []);
 
   // --- Effects ---
   const effectiveDate = useMemo(() => {
@@ -3665,6 +3697,10 @@ export default function App() {
 
   // --- Handlers ---
   const handleEnterExecution = (chunkId: string) => {
+    // [코멘트] 실행화면 진입 시 포커스 해제하여 아이폰 '흔들어서 실행취소' 방지
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     const chunk = userData.routineChunks.find(c => c.id === chunkId);
     if (!chunk) return;
 
@@ -5417,7 +5453,7 @@ export default function App() {
                 transition={{ delay: 0.3 }}
                 className="text-4xl md:text-6xl font-black text-indigo-700 mt-8 drop-shadow-sm"
               >
-                GOOD MORNING!
+              GOOD MORNING !
               </motion.h2>
               <motion.p
                 initial={{ y: 10, opacity: 0 }}

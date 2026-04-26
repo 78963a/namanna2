@@ -115,8 +115,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       const checkInDiff = timeToMinutes(todayCheckIn.time) - timeToMinutes(userData.targetWakeUpTime);
                       // 체크인 성공 판정 시에도 설정된 유예 시간 로직 적용
                       return checkInDiff >= -earlyLimit && checkInDiff <= lateLimit 
-                        ? `성공! (${todayCheckIn.time.slice(0, 5)})` 
-                        : `지각(${todayCheckIn.time.slice(0, 5)})`;
+                        ? `성공 ! (${todayCheckIn.time.slice(0, 5)})` 
+                        : `지각 ${todayCheckIn.time.slice(0, 5)}`;
                     })()}
                   </span>
                 </div>
