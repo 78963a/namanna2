@@ -184,7 +184,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
         <span>{formatTime(task.duration || 0)} / {targetDuration}분</span>
       ) : isSkip ? (
         <span>0 / {targetDuration}분</span>
-      ) : task.startTime ? (
+      ) : (task.startTime || task.isPaused) ? (
         <span>{formatTime(calculateCurrentDuration(task))} / {targetDuration}분</span>
       ) : (
         <span>{targetDuration}분</span>

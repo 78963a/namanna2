@@ -3139,6 +3139,7 @@ export default function App() {
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // CMD/CTRL + Z 방지 (iOS 흔들어서 실행취소도 일부 차단 지원)
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         e.preventDefault();
       }
@@ -4091,7 +4092,8 @@ export default function App() {
                   duration: undefined,
                   closingNote: undefined,
                   satisfaction: undefined,
-                  accumulatedDuration: task.duration ?? task.accumulatedDuration ?? 0
+                  // [수정] duration(완료기록)이 있다면 이를 우선시하고, 없다면 기존 누적(accumulatedDuration)을 보존
+                  accumulatedDuration: (task.duration !== undefined) ? task.duration : (task.accumulatedDuration ?? 0)
                 };
               } else {
                 // Pausing: calculate accumulated duration
@@ -4260,6 +4262,8 @@ export default function App() {
                   updated.satisfaction = closingData.satisfaction;
                 }
               } else {
+                // [수정] 완료 취소 시 기존 duration 기록을 accumulatedDuration으로 복구하여 이어하기 가능하게 함
+                updated.accumulatedDuration = t.duration ?? t.accumulatedDuration ?? 0;
                 updated.endTime = undefined;
                 updated.duration = undefined;
                 updated.status = TaskStatus.NOT_STARTED;
