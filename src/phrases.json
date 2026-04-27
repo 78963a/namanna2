@@ -151,10 +151,10 @@
         "message": "{{title}}{{particle:이/가}} 1분 지났어요."
       },
       {
-        "id": "5min_elapsed",
-        "type": "elapsed",
-        "triggerSeconds": 300,
-        "message": "{{title}}{{particle:이/가}} 5분 지났어요."
+        "id": "overtime_periodic",
+        "type": "periodic_overtime",
+        "intervalMinutes": 2,
+        "message": "{{title}}{{particle:이/가}},{{overtimeMinutes}}분 지났어요."
       }
     ]
   },

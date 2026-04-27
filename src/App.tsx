@@ -531,7 +531,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
         activeTask.text,
         getElapsed(activeTask),
         activeTask.targetDuration || 0,
-        !!userData.isVoiceEnabled
+        !!userData.isVoiceEnabled,
+        activeTask.taskType || TaskType.TIME_LIMITED
       );
     }
   }, [activeTask?.id, activeTask?.isPaused, activeTask?.startTime, activeTask ? getElapsed(activeTask) : 0, userData.isVoiceEnabled]);

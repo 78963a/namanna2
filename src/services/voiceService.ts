@@ -1,4 +1,5 @@
 import { getJosa } from "../utils";
+import { TaskType } from "../types";
 
 /**
  * Service for handling Text-to-Speech (TTS) notifications.
@@ -89,13 +90,15 @@ class VoiceService {
    * @param elapsedSeconds Current elapsed time in seconds
    * @param targetDurationMinutes Target duration in minutes
    * @param isVoiceEnabled Whether voice is toggled on
+   * @param taskType The type of the current task
    */
   processRules(
     rules: any[],
     title: string,
     elapsedSeconds: number,
     targetDurationMinutes: number,
-    isVoiceEnabled: boolean
+    isVoiceEnabled: boolean,
+    taskType: TaskType = TaskType.TIME_LIMITED
   ) {
     if (!isVoiceEnabled) return;
 
@@ -104,6 +107,7 @@ class VoiceService {
 
     for (const rule of rules) {
       let shouldTrigger = false;
+      let finalMessage = rule.message;
 
       if (rule.type === 'remaining') {
         // Trigger if remaining time is exactly the threshold (allowing 1s window)
@@ -123,6 +127,18 @@ class VoiceService {
         if (rule.maxTargetMinutes && targetDurationMinutes > rule.maxTargetMinutes) {
           shouldTrigger = false;
         }
+      } else if (rule.type === 'periodic_overtime') {
+        // Only trigger for TIME_LIMITED tasks
+        if (taskType === TaskType.TIME_LIMITED) {
+          const overtimeSeconds = elapsedSeconds - targetSeconds;
+          const intervalSeconds = (rule.intervalMinutes || 1) * 60;
+          
+          if (overtimeSeconds > 0 && overtimeSeconds % intervalSeconds === 0) {
+            shouldTrigger = true;
+            const overtimeMinutes = Math.floor(overtimeSeconds / 60);
+            finalMessage = finalMessage.replace(/\{\{overtimeMinutes\}\}/g, overtimeMinutes.toString());
+          }
+        }
       }
 
       if (shouldTrigger) {
@@ -131,7 +147,7 @@ class VoiceService {
         if (this.lastTriggeredId !== triggerId) {
           this.lastTriggeredId = triggerId;
           
-          let msg = rule.message;
+          let msg = finalMessage;
           // Apply title and particle rules
           const josaRegex = /\{\{title\}\}(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이|가|을|를|은|는|으로|로|이죠|죠)/g;
           const particleTagRegex = /\{\{title\}\}\{\{particle:(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이|가|을|를|은|는|으로|로|이죠|죠)\}\}/g;
