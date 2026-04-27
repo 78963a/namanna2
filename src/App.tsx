@@ -335,19 +335,28 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   useEffect(() => {
     if (allTasksDone && !wasDoneOnMount.current && !isCompleted && !isAlreadyFinalized) {
-      // Start completion sequence after a short delay (0.3s after last task celebration)
+      // Start completion sequence immediately to lock the state
+      setIsCompleted(true);
+    }
+  }, [allTasksDone, isCompleted, isAlreadyFinalized]);
+
+  useEffect(() => {
+    if (isCompleted && animationStage === 'none' && !isAlreadyFinalized) {
       const timer = setTimeout(() => {
-        setIsCompleted(true);
         setAnimationStage('whiteout');
-        
-        // Use a second state or similar if we really need precise cleanup, 
-        // but for now, moving the second timeout to its own effect or sharpening this one.
-        setAnimationStage('whiteout');
-        setTimeout(() => setAnimationStage('rising'), 500);
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [allTasksDone, isCompleted, isAlreadyFinalized]);
+  }, [isCompleted, animationStage, isAlreadyFinalized]);
+
+  useEffect(() => {
+    if (animationStage === 'whiteout') {
+      const timer = setTimeout(() => {
+        setAnimationStage('rising');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [animationStage]);
 
   useEffect(() => {
     if (animationStage === 'rising') {
@@ -3400,8 +3409,8 @@ export default function App() {
               startTime: undefined,
               endTime: undefined,
               isPaused: false,
-              accumulatedDuration: 0,
-              duration: 0,
+              accumulatedDuration: undefined,
+              duration: undefined,
               closingNote: undefined,
               satisfaction: undefined,
               status: TaskStatus.NOT_STARTED,
@@ -4092,8 +4101,11 @@ export default function App() {
                   duration: undefined,
                   closingNote: undefined,
                   satisfaction: undefined,
-                  // [수정] duration(완료기록)이 있다면 이를 우선시하고, 없다면 기존 누적(accumulatedDuration)을 보존
-                  accumulatedDuration: (task.duration !== undefined) ? task.duration : (task.accumulatedDuration ?? 0)
+                  // [수정] 이미 진행 중인 시간이 있다면(accumulatedDuration) 이를 유지하고, 
+                  // 완료 기록(duration)이 있는 경우(건너뛰기 등에서 복구할 때) 이를 누적 시간으로 사용함.
+                  accumulatedDuration: (task.accumulatedDuration !== undefined && task.accumulatedDuration > 0)
+                    ? task.accumulatedDuration 
+                    : (task.duration ?? 0)
                 };
               } else {
                 // Pausing: calculate accumulated duration
@@ -4792,8 +4804,7 @@ export default function App() {
           dailyCompletionRate: {},
           lastResetDate: null,
           dailyTaskStatus: {},
-          forcedActiveTasks: {},
-          dailyActivityLog: {}
+          forcedActiveTasks: {}
         }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setDeletionMessage('루틴 기록이 삭제되었습니다');
@@ -4819,7 +4830,6 @@ export default function App() {
           lastResetDate: null,
           dailyTaskStatus: {},
           forcedActiveTasks: {},
-          dailyActivityLog: {},
           lastPerfectDayAnimationDate: undefined
         }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));

@@ -95,7 +95,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       message = message.replace(/\{\{triggerTask\}\}/g, triggerTaskHtml);
       
       // Handle remaining potential placeholders
-      const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || 0), 0);
+      const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || t.accumulatedDuration || 0), 0);
       const totalMinutes = Math.floor(totalSeconds / 60);
       const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
 
@@ -160,7 +160,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     const startInfoHtml = getStyledHtml('start_info', startInfoText);
 
     // 3. 소요 시간 정보 (duration)
-    const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || 0), 0);
+    const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || t.accumulatedDuration || 0), 0);
     const totalMinutes = Math.floor(totalSeconds / 60);
     const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
     const durationHtml = getStyledHtml('duration', durationText);

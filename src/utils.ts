@@ -258,7 +258,10 @@ export const calculateTaskDuration = (task: Task, currentTime: Date): number => 
   if (!task) return 0;
   let currentSession = 0;
   if (task.startTime && !task.isPaused) {
-    const [h, m, s] = task.startTime.split(':').map(Number);
+    const parts = task.startTime.split(':').map(Number);
+    const h = parts[0];
+    const m = parts[1];
+    const s = parts[2] || 0; // Default to 0 if seconds are missing
     const start = new Date(currentTime);
     start.setHours(h, m, s, 0);
     

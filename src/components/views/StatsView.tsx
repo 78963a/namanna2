@@ -27,7 +27,7 @@ import {
   X
 } from 'lucide-react';
 import { UserData, TaskStatus, TaskType } from '../../types';
-import { timeToMinutes, minutesToTime, formatDate, formatDurationPrecise } from '../../utils';
+import { timeToMinutes, minutesToTime, formatDate, formatDurationPrecise, isTaskScheduledToday, calculateTaskDuration } from '../../utils';
 
 interface StatsViewProps {
   userData: UserData;
@@ -45,7 +45,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
   const [calendarYear, setCalendarYear] = useState(currentTime.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(currentTime.getMonth());
 
-  const [activeTab, setActiveTab] = useState<'wake-up' | 'achievement'>('achievement');
+  const [activeTab, setActiveTab] = useState<'wake-up' | 'achievement' | 'usage'>('achievement');
   const [isWakeUpExpanded, setIsWakeUpExpanded] = useState(false);
   const [isAchievementExpanded, setIsAchievementExpanded] = useState(false);
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
@@ -537,6 +537,58 @@ export const StatsView: React.FC<StatsViewProps> = ({
     };
   }, [selectedTaskId, userData, last7Days, last30Days, last40Days]);
 
+  const usageStats = useMemo(() => {
+    const logs = userData.dailyActivityLog || {};
+    const dates = Object.keys(logs).sort((a, b) => b.localeCompare(a));
+    
+    const colorList = ['#e2e8f0', '#1e293b', '#fbbf24', '#f97316', '#ef4444'];
+    
+    return dates.map(date => {
+      const log = logs[date];
+      const stops = [];
+      let start = 0;
+      let currentColor = log[0];
+      
+      for (let i = 1; i <= log.length; i++) {
+        const val = i < log.length ? log[i] : -1;
+        if (val !== currentColor) {
+          const colorCode = colorList[currentColor] || '#e2e8f0';
+          const startPct = (start / 1440) * 100;
+          const endPct = (i / 1440) * 100;
+          stops.push(`${colorCode} ${startPct}% ${endPct}%`);
+          start = i;
+          currentColor = val;
+        }
+      }
+
+      let totalUsageSeconds = 0;
+      if (date === todayStr) {
+        // Calculate live duration for today
+        totalUsageSeconds = userData.routineChunks.reduce((acc, chunk) => {
+          const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
+          const chunkDuration = scheduledTasks.reduce((taskAcc, task) => {
+            if (task.completed) {
+              return taskAcc + (task.duration || 0);
+            }
+            return taskAcc + calculateTaskDuration(task, currentTime);
+          }, 0);
+          return acc + chunkDuration;
+        }, 0);
+      } else {
+        totalUsageSeconds = (userData.routineGroupHistory || [])
+          .filter(h => h.date === date)
+          .reduce((acc, h) => acc + (h.totalDuration || 0), 0);
+      }
+      
+      return {
+        date,
+        gradient: `linear-gradient(to right, ${stops.join(', ')})`,
+        totalMinutes: Math.floor(totalUsageSeconds / 60),
+        totalSeconds: totalUsageSeconds
+      };
+    });
+  }, [userData.dailyActivityLog, userData.routineGroupHistory, userData.routineChunks, todayStr, currentTime, userData]);
+
   if (selectedTaskId && taskDetailData) {
     const renderStatusIcon = (status: string) => {
       let iconColor = "text-slate-200";
@@ -625,6 +677,23 @@ export const StatsView: React.FC<StatsViewProps> = ({
             <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
             달성률 통계
             {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('usage');
+              setSelectedTaskId(null);
+              setSelectedGroupId(null);
+            }}
+            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+              activeTab === 'usage' 
+                ? 'bg-white text-emerald-600 border-slate-100 -mb-[1px] pt-4' 
+                : 'bg-slate-50 text-slate-400 border-transparent'
+            }`}
+          >
+            <Timer className={`w-3.5 h-3.5 ${activeTab === 'usage' ? 'text-emerald-500' : 'text-slate-300'}`} />
+            사용 시간 통계
+            {activeTab === 'usage' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
           </button>
         </div>
 
@@ -750,6 +819,22 @@ export const StatsView: React.FC<StatsViewProps> = ({
             <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
             달성률 통계
             {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('usage');
+              setSelectedGroupId(null);
+            }}
+            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+              activeTab === 'usage' 
+                ? 'bg-white text-emerald-600 border-slate-100 -mb-[1px] pt-4' 
+                : 'bg-slate-50 text-slate-400 border-transparent'
+            }`}
+          >
+            <Timer className={`w-3.5 h-3.5 ${activeTab === 'usage' ? 'text-emerald-500' : 'text-slate-300'}`} />
+            사용 시간 통계
+            {activeTab === 'usage' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
           </button>
         </div>
 
@@ -922,6 +1007,20 @@ export const StatsView: React.FC<StatsViewProps> = ({
           달성률 통계
           {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
         </button>
+
+        {/* Third Tab: 사용시간 통계 */}
+        <button
+          onClick={() => setActiveTab('usage')}
+          className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+            activeTab === 'usage' 
+              ? 'bg-white text-emerald-600 border-slate-100 -mb-[1px] pt-4' 
+              : 'bg-slate-50 text-slate-400 border-transparent'
+          }`}
+        >
+          <Timer className={`w-3.5 h-3.5 ${activeTab === 'usage' ? 'text-emerald-500' : 'text-slate-300'}`} />
+          사용 시간 통계
+          {activeTab === 'usage' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+        </button>
       </div>
 
       {/* Main Folder Content Body */}
@@ -1009,7 +1108,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                   </div>
                 </div>
               </motion.div>
-            ) : (
+            ) : activeTab === 'achievement' ? (
               <motion.div
                 key="achievement-tab"
                 initial={{ opacity: 0, x: 10 }}
@@ -1167,6 +1266,69 @@ export const StatsView: React.FC<StatsViewProps> = ({
                         </button>
                       ))}
                     </div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="usage-tab"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6 py-6"
+              >
+                {/* 사용시간통계박스 */}
+                <div className="px-3 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-emerald-50 p-2.5 rounded-[12px]">
+                      <Timer className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <h2 className="text-lg font-black text-slate-800">사용 시간 통계</h2>
+                  </div>
+
+                  <div className="bg-white rounded-[15px] border border-slate-100 overflow-hidden shadow-sm">
+                    <div className="p-4 bg-slate-50 border-b border-slate-100">
+                      <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
+                        <History className="w-4 h-4 text-emerald-500" />
+                        일별 사용 시간 기록
+                      </h3>
+                    </div>
+                    
+                    <div className="p-4 space-y-4">
+                      {usageStats.length > 0 ? (
+                        usageStats.map((day, i) => (
+                          <div key={i} className="flex items-center gap-3 h-10 group">
+                            <div className="w-10 text-[11px] font-black text-slate-400 tabular-nums">
+                              {day.date.split('-').slice(1).join('/')}
+                            </div>
+                            
+                            <div className="flex-grow h-3 bg-slate-100 rounded-full overflow-hidden relative shadow-inner">
+                              <div 
+                                className="absolute inset-0 transition-opacity duration-300"
+                                style={{ backgroundImage: day.gradient }}
+                              />
+                            </div>
+                            
+                            <div className="w-16 text-right text-[11px] font-black text-indigo-600 tabular-nums">
+                              {day.totalMinutes}분
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="py-20 text-center space-y-3">
+                           <Hourglass className="w-12 h-12 text-slate-200 mx-auto animate-pulse" />
+                           <p className="text-sm font-bold text-slate-300">기록된 사용 시간이 없습니다</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-emerald-50/50 p-4 rounded-[15px] border border-emerald-100/50">
+                    <p className="text-[10px] font-bold text-emerald-700 leading-relaxed">
+                      ※ 시간 바는 00:00부터 24:00까지의 앱 사용 현황을 보여줍니다.<br/>
+                      ※ 소요 시간은 해당 날짜에 루틴 타이머가 작동한 총 합계입니다.
+                    </p>
                   </div>
                 </div>
               </motion.div>
