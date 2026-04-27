@@ -5465,7 +5465,7 @@ export default function App() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="text-4xl md:text-6xl font-black text-indigo-700 mt-8 drop-shadow-sm"
+                className="text-4xl md:text-6xl font-black text-amber-300 mt-8 drop-shadow-sm"
               >
               GOOD MORNING !
               </motion.h2>
@@ -5473,7 +5473,7 @@ export default function App() {
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                className="text-lg font-bold text-indigo-500 mt-2"
+                className="text-2xl font-bold text-red-400 mt-2"
               >
                 체크인 성공! 기분 좋은 시작입니다.
               </motion.p>

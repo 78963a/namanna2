@@ -802,6 +802,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           >
             <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
             기상 시각 통계
+  
             {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
           </button>
 
@@ -990,7 +991,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           }`}
         >
           <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
-          기상 시각 통계
+          기상시각 통계
           {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
         </button>
 
@@ -1018,7 +1019,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           }`}
         >
           <Timer className={`w-3.5 h-3.5 ${activeTab === 'usage' ? 'text-emerald-500' : 'text-slate-300'}`} />
-          사용 시간 통계
+          사용시간 통계
           {activeTab === 'usage' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
         </button>
       </div>
@@ -1286,6 +1287,12 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     </div>
                     <h2 className="text-lg font-black text-slate-800">사용 시간 통계</h2>
                   </div>
+                  <div className="bg-emerald-50/50 p-4 rounded-[15px] border border-emerald-100/50">
+                    <p className="text-[10px] font-bold text-emerald-700 leading-relaxed">
+                      ※ 시간 바는 00:00부터 24:00까지의 앱 사용 현황을 보여줍니다.<br/>
+                      ※ 소요 시간은 해당 날짜에 루틴 타이머가 작동한 총 합계입니다.
+                    </p>
+                  </div>
 
                   <div className="bg-white rounded-[15px] border border-slate-100 overflow-hidden shadow-sm">
                     <div className="p-4 bg-slate-50 border-b border-slate-100">
@@ -1298,8 +1305,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <div className="p-4 space-y-4">
                       {usageStats.length > 0 ? (
                         usageStats.map((day, i) => (
-                          <div key={i} className="flex items-center gap-3 h-10 group">
-                            <div className="w-10 text-[11px] font-black text-slate-400 tabular-nums">
+                          <div key={i} className="flex items-center gap-1 h-10 group">
+                            <div className="w-9 text-[11px] font-black text-slate-400 tabular-nums">
                               {day.date.split('-').slice(1).join('/')}
                             </div>
                             
@@ -1310,7 +1317,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                               />
                             </div>
                             
-                            <div className="w-16 text-right text-[11px] font-black text-indigo-600 tabular-nums">
+                            <div className="w-9 text-right text-[11px] font-black text-indigo-600 tabular-nums">
                               {day.totalMinutes}분
                             </div>
                           </div>
@@ -1324,12 +1331,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     </div>
                   </div>
                   
-                  <div className="bg-emerald-50/50 p-4 rounded-[15px] border border-emerald-100/50">
-                    <p className="text-[10px] font-bold text-emerald-700 leading-relaxed">
-                      ※ 시간 바는 00:00부터 24:00까지의 앱 사용 현황을 보여줍니다.<br/>
-                      ※ 소요 시간은 해당 날짜에 루틴 타이머가 작동한 총 합계입니다.
-                    </p>
-                  </div>
                 </div>
               </motion.div>
             )}
