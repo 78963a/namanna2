@@ -4790,6 +4790,26 @@ export default function App() {
     });
   };
 
+  const resetUsageHistory = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: '사용 시간 기록 삭제',
+      message: '현재까지 기록된 사용 시간 바 기록을 모두 삭제하시겠습니까?',
+      confirmLabel: '삭제',
+      validationValue: userData.userName || '나',
+      onConfirm: () => {
+        setActivityLog({});
+        localStorage.removeItem('routine_activity_log');
+        setUserData(prev => ({
+          ...prev,
+          dailyActivityLog: {}
+        }));
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setDeletionMessage('사용 시간 기록이 삭제되었습니다');
+      }
+    });
+  };
+
   const resetRoutineHistory = () => {
     setConfirmModal({
       isOpen: true,
@@ -5307,6 +5327,14 @@ export default function App() {
                 >
                   <span className="text-sm font-black text-slate-700 mb-1">기상시각 기록 삭제</span>
                   <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 기상시각 기록을 모두 삭제합니다.</span>
+                </button>
+
+                <button 
+                  onClick={resetUsageHistory}
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                >
+                  <span className="text-sm font-black text-slate-700 mb-1">사용 시간 기록 삭제</span>
+                  <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 사용 시간 바 기록을 모두 삭제합니다.</span>
                 </button>
 
                 <button 
