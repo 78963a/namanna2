@@ -1324,7 +1324,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
                       <div className="text-slate-600 font-bold whitespace-nowrap">
                         평균: {task.last7.avg} (최단: {task.last7.min} / 최장: {task.last7.max})
                       </div>
-                      <div className="text-slate-400 font-bold whitespace-nowrap">누적: {task.last7.total}</div>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] bg-slate-50 p-2 rounded-[10px]">
                       <div className="font-black text-slate-400 whitespace-nowrap">30일</div>
@@ -1332,7 +1331,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
                       <div className="text-slate-600 font-bold whitespace-nowrap">
                         평균: {task.last30.avg} (최단: {task.last30.min} / 최장: {task.last30.max})
                       </div>
-                      <div className="text-slate-400 font-bold whitespace-nowrap">누적: {task.last30.total}</div>
                     </div>
                   </div>
                 </button>
@@ -1617,7 +1615,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             <div className="space-y-0.5">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 소요 시간</p>
                               <p className="text-xs font-black text-slate-700">{group.avgDuration7}</p>
-                              <p className="text-[9px] font-bold text-slate-400">누적: {group.totalDuration7}</p>
                             </div>
                             <div className="space-y-0.5">
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">달성률</p>
