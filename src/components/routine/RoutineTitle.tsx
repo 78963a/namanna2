@@ -36,12 +36,14 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     };
 
     const replaceWithJosa = (msg: string, tag: 'title' | 'purpose' | 'userName' | 'triggerTask', value: string, html: string) => {
+      if (!msg) return "";
       // 1. Handle standard particles attached to placeholders
       const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|이|가|을|를|은|는|으로|로|이죠|죠)`, 'g');
       let result = msg.replace(regex, (_, p1) => {
         return html + getJosa(value, p1 as any);
       });
 
+      if (!result) return "";
       // 2. Handle specific particle tags following the placeholder
       const particleRegex = new RegExp(`\\{\\{${tag}\\}\\}\\{\\{particle:(이/가|을/를|은/는|으로/로|이죠/죠|이|가|을|를|은|는|으로|로|이죠|죠)\\}\\}(\\s|$)`, 'g');
       result = result.replace(particleRegex, (_, p1, trailing) => {
@@ -122,7 +124,8 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     };
 
     const key = statusMap[status] || 'NOT_STARTED';
-    const messages = phrases.routine_messages[key as keyof typeof phrases.routine_messages];
+    const messages = phrases.routine_messages[key as keyof typeof phrases.routine_messages] as string[];
+    if (!messages || messages.length === 0) return '';
     
     // Use a stable random based on chunk id and today's date to avoid flickering
     const today = new Date().toISOString().split('T')[0];
@@ -133,7 +136,8 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       hash |= 0;
     }
     const index = Math.abs(hash) % messages.length;
-    let message = messages[index];
+    let message = messages[index] || '';
+    if (!message) return '';
 
     // --- [사용자 정의 변수 추출] ---
     

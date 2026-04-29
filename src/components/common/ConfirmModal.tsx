@@ -100,6 +100,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
                       placeholder={validationPlaceholder}
+                      spellCheck={false}
+                      autoComplete="off"
                       className="w-full p-3 bg-slate-50 border border-slate-100 rounded-[10px] text-sm font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all"
                       autoFocus
                     />

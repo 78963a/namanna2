@@ -698,6 +698,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
                   // Resolve particles but keep the placeholder for RoutineTitle to style
                   const resolveParticles = (msg: string, tag: string, value: string) => {
+                    if (!msg) return "";
                     const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|이|가|을|를|은|는|으로|로|이죠|죠)`, 'g');
                     return msg.replace(regex, (_, p1) => {
                       return `{{${tag}}}` + getJosa(value, p1 as any);
@@ -712,14 +713,16 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   // so that RoutineTitle can style them based on phrases.json settings.
                   
                   // For the UI display in buttons, replace everything
-                  let displayPhrase = storedPhrase;
-                  displayPhrase = displayPhrase.replace(/\{\{userName\}\}/g, userData.userName || '나');
-                  displayPhrase = displayPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
-                  displayPhrase = displayPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);
-                  displayPhrase = displayPhrase.replace(/\{\{duration\}\}/g, durationStr);
-                  displayPhrase = displayPhrase.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationStr);
-                  displayPhrase = displayPhrase.replace(/\{\{title\}\}/g, chunk.name);
-                  displayPhrase = displayPhrase.replace(/\{\{purpose\}\}/g, chunk.purpose || '목표');
+                  let displayPhrase = storedPhrase || '';
+                  if (displayPhrase) {
+                    displayPhrase = displayPhrase.replace(/\{\{userName\}\}/g, userData.userName || '나');
+                    displayPhrase = displayPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
+                    displayPhrase = displayPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);
+                    displayPhrase = displayPhrase.replace(/\{\{duration\}\}/g, durationStr);
+                    displayPhrase = displayPhrase.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationStr);
+                    displayPhrase = displayPhrase.replace(/\{\{title\}\}/g, chunk.name);
+                    displayPhrase = displayPhrase.replace(/\{\{purpose\}\}/g, chunk.purpose || '목표');
+                  }
 
                   return (
                     <button
@@ -1254,6 +1257,8 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
               value={editingChunkName}
               onChange={(e) => setEditingChunkName(e.target.value)}
               placeholder="그룹 이름"
+              spellCheck={false}
+              autoComplete="off"
               className="w-full bg-white border border-slate-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               autoFocus
             />
@@ -1263,6 +1268,8 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
                 value={editingChunkPurpose}
                 onChange={(e) => setEditingChunkPurpose(e.target.value)}
                 placeholder="그룹 목적"
+                spellCheck={false}
+                autoComplete="off"
                 className="flex-grow bg-white border border-slate-200 rounded-[10px] px-2 py-1 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose);
@@ -1378,13 +1385,15 @@ const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-slate-400">{index + 1}.</span>
-            <input 
-              type="text"
-              value={editingTaskText}
-              onChange={(e) => setEditingTaskText(e.target.value)}
-              className="flex-grow bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-              autoFocus
-            />
+        <input 
+                  type="text"
+                  value={editingTaskText}
+                  onChange={(e) => setEditingTaskText(e.target.value)}
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="flex-grow bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  autoFocus
+                />
           </div>
           <div className="space-y-3">
             <div className="space-y-1">
@@ -1852,6 +1861,8 @@ const TaskInputSection = ({
           value={task.text}
           onChange={(e) => setTask({ ...task, text: e.target.value })}
           placeholder={isTrigger ? "예: 침대에서 벗어나기" : "루틴 내용을 입력하세요"}
+          spellCheck={false}
+          autoComplete="off"
           className="w-full bg-white border border-slate-200 rounded-[10px] px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
       </div>
@@ -2590,6 +2601,8 @@ const RoutineGroupFormView: React.FC<{
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="예: 아침 루틴, 독서 루틴 등"
+              spellCheck={false}
+              autoComplete="off"
               className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-base font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
@@ -2602,6 +2615,8 @@ const RoutineGroupFormView: React.FC<{
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
               placeholder="예: 아침시간을 낭비하지 않는 사람"
+              spellCheck={false}
+              autoComplete="off"
               className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-base font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
@@ -2695,6 +2710,8 @@ const RoutineGroupFormView: React.FC<{
                         value={situation}
                         onChange={(e) => setSituation(e.target.value)}
                         placeholder="상황을 입력하세요 (예: 나갔다와서)"
+                        spellCheck={false}
+                        autoComplete="off"
                         className="w-full bg-slate-50 border border-slate-100 rounded-[10px] px-4 py-2 text-sm font-black text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all focus:bg-white"
                       />
                     </div>
@@ -2708,6 +2725,8 @@ const RoutineGroupFormView: React.FC<{
                           type="time" 
                           value={startTime}
                           onChange={(e) => setStartTime(e.target.value)}
+                          spellCheck={false}
+                          autoComplete="off"
                           className="text-lg font-black bg-transparent border-none focus:ring-0 p-0 text-slate-700 tabular-nums"
                           style={{ width: '130px' }} 
                         />
@@ -3141,29 +3160,34 @@ export default function App() {
   useEffect(() => {
     // [코멘트] 아이폰 '흔들어서 실행취소'Prompt를 방지하기 위해 전역 undo/redo 이벤트를 막음
     const handleUndoRedo = (e: any) => {
-      if (e.type === 'beforeinput' && (e.inputType === 'historyUndo' || e.inputType === 'historyRedo')) {
+      const blockTypes = ['historyUndo', 'historyRedo', 'undo', 'redo'];
+      if (e.type === 'beforeinput' && blockTypes.includes(e.inputType)) {
         e.preventDefault();
+        e.stopPropagation();
       } else if (e.type === 'undo' || e.type === 'redo') {
         e.preventDefault();
+        e.stopPropagation();
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // CMD/CTRL + Z 방지 (iOS 흔들어서 실행취소도 일부 차단 지원)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
+        e.stopPropagation();
       }
     };
 
-    document.addEventListener('undo', handleUndoRedo, { capture: true });
-    document.addEventListener('redo', handleUndoRedo, { capture: true });
-    document.addEventListener('beforeinput', handleUndoRedo, { capture: true });
+    // window 및 document 모두에 대해 capture 단계에서 차단
+    window.addEventListener('undo', handleUndoRedo, { capture: true });
+    window.addEventListener('redo', handleUndoRedo, { capture: true });
+    window.addEventListener('beforeinput', handleUndoRedo, { capture: true });
     window.addEventListener('keydown', handleKeyDown, { capture: true });
 
     return () => {
-      document.removeEventListener('undo', handleUndoRedo, { capture: true });
-      document.removeEventListener('redo', handleUndoRedo, { capture: true });
-      document.removeEventListener('beforeinput', handleUndoRedo, { capture: true });
+      window.removeEventListener('undo', handleUndoRedo, { capture: true });
+      window.removeEventListener('redo', handleUndoRedo, { capture: true });
+      window.removeEventListener('beforeinput', handleUndoRedo, { capture: true });
       window.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
   }, []);
@@ -5426,7 +5450,7 @@ export default function App() {
   }, [effectiveDate]);
 
   return (
-    <div className="min-h-screen bg-[#F7FEE7] text-slate-900 font-sans pb-20">
+    <div className="min-h-screen bg-[#F7FEE7] text-slate-900 font-sans pb-20" spellCheck={false}>
       {/* Celebration Animation Overlay */}
       <AnimatePresence>
         {lastCompletedTaskName && (

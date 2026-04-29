@@ -107,7 +107,8 @@ class VoiceService {
 
     for (const rule of rules) {
       let shouldTrigger = false;
-      let finalMessage = rule.message;
+      let finalMessage = rule.message || '';
+      if (!finalMessage) continue;
 
       if (rule.type === 'remaining') {
         // Trigger if remaining time is exactly the threshold (allowing 1s window)
@@ -141,13 +142,14 @@ class VoiceService {
         }
       }
 
-      if (shouldTrigger) {
+      if (shouldTrigger && finalMessage) {
         // Prevent repeated triggers for the same rule/task combination in the same second
         const triggerId = `${rule.id}-${title}-${elapsedSeconds}`;
         if (this.lastTriggeredId !== triggerId) {
           this.lastTriggeredId = triggerId;
           
           let msg = finalMessage;
+          if (!msg) continue;
           // Apply title and particle rules
           const josaRegex = /\{\{title\}\}(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이|가|을|를|은|는|으로|로|이죠|죠)/g;
           const particleTagRegex = /\{\{title\}\}\{\{particle:(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이|가|을|를|은|는|으로|로|이죠|죠)\}\}/g;
