@@ -5455,15 +5455,15 @@ export default function App() {
         {lastCompletedTaskName && (
           <motion.div
             key="celebration-overlay"
-            initial={{ scale: 0.5, opacity: 0, filter: "blur(20px)" }}
+            initial={{ scale: 0.7, opacity: 0, filter: "blur(10px)" }}
             animate={{ 
-              scale: [0.5, 1, 4], 
-              opacity: [0, 1, 0],
-              filter: ["blur(10px)", "blur(0px)", "blur(20px)"]
+              scale: [0.7, 1, 1.05, 7], 
+              opacity: [0, 1, 1, 0],
+              filter: ["blur(10px)", "blur(0px)", "blur(10px)", "blur(25px)"]
             }}
             transition={{ 
-              duration: 1.5, 
-              times: [0, 0.15, 1],
+              duration: 2.0, 
+              times: [0, 0.2, 0.65, 1],
               ease: [0.22, 1, 0.36, 1] 
             }}
             className="fixed inset-0 flex items-center justify-center pointer-events-none z-[9999]"
