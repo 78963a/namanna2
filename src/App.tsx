@@ -4126,11 +4126,8 @@ export default function App() {
                   duration: undefined,
                   closingNote: undefined,
                   satisfaction: undefined,
-                  // [수정] 이미 진행 중인 시간이 있다면(accumulatedDuration) 이를 유지하고, 
-                  // 완료 기록(duration)이 있는 경우(건너뛰기 등에서 복구할 때) 이를 누적 시간으로 사용함.
-                  accumulatedDuration: (task.accumulatedDuration !== undefined && task.accumulatedDuration > 0)
-                    ? task.accumulatedDuration 
-                    : (task.duration ?? 0)
+                  // [수정] 이미 완료(duration) 기록이 있다면 이를 우선 사용하고, 없으면 진행 중인 시간(accumulatedDuration)을 유지함.
+                  accumulatedDuration: task.duration ?? task.accumulatedDuration ?? 0,
                 };
               } else {
                 // Pausing: calculate accumulated duration
@@ -4281,6 +4278,8 @@ export default function App() {
                 updated.endTime = nowStr;
                 const totalSeconds = calculateTaskDuration(t, now);
                 updated.duration = totalSeconds;
+                // [수정] 완료 시점의 최종 시간을 accumulatedDuration에도 저장하여 이어하기 시 이 시점부터 시작되도록 보장
+                updated.accumulatedDuration = totalSeconds;
                 updated.startTime = undefined;
                 updated.isPaused = false;
                 

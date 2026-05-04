@@ -47,7 +47,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
   const [activeTab, setActiveTab] = useState<'wake-up' | 'achievement' | 'usage'>('achievement');
   const [viewAllType, setViewAllType] = useState<'overall' | 'group' | 'task' | null>(null);
-  const [isWakeUpExpanded, setIsWakeUpExpanded] = useState(false);
 
   // Scroll to top when entering detailed view
   useEffect(() => {
@@ -129,43 +128,41 @@ export const StatsView: React.FC<StatsViewProps> = ({
   const wakeUpStats = useMemo(() => {
     const history = userData.wakeUpTimeHistory || [];
     
-    const getAvgForPeriod = (days: string[]) => {
-      const periodHistory = days.map(date => {
-        const entry = history.find(h => h.date === date);
-        const isLate = entry ? timeToMinutes(entry.wakeUpTime) > timeToMinutes(userData.targetWakeUpTime) + 10 : false;
-        return {
-          date,
-          time: entry?.wakeUpTime || null,
-          status: entry ? (isLate ? '지각' : '달성') : '미기록'
-        };
+    // Sort all history by date (recent first)
+    const sortedAll = [...history].sort((a, b) => b.date.localeCompare(a));
+    
+    const historyByYear: { [year: string]: any[] } = {};
+    sortedAll.forEach(entry => {
+      const year = entry.date.split('-')[0];
+      if (!historyByYear[year]) historyByYear[year] = [];
+      
+      const isLate = timeToMinutes(entry.wakeUpTime) > timeToMinutes(userData.targetWakeUpTime) + 10;
+      historyByYear[year].push({
+        date: entry.date,
+        time: entry.wakeUpTime,
+        status: isLate ? '지각' : '달성'
       });
+    });
 
-      const recordedTimes = periodHistory.filter(h => h.time).map(h => timeToMinutes(h.time!));
+    const getAvgForPeriod = (days: string[]) => {
+      const recordedTimes = days
+        .map(date => history.find(h => h.date === date))
+        .filter(h => h)
+        .map(h => timeToMinutes(h!.wakeUpTime));
+        
       const avgMinutes = recordedTimes.length > 0 
         ? recordedTimes.reduce((a, b) => a + b, 0) / recordedTimes.length 
         : null;
 
-      return {
-        avgTime: avgMinutes !== null ? minutesToTime(avgMinutes) : 'N/A',
-        history: periodHistory
-      };
+      return avgMinutes !== null ? minutesToTime(avgMinutes) : 'N/A';
     };
-
-    const stats7 = getAvgForPeriod(last7Days);
-    const stats30 = getAvgForPeriod(last30Days);
-    const stats40 = getAvgForPeriod(last40Days);
-
-    // Sort history with today at the top
-    const sortedHistory7 = [...stats7.history].reverse();
-    const sortedHistory40 = [...stats40.history].reverse();
 
     return {
-      avgTime7: stats7.avgTime,
-      avgTime30: stats30.avgTime,
-      history7: sortedHistory7,
-      history40: sortedHistory40
+      avgTime7: getAvgForPeriod(last7Days),
+      avgTime30: getAvgForPeriod(last30Days),
+      historyByYear
     };
-  }, [userData.wakeUpTimeHistory, userData.targetWakeUpTime, last7Days, last30Days, last40Days]);
+  }, [userData.wakeUpTimeHistory, userData.targetWakeUpTime, last7Days, last30Days]);
 
   // --- Achievement Stats ---
   const achievementStats = useMemo(() => {
@@ -1424,53 +1421,50 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-[15px] border border-slate-100 overflow-hidden">
-                    <div className="p-4 bg-slate-50 border-b border-slate-100">
-                      <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
-                        <History className="w-4 h-4 text-indigo-500" />
-                        최근 {isWakeUpExpanded ? '40' : '7'}일 기록
-                      </h3>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead>
-                          <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                            <th className="px-2 py-2">날짜</th>
-                            <th className="px-2 py-2">기상 시각</th>
-                            <th className="px-2 py-2 text-right">상태</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {(isWakeUpExpanded ? wakeUpStats.history40 : wakeUpStats.history7).map((h, i) => (
-                            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-2 py-2 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
-                              <td className="px-2 py-2 font-black text-slate-700">{h.time || '--:--'}</td>
-                              <td className="px-2 py-2 text-right">
-                                <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black ${
-                                  h.status === '달성' ? 'bg-emerald-100 text-emerald-600' : 
-                                  h.status === '지각' ? 'bg-rose-100 text-rose-600' : 
-                                  'bg-slate-200 text-slate-400'
-                                }`}>
-                                  {h.status}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="p-3 border-t border-slate-50">
-                      <button 
-                        onClick={() => setIsWakeUpExpanded(!isWakeUpExpanded)}
-                        className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-400 hover:text-indigo-600 transition-colors py-2"
-                      >
-                        <div className="flex flex-col items-center">
-                          <span>{isWakeUpExpanded ? '접기' : '최근 40일 기록 확인'}</span>
-                          {!isWakeUpExpanded && <div className="mt-1 border-b-2 border-r-2 border-slate-300 w-1.5 h-1.5 rotate-45" />}
-                          {isWakeUpExpanded && <div className="mb-1 border-t-2 border-l-2 border-indigo-500 w-1.5 h-1.5 rotate-45" />}
+                  <div className="space-y-6">
+                    {Object.keys(wakeUpStats.historyByYear).sort((a, b) => b.localeCompare(a)).map(year => (
+                      <div key={year} className="bg-white rounded-[15px] border border-slate-100 overflow-hidden">
+                        <div className="p-4 bg-slate-50 border-b border-slate-100">
+                          <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-indigo-500" />
+                            {year}년 기록
+                          </h3>
                         </div>
-                      </button>
-                    </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs">
+                            <thead>
+                              <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
+                                <th className="px-2 py-2">날짜</th>
+                                <th className="px-2 py-2">기상 시각</th>
+                                <th className="px-2 py-2 text-right">상태</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {wakeUpStats.historyByYear[year].map((h, i) => (
+                                <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-2 py-2 font-bold text-slate-500">{h.date.split('-').slice(1).join('/')}</td>
+                                  <td className="px-2 py-2 font-black text-slate-700">{h.time || '--:--'}</td>
+                                  <td className="px-2 py-2 text-right">
+                                    <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black ${
+                                      h.status === '달성' ? 'bg-emerald-100 text-emerald-600' : 
+                                      h.status === '지각' ? 'bg-rose-100 text-rose-600' : 
+                                      'bg-slate-200 text-slate-400'
+                                    }`}>
+                                      {h.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                    {Object.keys(wakeUpStats.historyByYear).length === 0 && (
+                      <div className="bg-white rounded-[15px] border border-slate-100 p-8 text-center text-slate-400 font-bold">
+                        기록이 없습니다.
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
