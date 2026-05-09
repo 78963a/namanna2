@@ -309,7 +309,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-[8px] text-slate-600 text-[10px] font-black">
                           <Clock className="w-3 h-3" />
                           <span>
-                            {chunk.startType === 'time' && chunk.startTime ? chunk.startTime : (chunk.situation || '언제든')}
+                            {chunk.startType === 'time' && chunk.startTime ? chunk.startTime.replace(/시/g, '') : (chunk.situation || '언제든')}
                           </span>
                         </div>
                         <div className="flex items-center px-2 py-1 bg-slate-100 rounded-[8px] text-slate-600 text-[10px] font-black">
@@ -335,14 +335,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   ))}
 
                   {isFullyCompleted && (
-                    <div className="px-[15px] pt-3 mt-2 flex justify-end">
+                    <div className="px-[15px] pt-3 mt-2 flex justify-end border-t border-slate-50">
                       <div className="flex items-center gap-1.5 text-[11px] font-black text-indigo-600/60">
                         <Clock className="w-3 h-3 opacity-70" />
                         <span>{(() => {
                           const entry = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
                           const startTime = entry?.firstTaskStartTime ? entry.firstTaskStartTime.slice(0, 5) : '--:--';
                           const endTime = entry?.completedAt ? entry.completedAt.slice(0, 5) : '--:--';
-                          const totalDurationSeconds = scheduledTasks.reduce((acc, t) => acc + (t.duration || 0), 0);
+                          const totalDurationSeconds = entry?.totalDuration || scheduledTasks.reduce((acc, t) => acc + (t.duration || 0), 0);
                           const totalMin = Math.floor(totalDurationSeconds / 60);
                           return `${startTime}~${endTime}, ${totalMin}분`;
                         })()}</span>

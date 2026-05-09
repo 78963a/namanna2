@@ -839,7 +839,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
                   <Clock className="w-3.5 h-3.5" />
                   <span>
-                    {chunk.startType === 'time' && chunk.startTime ? chunk.startTime : (chunk.situation || '언제든')}
+                    {chunk.startType === 'time' && chunk.startTime ? chunk.startTime.replace(/시/g, '') : (chunk.situation || '언제든')}
                   </span>
                 </div>
                 <div className="flex items-center px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
@@ -952,15 +952,15 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                         <div>{`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}</div>
                       </div>
                       
-                      {/* [디자인 수정 구역 10: 타이머 숫자 (00:00)] 
-                          - 진행중 색상: text-slate-900
-                          - 일시정지 색상: text-slate-300
-                          - 분 표시 색상: text-slate-400
-                      */}
-                      <div className={`text-6xl font-black tabular-nums tracking-tighter ${(activeTask.isPaused || !activeTask.startTime) ? 'text-slate-300' : 'text-slate-900'}`}>
-                        {formatDuration(getElapsed(activeTask))}
-                        <span className="text-xl text-slate-400 ml-2">/ {activeTask.targetDuration}분</span>
-                      </div>
+    {/* [디자인 수정 구역 10: 타이머 숫자 (00:00)] 
+        - 진행중 색상: text-slate-900
+        - 일시정지 색상: text-slate-300
+        - 분 표시 색상: text-slate-400
+    */}
+    <div className={`text-6xl font-black tabular-nums tracking-tighter ${(!activeTask.startTime || activeTask.isPaused) ? 'text-slate-300' : 'text-slate-900'}`}>
+      {formatDuration(getElapsed(activeTask))}
+      <span className="text-xl text-slate-400 ml-2">/ {activeTask.targetDuration}분</span>
+    </div>
                       
                       {/* [디자인 수정 구역 11: 타이머 상태 텍스트 (Ready/Paused/In Progress)] 
                           - 글자색: text-slate-400 ~ text-slate-500
@@ -3767,10 +3767,11 @@ export default function App() {
 
     // Only start if it's not already active (to avoid resetting startTime)
     // [수정] 일시정지된 태스크가 자동으로 시작되지 않도록 보장. 
-    // '첫 루틴 자동 시작'은 전체 그룹이 '미실행' 상태(어떤 태스크도 시작되지 않음)일 때만 동작하도록 함.
-    const isGroupUnstarted = scheduledTasks.every(t => !t.startTime && !isFinished(t));
+    // '첫 루틴 자동 시작'은 전체 그룹이 '미실행' 상태(어떤 태스크도 시작/일시정지/완료된 적 없음)일 때만 동작하도록 함.
+    const isAnyTaskEngaged = scheduledTasks.some(t => t.startTime || isFinished(t) || t.isPaused || (t.accumulatedDuration !== undefined && t.accumulatedDuration > 0));
+    const isGroupUnstarted = !isAnyTaskEngaged;
     
-    if (userData.firstRoutineAutoStart && isGroupUnstarted && targetTask && !targetTask.startTime && !targetTask.laterTimestamp) {
+    if (userData.firstRoutineAutoStart && isGroupUnstarted && targetTask && !targetTask.startTime && !targetTask.laterTimestamp && !targetTask.isPaused) {
       startTask(targetTask.id, true);
     }
   };
@@ -5151,7 +5152,7 @@ export default function App() {
                                     : 'hover:bg-slate-50 text-slate-600'
                                 }`}
                               >
-                                <span className="font-black text-sm">오전 {hour}시</span>
+                                <span className="font-black text-sm">오전 {hour}:00</span>
                                 {isSelected && <Check className="w-4 h-4 text-white" />}
                               </button>
                             );
@@ -5460,13 +5461,13 @@ export default function App() {
             key="celebration-overlay"
             initial={{ scale: 0.7, opacity: 0, filter: "blur(10px)" }}
             animate={{ 
-              scale: [0.7, 1, 1.05, 7], 
+              scale: [0.7, 1, 1.1, 8], 
               opacity: [0, 1, 1, 0],
-              filter: ["blur(10px)", "blur(0px)", "blur(10px)", "blur(25px)"]
+              filter: ["blur(10px)", "blur(0px)", "blur(5px)", "blur(20px)"]
             }}
             transition={{ 
-              duration: 2.0, 
-              times: [0, 0.2, 0.65, 1],
+              duration: 2.5, 
+              times: [0, 0.15, 0.75, 1],
               ease: [0.22, 1, 0.36, 1] 
             }}
             className="fixed inset-0 flex items-center justify-center pointer-events-none z-[9999]"

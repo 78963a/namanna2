@@ -157,7 +157,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     // 2. 시작 상황/시간 정보 (start_info)
     let startInfoText = '아무때나';
     if (chunk.startType === 'time' && chunk.startTime) {
-      startInfoText = chunk.startTime;
+      startInfoText = chunk.startTime.replace(/시/g, '');
     } else if (chunk.startType === 'situation' && chunk.situation) {
       startInfoText = chunk.situation;
     }
