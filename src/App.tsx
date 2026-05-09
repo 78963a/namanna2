@@ -839,7 +839,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
                   <Clock className="w-3.5 h-3.5" />
                   <span>
-                    {chunk.startType === 'time' && chunk.startTime ? `${chunk.startTime}시` : (chunk.situation || '언제든')}
+                    {chunk.startType === 'time' && chunk.startTime ? chunk.startTime : (chunk.situation || '언제든')}
                   </span>
                 </div>
                 <div className="flex items-center px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
@@ -957,7 +957,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                           - 일시정지 색상: text-slate-300
                           - 분 표시 색상: text-slate-400
                       */}
-                      <div className={`text-6xl font-black tabular-nums tracking-tighter ${activeTask.isPaused ? 'text-slate-300' : 'text-slate-900'}`}>
+                      <div className={`text-6xl font-black tabular-nums tracking-tighter ${(activeTask.isPaused || !activeTask.startTime) ? 'text-slate-300' : 'text-slate-900'}`}>
                         {formatDuration(getElapsed(activeTask))}
                         <span className="text-xl text-slate-400 ml-2">/ {activeTask.targetDuration}분</span>
                       </div>
@@ -3766,9 +3766,12 @@ export default function App() {
     setActiveTab('execution');
 
     // Only start if it's not already active (to avoid resetting startTime)
-    if (userData.firstRoutineAutoStart && targetTask && (!targetTask.startTime || targetTask.isPaused || targetTask.laterTimestamp)) {
-      const shouldReset = !!targetTask.laterTimestamp || !targetTask.isPaused;
-      startTask(targetTask.id, shouldReset);
+    // [수정] 일시정지된 태스크가 자동으로 시작되지 않도록 보장. 
+    // '첫 루틴 자동 시작'은 전체 그룹이 '미실행' 상태(어떤 태스크도 시작되지 않음)일 때만 동작하도록 함.
+    const isGroupUnstarted = scheduledTasks.every(t => !t.startTime && !isFinished(t));
+    
+    if (userData.firstRoutineAutoStart && isGroupUnstarted && targetTask && !targetTask.startTime && !targetTask.laterTimestamp) {
+      startTask(targetTask.id, true);
     }
   };
 

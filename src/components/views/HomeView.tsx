@@ -6,7 +6,8 @@ import {
   ChevronRight, 
   ChevronDown, 
   ChevronUp,
-  Circle
+  Circle,
+  X
 } from 'lucide-react';
 import { HomeViewProps, RoutineChunk, Task, TaskStatus } from '../../types';
 import { timeToMinutes, isTaskScheduledToday } from '../../utils';
@@ -277,6 +278,47 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
               {isExpanded && (
                 <div className="pb-[15px]">
+                  {/* Routine Group Summary Line */}
+                  <div className="px-[15px] pb-3 mb-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                      {/* Active Days */}
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5, 6, 0].map((dayNum, i) => {
+                          const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+                          const isScheduled = chunk.scheduledDays.includes(dayNum);
+                          return (
+                            <div 
+                              key={dayNum}
+                              className={`relative flex items-center justify-center w-6 h-6 rounded-full border transition-all ${
+                                isScheduled 
+                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm' 
+                                  : 'bg-slate-50 border-slate-100 text-slate-300'
+                              }`}
+                            >
+                              <span className="text-[10px] font-black z-10">{dayNames[i]}</span>
+                              {!isScheduled && (
+                                <X className="absolute w-[60%] h-[60%] text-slate-200" strokeWidth={4} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Start Situation/Time & Target Duration */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-[8px] text-slate-600 text-[10px] font-black">
+                          <Clock className="w-3 h-3" />
+                          <span>
+                            {chunk.startType === 'time' && chunk.startTime ? chunk.startTime : (chunk.situation || '언제든')}
+                          </span>
+                        </div>
+                        <div className="flex items-center px-2 py-1 bg-slate-100 rounded-[8px] text-slate-600 text-[10px] font-black">
+                          <span>총 {chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0)}분</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {chunk.tasks.map(task => (
                     <div
                       key={task.id}
@@ -291,6 +333,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       />
                     </div>
                   ))}
+
+                  {isFullyCompleted && (
+                    <div className="px-[15px] pt-3 mt-2 flex justify-end">
+                      <div className="flex items-center gap-1.5 text-[11px] font-black text-indigo-600/60">
+                        <Clock className="w-3 h-3 opacity-70" />
+                        <span>{(() => {
+                          const entry = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
+                          const startTime = entry?.firstTaskStartTime ? entry.firstTaskStartTime.slice(0, 5) : '--:--';
+                          const endTime = entry?.completedAt ? entry.completedAt.slice(0, 5) : '--:--';
+                          const totalDurationSeconds = scheduledTasks.reduce((acc, t) => acc + (t.duration || 0), 0);
+                          const totalMin = Math.floor(totalDurationSeconds / 60);
+                          return `${startTime}~${endTime}, ${totalMin}분`;
+                        })()}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
