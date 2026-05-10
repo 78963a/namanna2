@@ -894,6 +894,14 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             <th className="px-2 py-2 text-center">완료</th>
                             <th className="px-2 py-2 text-center">상태</th>
                           </tr>
+                        ) : viewAllType === 'group' ? (
+                          <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
+                            <th className="px-2 py-2">날짜</th>
+                            <th className="px-2 py-2 text-center">시작</th>
+                            <th className="px-2 py-2 text-center">소요</th>
+                            <th className="px-2 py-2 text-center">완료</th>
+                            <th className="px-2 py-2 text-right">달성률</th>
+                          </tr>
                         ) : (
                           <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
                             <th className="px-2 py-2">날짜</th>
@@ -924,6 +932,14 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                 <td className="px-2 py-2 text-center font-black text-slate-700">{row.endTime}</td>
                                 <td className="px-2 py-2">{renderStatusIcon(row.status)}</td>
                               </>
+                            ) : viewAllType === 'group' ? (
+                               <>
+                                 <td className="px-2 py-2 font-bold text-slate-500 tracking-tighter whitespace-nowrap">{row.date.split('-').slice(1).join('/')}</td>
+                                 <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime}</td>
+                                 <td className="px-2 py-2 text-center font-bold text-indigo-600 tracking-tighter">{row.duration}</td>
+                                 <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime}</td>
+                                 <td className="px-2 py-2 text-right font-black text-emerald-600 tracking-tighter">{row.rate}</td>
+                               </>
                             ) : (
                               <>
                                 <td className="px-2 py-2 font-bold text-slate-500 whitespace-nowrap">{row.date.split('-').slice(1).join('/')}</td>
@@ -955,13 +971,17 @@ export const StatsView: React.FC<StatsViewProps> = ({
     );
   };
 
-  const usageStats = useMemo(() => {
+  const usageStatsGroups = useMemo(() => {
     const logs = userData.dailyActivityLog || {};
     const dates = Object.keys(logs).sort((a, b) => b.localeCompare(a));
-    
     const colorList = ['#e2e8f0', '#1e293b', '#fbbf24', '#f97316', '#ef4444'];
     
-    return dates.map(date => {
+    const groups: { [year: string]: any[] } = {};
+    
+    dates.forEach(date => {
+      const year = date.split('-')[0];
+      if (!groups[year]) groups[year] = [];
+      
       const log = logs[date];
       const stops = [];
       let start = 0;
@@ -981,7 +1001,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
       let totalUsageSeconds = 0;
       if (date === todayStr) {
-        // Calculate live duration for today
         totalUsageSeconds = userData.routineChunks.reduce((acc, chunk) => {
           const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData));
           const chunkDuration = scheduledTasks.reduce((taskAcc, task) => {
@@ -998,13 +1017,15 @@ export const StatsView: React.FC<StatsViewProps> = ({
           .reduce((acc, h) => acc + (h.totalDuration || 0), 0);
       }
       
-      return {
+      groups[year].push({
         date,
         gradient: `linear-gradient(to right, ${stops.join(', ')})`,
         totalMinutes: Math.floor(totalUsageSeconds / 60),
         totalSeconds: totalUsageSeconds
-      };
+      });
     });
+    
+    return groups;
   }, [userData.dailyActivityLog, userData.routineGroupHistory, userData.routineChunks, todayStr, currentTime, userData]);
 
   if (viewAllType) {
@@ -1646,41 +1667,44 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     </p>
                   </div>
 
-                  <div className="bg-white rounded-[15px] border border-slate-100 overflow-hidden shadow-sm">
-                    <div className="p-4 bg-slate-50 border-b border-slate-100">
-                      <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
-                        <History className="w-4 h-4 text-emerald-500" />
-                        일별 사용 시간 기록
-                      </h3>
-                    </div>
-                    
-                    <div className="p-4 space-y-4">
-                      {usageStats.length > 0 ? (
-                        usageStats.map((day, i) => (
-                          <div key={i} className="flex items-center gap-1 h-10 group">
-                            <div className="w-9 text-[11px] font-black text-slate-400 tabular-nums">
-                              {day.date.split('-').slice(1).join('/')}
-                            </div>
-                            
-                            <div className="flex-grow h-3 bg-slate-100 rounded-full overflow-hidden relative shadow-inner">
-                              <div 
-                                className="absolute inset-0 transition-opacity duration-300"
-                                style={{ backgroundImage: day.gradient }}
-                              />
-                            </div>
-                            
-                            <div className="w-9 text-right text-[11px] font-black text-indigo-600 tabular-nums">
-                              {day.totalMinutes}분
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="py-20 text-center space-y-3">
-                           <Hourglass className="w-12 h-12 text-slate-200 mx-auto animate-pulse" />
-                           <p className="text-sm font-bold text-slate-300">기록된 사용 시간이 없습니다</p>
+                  <div className="space-y-6">
+                    {Object.keys(usageStatsGroups).sort((a, b) => b.localeCompare(a)).map(year => (
+                      <div key={year} className="bg-white rounded-[15px] border border-slate-100 overflow-hidden shadow-sm">
+                        <div className="p-4 bg-slate-50 border-b border-slate-100">
+                          <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
+                            <History className="w-4 h-4 text-emerald-500" />
+                            {year}년
+                          </h3>
                         </div>
-                      )}
-                    </div>
+                        
+                        <div className="p-4 space-y-4">
+                          {usageStatsGroups[year].map((day, i) => (
+                            <div key={i} className="flex items-center gap-1 h-10 group">
+                              <div className="w-9 text-[11px] font-black text-slate-400 tabular-nums">
+                                {day.date.split('-').slice(1).join('/')}
+                              </div>
+                              
+                              <div className="flex-grow h-3 bg-slate-100 rounded-full overflow-hidden relative shadow-inner">
+                                <div 
+                                  className="absolute inset-0 transition-opacity duration-300"
+                                  style={{ backgroundImage: day.gradient }}
+                                />
+                              </div>
+                              
+                              <div className="w-9 text-right text-[11px] font-black text-indigo-600 tabular-nums">
+                                {day.totalMinutes}분
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {Object.keys(usageStatsGroups).length === 0 && (
+                      <div className="bg-white rounded-[15px] border border-slate-100 p-20 text-center space-y-3 shadow-sm text-slate-400 font-bold">
+                         <Hourglass className="w-12 h-12 text-slate-200 mx-auto animate-pulse" />
+                         <p className="text-sm font-bold text-slate-300">기록된 사용 시간이 없습니다</p>
+                      </div>
+                    )}
                   </div>
                   
                 </div>
