@@ -1295,8 +1295,9 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
               onClick={() => onEnterDetail(chunk.id)}
               className="flex-grow text-left group/title flex items-center gap-2 min-w-0"
             >
-              <h4 className="font-black text-slate-900 group-hover/title:text-indigo-600 transition-colors whitespace-nowrap truncate">
+              <h4 className="font-black text-slate-900 group-hover/title:text-indigo-600 transition-colors whitespace-nowrap truncate flex items-center gap-1.5">
                 {chunk.name}
+                {chunk.isAlarmEnabled && <Bell className="w-3.5 h-3.5 text-amber-500 fill-amber-500/10" />}
               </h4>
               <div className="relative group/tooltip flex-shrink-0">
                 <Settings className="w-4 h-4 text-slate-300 group-hover/title:text-indigo-400 transition-colors" />
@@ -6095,8 +6096,7 @@ export default function App() {
                 </div>
                 <h3 className="text-xl font-black text-slate-800">알림 권한이 필요합니다</h3>
                 <div className="text-sm font-bold text-slate-500 leading-relaxed text-left bg-slate-50 p-4 rounded-2xl">
-                  기상 알람 및 루틴 알람을 받으시려면 브라우저의 알림 권한을 허용해주셔야 합니다.<br/><br/>
-                  <span className="text-indigo-600">브라우저 주소창 왼쪽의 설정 아이콘</span>을 클릭하여 '알림' 설정을 <span className="font-black text-slate-800">허용</span>으로 변경해주세요.
+                  기상 알람 및 루틴 알람을 받으시려면 알림 권한을 허용하여야 합니다.<br/><br/>
                 </div>
                 <button 
                   onClick={() => setShowPermissionGuide(false)}
