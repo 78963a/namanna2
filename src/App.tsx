@@ -2744,7 +2744,20 @@ const RoutineGroupFormView: React.FC<{
                         </span>
                         <button 
                           type="button"
-                          onClick={() => setIsAlarmEnabled(!isAlarmEnabled)}
+                          onClick={async () => {
+                            if (!isAlarmEnabled) {
+                              const status = await notificationService.requestPermission();
+                              if (status !== 'granted') {
+                                // show guide in parent? No, we need to pass a way.
+                                // Actually, I'll pass down a handler or just do it here if I have access to service.
+                                // But I can't easily show the modal from here without passing it down.
+                                // I'll use window alert as a fallback or if I can access the setter.
+                                (window as any).__showPermissionGuide?.();
+                                return;
+                              }
+                            }
+                            setIsAlarmEnabled(!isAlarmEnabled);
+                          }}
                           className="w-10 h-5 rounded-full transition-all relative border-0 p-0 cursor-pointer shadow-none overflow-hidden"
                           style={{ backgroundColor: isAlarmEnabled ? 'rgb(79 70 229)' : 'rgb(203 213 225)' }}
                         >
@@ -2897,6 +2910,11 @@ const RoutineGroupFormView: React.FC<{
 
 export default function App() {
   // --- State ---
+  useEffect(() => {
+    (window as any).__showPermissionGuide = () => setShowPermissionGuide(true);
+    return () => { delete (window as any).__showPermissionGuide; };
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
 
   const [selectedChunkId, setSelectedChunkId] = useState<string | null>(null);
@@ -2970,7 +2988,7 @@ export default function App() {
         nextRoutineAutoStart: false,
         userName: '나',
         isVoiceEnabled: true,
-        isWakeUpAlarmEnabled: true
+        isWakeUpAlarmEnabled: false
       };
     }
 
@@ -3032,7 +3050,7 @@ export default function App() {
     if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
     if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
     if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
-    if (parsed.isWakeUpAlarmEnabled === undefined) parsed.isWakeUpAlarmEnabled = true;
+    if (parsed.isWakeUpAlarmEnabled === undefined) parsed.isWakeUpAlarmEnabled = false;
     
     if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
     if (parsed.routineGroupHistory === undefined) parsed.routineGroupHistory = [];
@@ -3096,6 +3114,8 @@ export default function App() {
   const [editingChunkName, setEditingChunkName] = useState('');
   const [editingChunkPurpose, setEditingChunkPurpose] = useState('');
   const [settingsSubView, setSettingsSubView] = useState<SettingsSubView>({ type: 'main' });
+  const [showPermissionGuide, setShowPermissionGuide] = useState(false);
+  const [permissionNotificationMessage, setPermissionNotificationMessage] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTaskText, setEditingTaskText] = useState('');
   const [editingTaskDuration, setEditingTaskDuration] = useState(10);
@@ -3230,6 +3250,37 @@ export default function App() {
   }, []);
 
   // --- Effects ---
+  useEffect(() => {
+    const checkAlarmsOnStart = async () => {
+      const anyAlarmEnabled = userData.isWakeUpAlarmEnabled || userData.routineChunks.some(c => c.isAlarmEnabled);
+      if (anyAlarmEnabled && Notification.permission !== 'granted') {
+        setShowPermissionGuide(true);
+      }
+    };
+    checkAlarmsOnStart();
+  }, []);
+
+  useEffect(() => {
+    const handlePermissionChange = () => {
+      if (Notification.permission === 'denied') {
+        const anyWakeUpAlarmEnabled = userData.isWakeUpAlarmEnabled;
+        const anyChunkAlarmEnabled = userData.routineChunks.some(c => c.isAlarmEnabled);
+        
+        if (anyWakeUpAlarmEnabled || anyChunkAlarmEnabled) {
+          setUserData(prev => ({
+            ...prev,
+            isWakeUpAlarmEnabled: false,
+            routineChunks: prev.routineChunks.map(c => ({ ...c, isAlarmEnabled: false }))
+          }));
+          setPermissionNotificationMessage('알림 권한이 거부되어 활성화된 모든 알람을 비활성화하였습니다. 알람을 받으시려면 기기 설정에서 알림 권한을 허용해주세요.');
+        }
+      }
+    };
+
+    window.addEventListener('focus', handlePermissionChange);
+    return () => window.removeEventListener('focus', handlePermissionChange);
+  }, [userData.isWakeUpAlarmEnabled, userData.routineChunks]);
+
   const effectiveDate = useMemo(() => {
     const [resetH] = userData.resetTime.split(':').map(Number);
     return getEffectiveDateObject(currentTime, resetH);
@@ -4815,7 +4866,15 @@ export default function App() {
     });
   };
 
-  const toggleWakeUpAlarm = () => {
+  const toggleWakeUpAlarm = async () => {
+    if (!userData.isWakeUpAlarmEnabled) {
+      // User is trying to turn it ON
+      const status = await notificationService.requestPermission();
+      if (status !== 'granted') {
+        setShowPermissionGuide(true);
+        return;
+      }
+    }
     setUserData(prev => ({ ...prev, isWakeUpAlarmEnabled: !prev.isWakeUpAlarmEnabled }));
   };
 
@@ -5126,43 +5185,6 @@ export default function App() {
             </div>
 
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
-                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">알림 설정</h3>
-              </div>
-              
-              <div className="space-y-4 pt-1">
-                <div className="flex flex-col gap-1">
-                  <div className="flex flex-col gap-1">
-                    <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10"> 기상 및 루틴 시작 시간에 맞춰 브라우저 알림을 보냅니다.</p>
-                  </div>
-                  <div className="flex flex-col items-start gap-2 ml-10">
-                    <button 
-                      onClick={async () => {
-                        const status = await notificationService.requestPermission();
-                        setNotificationPermission(status);
-                      }}
-                      className={`h-10 px-4 rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center ${
-                        notificationPermission === 'granted' 
-                          ? 'bg-green-100 text-green-700' 
-                          : notificationPermission === 'denied'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-indigo-600 text-white hover:bg-slate-700'
-                      }`}
-                    >
-                      {notificationPermission === 'granted' ? '권한 허용됨' : notificationPermission === 'denied' ? '권한 거부됨' : '알림 받기'}
-                    </button>
-                    {notificationPermission === 'denied' && (
-                      <span className="text-[9px] text-red-400 font-bold whitespace-nowrap">* 브라우저 설정에서 직접 해제해주세요</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Settings className="w-5 h-5 text-indigo-600" />
@@ -5191,13 +5213,13 @@ export default function App() {
                     soundService.unlock();
                     toggleWakeUpAlarm();
                   }}
-                  className={`h-10 px-4 rounded-xl font-bold text-sm transition-all shadow-md shrink-0 flex items-center gap-1.5 ${
-                    userData.isWakeUpAlarmEnabled !== false 
-                      ? 'bg-amber-100 text-amber-700' 
+                  className={`h-10 px-4 rounded-xl font-bold text-sm transition-all shrink-0 flex items-center gap-1.5 ${
+                    userData.isWakeUpAlarmEnabled 
+                      ? 'bg-sky-100 text-sky-700' 
                       : 'bg-slate-100 text-slate-400'
                   }`}
                 >
-                  {userData.isWakeUpAlarmEnabled !== false ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                  {userData.isWakeUpAlarmEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
                   알람
                 </button>
               </div>
@@ -6049,6 +6071,81 @@ export default function App() {
         onClose={() => setShowPerfectDay(false)}
         completedGroups={perfectDayGroups}
       />
+
+      {/* 알림 권한 안내 모달 */}
+      <AnimatePresence>
+        {showPermissionGuide && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setShowPermissionGuide(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-[25px] overflow-hidden shadow-2xl z-10"
+            >
+              <div className="p-6 text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-2">
+                  <BellOff className="w-8 h-8 text-amber-500" />
+                </div>
+                <h3 className="text-xl font-black text-slate-800">알림 권한이 필요합니다</h3>
+                <div className="text-sm font-bold text-slate-500 leading-relaxed text-left bg-slate-50 p-4 rounded-2xl">
+                  기상 알람 및 루틴 알람을 받으시려면 브라우저의 알림 권한을 허용해주셔야 합니다.<br/><br/>
+                  <span className="text-indigo-600">브라우저 주소창 왼쪽의 설정 아이콘</span>을 클릭하여 '알림' 설정을 <span className="font-black text-slate-800">허용</span>으로 변경해주세요.
+                </div>
+                <button 
+                  onClick={() => setShowPermissionGuide(false)}
+                  className="w-full bg-indigo-600 text-white font-black py-4 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                >
+                  확인했습니다
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 알림 권한 거부 시 자동 비활성 안내 모달 */}
+      <AnimatePresence>
+        {permissionNotificationMessage && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setPermissionNotificationMessage(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-[25px] overflow-hidden shadow-2xl z-10"
+            >
+              <div className="p-6 text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mb-2">
+                  <AlertCircle className="w-8 h-8 text-rose-500" />
+                </div>
+                <h3 className="text-xl font-black text-slate-800">알람 비활성화 안내</h3>
+                <p className="text-sm font-bold text-slate-500 leading-relaxed">
+                  {permissionNotificationMessage}
+                </p>
+                <button 
+                  onClick={() => setPermissionNotificationMessage(null)}
+                  className="w-full bg-slate-900 text-white font-black py-4 rounded-[15px] hover:bg-slate-800 transition-all shadow-lg"
+                >
+                  확인
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Deletion Message Toast */}
       <AnimatePresence>
