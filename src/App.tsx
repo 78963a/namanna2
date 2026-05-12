@@ -91,7 +91,8 @@ import {
   HeaderBoxProps,
   HomeViewProps,
   StatsViewProps,
-  ExecutionViewProps
+  ExecutionViewProps,
+  NaggingSettings
 } from './types';
 import phrases from './phrases.json';
 import { 
@@ -527,20 +528,65 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     setAnimationStage('none');
   };
 
-  // --- [음성 안내 (Voice Notification) 로직] ---
-  // phrases.json에 정의된 규칙에 따라 타이머 시점에 맞춰 음성 안내를 실행합니다.
+  // --- [잔소리 기능 (Nagging Function) 로직] ---
+  // 사용자가 설정한 문구와 시점에 맞춰 음성 안내를 실행합니다.
   useEffect(() => {
-    if (activeTask && !activeTask.isPaused && activeTask.startTime && userData.isVoiceEnabled) {
-      voiceService.processRules(
-        phrases.voiceSettings.rules,
-        activeTask.text,
-        getElapsed(activeTask),
-        activeTask.targetDuration || 0,
-        !!userData.isVoiceEnabled,
-        activeTask.taskType || TaskType.TIME_LIMITED
-      );
+    if (!activeTask || activeTask.isPaused || !activeTask.startTime || !userData.isVoiceEnabled || !userData.naggingSettings) return;
+
+    const settings = userData.naggingSettings;
+    const elapsed = getElapsed(activeTask);
+    const target = (activeTask.targetDuration || 0) * 60;
+    const remaining = target - elapsed;
+    
+    const variables = {
+      name: userData.userName || '나',
+      task: activeTask.text,
+      n: settings.beforeEndTime,
+      m: Math.floor((elapsed - target) / 60)
+    };
+
+    // 1. 루틴 시작 알림 (0초 또는 재개 시점)
+    if (settings.startEnabled && elapsed === 0) {
+      // 효과음이 끝날 때까지 기다렸다가 재생 (최대 3초)
+      const trySpeak = (retry = 0) => {
+        if (soundService.isPlaying && retry < 15) {
+          setTimeout(() => trySpeak(retry + 1), 200);
+        } else {
+          voiceService.speakNagging(`start-${activeTask.id}`, settings.startMessage || 'task', variables);
+        }
+      };
+      trySpeak();
     }
-  }, [activeTask?.id, activeTask?.isPaused, activeTask?.startTime, activeTask ? getElapsed(activeTask) : 0, userData.isVoiceEnabled]);
+
+    // 2. 루틴 종료 전 알림
+    if (settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && remaining > 0) {
+      voiceService.speakNagging(`beforeEnd-${activeTask.id}-${elapsed}`, settings.beforeEndMessage, variables);
+    }
+
+    // 3. 루틴 종료 알림
+    if (settings.endEnabled && elapsed === target && target > 0) {
+      voiceService.speakNagging(`end-${activeTask.id}`, settings.endMessage, variables);
+    }
+
+    // 4. 루틴 종료 후 알림 (초과 시간 정기 안내)
+    if (settings.overTimeEnabled && activeTask.taskType === TaskType.TIME_LIMITED && elapsed > target) {
+      const overtimeSeconds = elapsed - target;
+      const intervalSeconds = settings.overTimeInterval * 60;
+      if (overtimeSeconds > 0 && overtimeSeconds % intervalSeconds === 0) {
+        voiceService.speakNagging(`overtime-${activeTask.id}-${elapsed}`, settings.overTimeMessage, {
+          ...variables,
+          m: Math.floor(overtimeSeconds / 60)
+        });
+      }
+    }
+  }, [
+    activeTask?.id, 
+    activeTask?.isPaused, 
+    activeTask?.startTime, 
+    activeTask ? getElapsed(activeTask) : 0, 
+    userData.isVoiceEnabled,
+    userData.naggingSettings
+  ]);
 
   if (isCompleted && animationStage !== 'none') {
     // 루틴그룹완료화면 (Routine Group Completion Screen)
@@ -846,6 +892,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   <span>
                     {chunk.startType === 'time' && chunk.startTime ? chunk.startTime.replace(/시/g, '') : (chunk.situation || '언제든')}
                   </span>
+                  {chunk.isAlarmEnabled ? (
+                    <Bell className="w-3.5 h-3.5 ml-1 opacity-70" />
+                  ) : (
+                    <BellOff className="w-3.5 h-3.5 ml-1 opacity-40" />
+                  )}
                 </div>
                 <div className="flex items-center px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
                   <span>총 {scheduledTasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0)}분</span>
@@ -2989,7 +3040,19 @@ export default function App() {
         nextRoutineAutoStart: false,
         userName: '나',
         isVoiceEnabled: true,
-        isWakeUpAlarmEnabled: false
+        isWakeUpAlarmEnabled: false,
+        naggingSettings: {
+          startEnabled: false,
+          startMessage: 'task',
+          beforeEndEnabled: false,
+          beforeEndTime: 1,
+          beforeEndMessage: 'task 종료 n분 전입니다.',
+          endEnabled: false,
+          endMessage: 'task 시간이 경과되었습니다.',
+          overTimeEnabled: false,
+          overTimeInterval: 1,
+          overTimeMessage: 'name님, task가 m분 지났어요.'
+        }
       };
     }
 
@@ -3052,6 +3115,21 @@ export default function App() {
     if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
     if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
     if (parsed.isWakeUpAlarmEnabled === undefined) parsed.isWakeUpAlarmEnabled = false;
+    
+    if (parsed.naggingSettings === undefined) {
+      parsed.naggingSettings = {
+        startEnabled: false,
+        startMessage: 'task',
+        beforeEndEnabled: false,
+        beforeEndTime: 1,
+        beforeEndMessage: 'task 종료 n분 전입니다.',
+        endEnabled: false,
+        endMessage: 'task 시간이 경과되었습니다.',
+        overTimeEnabled: false,
+        overTimeInterval: 1,
+        overTimeMessage: 'name님, task가 m분 지났어요.'
+      };
+    }
     
     if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
     if (parsed.routineGroupHistory === undefined) parsed.routineGroupHistory = [];
@@ -5396,6 +5474,25 @@ export default function App() {
             <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Volume2 className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h3 className="text-base font-black text-slate-900">잔소리 기능</h3>
+              </div>
+              <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">사용자 설정에 맞춘 음성 안내를 통해 루틴 진행을 돕습니다.</p>
+              <div className="pt-1">
+                <button 
+                  onClick={() => setSettingsSubView({ type: 'nagging' })}
+                  className="w-full flex items-center justify-between p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] group"
+                >
+                  <span className="text-sm font-black text-slate-700">잔소리 설정하기</span>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Settings className="w-5 h-5 text-indigo-600" />
                 </div>
                 <h3 className="text-base font-black text-slate-900">루틴 그룹 관리</h3>
@@ -5558,6 +5655,203 @@ export default function App() {
       );
     }
 
+    if (settingsSubView.type === 'nagging') {
+      const settings = userData.naggingSettings || {
+        startEnabled: false,
+        startMessage: 'task',
+        beforeEndEnabled: false,
+        beforeEndTime: 1,
+        beforeEndMessage: 'task 종료 n분 전입니다.',
+        endEnabled: false,
+        endMessage: 'task 시간이 경과되었습니다.',
+        overTimeEnabled: false,
+        overTimeInterval: 1,
+        overTimeMessage: 'name님, task가 m분 지났어요.'
+      };
+
+      const updateNagging = (key: keyof NaggingSettings, value: any) => {
+        setUserData(prev => ({
+          ...prev,
+          naggingSettings: {
+            ...(prev.naggingSettings || settings),
+            [key]: value
+          }
+        }));
+      };
+
+      return (
+        <div className="flex flex-col h-full overflow-hidden">
+          <div className="flex items-center gap-3 mb-6">
+            <button 
+              onClick={() => setSettingsSubView({ type: 'main' })}
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 shadow-sm"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <h2 className="text-xl font-black text-slate-800">잔소리 기능 설정</h2>
+          </div>
+
+          <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-grow pb-10">
+            {/* 공통 변수 안내 */}
+            <div className="p-4 bg-indigo-50 rounded-2xl space-y-2 border border-indigo-100">
+              <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4" /> 사용 가능한 변수
+              </h3>
+              <div className="grid grid-cols-2 gap-2 text-[11px] font-bold text-indigo-700">
+                <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">name</span>: 사용자 이름</div>
+                <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">task</span>: 루틴 제목</div>
+                <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">n</span>: 종료 전 분</div>
+                <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">m</span>: 경과된 분</div>
+              </div>
+            </div>
+
+            {/* 3-1. 루틴 시작 시 알림 */}
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-base font-black text-slate-800">루틴 시작 시 알림</h3>
+                  <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴을 시작할 때의 알림입니다.</p>
+                </div>
+                <button 
+                  onClick={() => updateNagging('startEnabled', !settings.startEnabled)}
+                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.startEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.startEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+              {settings.startEnabled && (
+                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                  <input 
+                    type="text"
+                    value={settings.startMessage}
+                    onChange={(e) => updateNagging('startMessage', e.target.value)}
+                    placeholder="예: task 시작합니다"
+                    className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* 3-2. 루틴 종료 전 알림 */}
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-base font-black text-slate-800">루틴 종료 전 알림</h3>
+                  <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴 시간이 종료되기 전의 알림입니다.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {settings.beforeEndEnabled && (
+                    <select 
+                      value={settings.beforeEndTime}
+                      onChange={(e) => updateNagging('beforeEndTime', parseInt(e.target.value))}
+                      className="text-xs font-black p-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
+                    >
+                      {[1,2,3,4,5,6,7,8,9,10].map(m => (
+                        <option key={m} value={m}>{m}분 전</option>
+                      ))}
+                    </select>
+                  )}
+                  <button 
+                    onClick={() => updateNagging('beforeEndEnabled', !settings.beforeEndEnabled)}
+                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.beforeEndEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.beforeEndEnabled ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
+              </div>
+              {settings.beforeEndEnabled && (
+                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                  <input 
+                    type="text"
+                    value={settings.beforeEndMessage}
+                    onChange={(e) => updateNagging('beforeEndMessage', e.target.value)}
+                    className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* 3-3. 루틴 종료 알림 */}
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-base font-black text-slate-800">루틴 종료 알림</h3>
+                  <p className="text-[11px] font-bold text-slate-400 leading-tight">사용자가 설정한 시간이 종료되었을 때의 알림입니다.</p>
+                </div>
+                <button 
+                  onClick={() => updateNagging('endEnabled', !settings.endEnabled)}
+                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.endEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.endEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+              {settings.endEnabled && (
+                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                  <input 
+                    type="text"
+                    value={settings.endMessage}
+                    onChange={(e) => updateNagging('endMessage', e.target.value)}
+                    className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* 3-4. 루틴 종료 후 알림 */}
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-base font-black text-slate-800">루틴 종료 후 알림</h3>
+                  <p className="text-[11px] font-bold text-slate-400 leading-tight">시간제한루틴의 경우, 지날 때마다 지난 시간을 안내합니다.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {settings.overTimeEnabled && (
+                    <div className="flex items-center gap-1">
+                      <input 
+                        type="number"
+                        min="1"
+                        max="60"
+                        value={settings.overTimeInterval}
+                        onChange={(e) => updateNagging('overTimeInterval', parseInt(e.target.value) || 1)}
+                        className="w-10 text-center text-xs font-black p-1 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
+                      />
+                      <span className="text-[10px] font-black text-slate-400">분</span>
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => updateNagging('overTimeEnabled', !settings.overTimeEnabled)}
+                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.overTimeEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.overTimeEnabled ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
+              </div>
+              {settings.overTimeEnabled && (
+                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                  <input 
+                    type="text"
+                    value={settings.overTimeMessage}
+                    onChange={(e) => updateNagging('overTimeMessage', e.target.value)}
+                    className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => setSettingsSubView({ type: 'main' })}
+            className="w-full mt-4 bg-slate-900 text-white font-black py-4 rounded-[15px] hover:bg-slate-800 transition-all shadow-lg"
+          >
+            확인
+          </button>
+        </div>
+      );
+    }
     const chunk = userData.routineChunks.find(c => c.id === settingsSubView.chunkId);
     if (!chunk) return null;
 

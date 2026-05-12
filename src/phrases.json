@@ -121,43 +121,6 @@
       { "minClicks": 15, "iconId": "crown_phoenix", "label": "왕관 피닉스" }
     ]
   },
-  "voiceSettings": {
-    "rules": [
-      {
-        "id": "5min_remaining",
-        "type": "remaining",
-        "triggerSeconds": 300,
-        "minTargetMinutes": 15,
-        "message": "{{title}}{{particle:이/가}} 5분 남았어요."
-      },
-      {
-        "id": "1min_remaining",
-        "type": "remaining",
-        "triggerSeconds": 60,
-        "minTargetMinutes": 5,
-        "message": "{{title}}{{particle:이/가}} 1분 남았어요."
-      },
-      {
-        "id": "timer_ended",
-        "type": "elapsed",
-        "triggerSeconds": 0,
-        "message": "{{title}}{{particle:이/가}} 시간이 지났어요."
-      },
-      {
-        "id": "1min_elapsed",
-        "type": "elapsed",
-        "triggerSeconds": 60,
-        "maxTargetMinutes": 5,
-        "message": "{{title}}{{particle:이/가}} 1분 지났어요."
-      },
-      {
-        "id": "overtime_periodic",
-        "type": "periodic_overtime",
-        "intervalMinutes": 2,
-        "message": "{{title}}{{particle:이/가}},{{overtimeMinutes}}분 지났어요."
-      }
-    ]
-  },
   "wakeUpCheckInSettings": {
     "_comment": "기상 체크인 유예 시간 설정 (단위: 분)",
     "earlyWindowMinutes": 30,

@@ -7,6 +7,7 @@
 class SoundService {
   private isUnlocked: boolean = false;
   private audioCache: { [path: string]: HTMLAudioElement } = {};
+  private activeCount: number = 0;
 
   /**
    * Resolves the full path for an asset, taking BASE_URL into account.
@@ -19,13 +20,18 @@ class SoundService {
     const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
     
     const result = baseUrl.endsWith('/') ? `${baseUrl}${normalizedPath}` : `${baseUrl}/${normalizedPath}`;
-    console.log('Resolving sound path:', path, '->', result);
     return result;
   }
 
   /**
+   * Returns whether any sound is currently playing.
+   */
+  get isPlaying(): boolean {
+    return this.activeCount > 0;
+  }
+
+  /**
    * Preloads an audio file and caches it.
-   * @param path The path to the audio file.
    */
   preload(path: string) {
     const fullPath = this.getFullPath(path);
@@ -45,20 +51,15 @@ class SoundService {
     const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
     silentAudio.play().then(() => {
       this.isUnlocked = true;
-      console.log('Sound context unlocked');
     }).catch(e => {
-      console.log('Sound unlock failed (expected if no gesture yet):', e);
+      console.log('Sound unlock failed:', e);
     });
   }
 
   /**
    * Plays a sound effect.
-   * @param path The path to the audio file.
-   * @param isEnabled Whether sounds are enabled.
    */
   play(path: string, isEnabled: boolean = true) {
-    // If undefined, we treat it as enabled for these specific sound effects 
-    // unless the user explicitly turned it off.
     if (isEnabled === false) return;
 
     const fullPath = this.getFullPath(path);
@@ -67,20 +68,27 @@ class SoundService {
       let audio = this.audioCache[fullPath];
       if (!audio) {
         audio = new Audio(fullPath);
-        audio.preload = 'auto'; // Force preload
+        audio.preload = 'auto';
         this.audioCache[fullPath] = audio;
       }
       
-      // Reset if already playing
       audio.currentTime = 0;
+      
+      const onEnd = () => {
+        this.activeCount = Math.max(0, this.activeCount - 1);
+        audio.removeEventListener('ended', onEnd);
+      };
+      
+      audio.addEventListener('ended', onEnd);
+      this.activeCount++;
+
       const playPromise = audio.play();
       
       if (playPromise !== undefined) {
         playPromise.catch(e => {
-          console.warn('Sound playback failed (likely blocked or 404):', e, 'Path:', fullPath);
-          // Try one more time with a fresh object if cached one failed
-          const fallback = new Audio(fullPath);
-          fallback.play().catch(err => console.error('Fallback sound playback failed:', err, 'Path:', fullPath));
+          this.activeCount = Math.max(0, this.activeCount - 1);
+          audio.removeEventListener('ended', onEnd);
+          console.warn('Sound playback failed:', e, 'Path:', fullPath);
         });
       }
     } catch (e) {

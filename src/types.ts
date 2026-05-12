@@ -110,6 +110,22 @@ export interface TaskHistoryEntry {
 }
 
 /**
+ * Settings for the "Nagging" (voice guidance) feature.
+ */
+export interface NaggingSettings {
+  startEnabled: boolean;
+  startMessage: string;
+  beforeEndEnabled: boolean;
+  beforeEndTime: number; // minutes
+  beforeEndMessage: string;
+  endEnabled: boolean;
+  endMessage: string;
+  overTimeEnabled: boolean;
+  overTimeInterval: number; // minutes
+  overTimeMessage: string;
+}
+
+/**
  * Represents the entire state of the user's data.
  */
 export interface UserData {
@@ -143,13 +159,14 @@ export interface UserData {
   lastPerfectDayAnimationDate?: string; // YYYY-MM-DD
   isVoiceEnabled?: boolean;
   isWakeUpAlarmEnabled?: boolean;
+  naggingSettings?: NaggingSettings;
 }
 
 /**
  * Represents the sub-view state within the settings screen.
  */
 export interface SettingsSubView {
-  type: 'main' | 'detail';
+  type: 'main' | 'detail' | 'nagging';
   chunkId?: string;
 }
 

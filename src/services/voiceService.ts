@@ -1,5 +1,4 @@
 import { getJosa } from "../utils";
-import { TaskType } from "../types";
 
 /**
  * Service for handling Text-to-Speech (TTS) notifications.
@@ -38,7 +37,6 @@ class VoiceService {
   unlock() {
     if (!this.synth || this.isUnlocked) return;
     
-    // RULE 5.1: Speak an empty string to initialize the audio session on iOS
     try {
       this.synth.cancel();
       const utterance = new SpeechSynthesisUtterance('');
@@ -53,19 +51,18 @@ class VoiceService {
 
   /**
    * Speaks a message using the browser's SpeechSynthesis API.
-   * @param message The text to speak.
+   * If another voice is playing, it will be cancelled.
    */
   speak(message: string) {
-    if (!this.synth) return;
+    if (!this.synth || !message) return;
 
-    // Cancel any ongoing speech
+    // Rule 5: Collision handling - cancel previous
     this.synth.cancel();
 
     const utterance = new SpeechSynthesisUtterance(message);
     utterance.lang = 'ko-KR';
     utterance.rate = 1.0;
     
-    // Rule 5.1: Ensure voice is set if available
     if (!this.voice) {
       const voices = this.synth.getVoices();
       if (voices.length > 0) {
@@ -77,95 +74,39 @@ class VoiceService {
       utterance.voice = this.voice;
     }
 
-    // Force unlock flag if we are speaking
     this.isUnlocked = true;
-
     this.synth.speak(utterance);
   }
 
   /**
-   * Processes voice rules and triggers speech if conditions are met.
-   * @param rules List of rules from phrases.json
-   * @param title The current task title
-   * @param elapsedSeconds Current elapsed time in seconds
-   * @param targetDurationMinutes Target duration in minutes
-   * @param isVoiceEnabled Whether voice is toggled on
-   * @param taskType The type of the current task
+   * Replaces variables in a template string and speaks if trigger Id is unique.
    */
-  processRules(
-    rules: any[],
-    title: string,
-    elapsedSeconds: number,
-    targetDurationMinutes: number,
-    isVoiceEnabled: boolean,
-    taskType: TaskType = TaskType.TIME_LIMITED
+  speakNagging(
+    triggerId: string,
+    template: string,
+    variables: { name?: string; task?: string; n?: number; m?: number }
   ) {
-    if (!isVoiceEnabled) return;
+    if (this.lastTriggeredId === triggerId) return;
+    this.lastTriggeredId = triggerId;
 
-    const targetSeconds = (targetDurationMinutes || 0) * 60;
-    const remainingSeconds = targetSeconds - elapsedSeconds;
+    let msg = template;
+    const { name = '', task = '', n = 0, m = 0 } = variables;
 
-    for (const rule of rules) {
-      let shouldTrigger = false;
-      let finalMessage = rule.message || '';
-      if (!finalMessage) continue;
+    // Replace variables
+    msg = msg.replace(/name/g, name);
+    msg = msg.replace(/task/g, task);
+    msg = msg.replace(/n/g, n.toString());
+    msg = msg.replace(/m/g, m.toString());
 
-      if (rule.type === 'remaining') {
-        // Trigger if remaining time is exactly the threshold (allowing 1s window)
-        if (remainingSeconds === rule.triggerSeconds) {
-          shouldTrigger = true;
-        }
-        // Min target duration constraint
-        if (rule.minTargetMinutes && targetDurationMinutes < rule.minTargetMinutes) {
-          shouldTrigger = false;
-        }
-      } else if (rule.type === 'elapsed') {
-        const overtimeSeconds = elapsedSeconds - targetSeconds;
-        if (overtimeSeconds === rule.triggerSeconds) {
-          shouldTrigger = true;
-        }
-        // Max target duration constraint
-        if (rule.maxTargetMinutes && targetDurationMinutes > rule.maxTargetMinutes) {
-          shouldTrigger = false;
-        }
-      } else if (rule.type === 'periodic_overtime') {
-        // Only trigger for TIME_LIMITED tasks
-        if (taskType === TaskType.TIME_LIMITED) {
-          const overtimeSeconds = elapsedSeconds - targetSeconds;
-          const intervalSeconds = (rule.intervalMinutes || 1) * 60;
-          
-          if (overtimeSeconds > 0 && overtimeSeconds % intervalSeconds === 0) {
-            shouldTrigger = true;
-            const overtimeMinutes = Math.floor(overtimeSeconds / 60);
-            finalMessage = finalMessage.replace(/\{\{overtimeMinutes\}\}/g, overtimeMinutes.toString());
-          }
-        }
-      }
+    // Apply particle rules (Josa) if variables were used followed by particles
+    // e.g. "task가" -> "루틴이"
+    const josaRegex = /(name|task)(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이|가|을|를|은|는|으로|로|이죠|죠)/g;
+    msg = msg.replace(josaRegex, (match, variable, p1) => {
+      const val = variable === 'name' ? name : task;
+      return val + getJosa(val, p1 as any);
+    });
 
-      if (shouldTrigger && finalMessage) {
-        // Prevent repeated triggers for the same rule/task combination in the same second
-        const triggerId = `${rule.id}-${title}-${elapsedSeconds}`;
-        if (this.lastTriggeredId !== triggerId) {
-          this.lastTriggeredId = triggerId;
-          
-          let msg = finalMessage;
-          if (!msg) continue;
-          // Apply title and particle rules
-          const josaRegex = /\{\{title\}\}(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이|가|을|를|은|는|으로|로|이죠|죠)/g;
-          const particleTagRegex = /\{\{title\}\}\{\{particle:(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이|가|을|를|은|는|으로|로|이죠|죠)\}\}/g;
-          
-          msg = msg.replace(josaRegex, (_: string, p1: string) => {
-            return title + getJosa(title, p1 as any);
-          });
-          msg = msg.replace(particleTagRegex, (_: string, p1: string) => {
-            return title + getJosa(title, p1 as any);
-          });
-          msg = msg.replace(/\{\{title\}\}/g, title);
-
-          this.speak(msg);
-        }
-      }
-    }
+    this.speak(msg);
   }
 }
 
