@@ -7,14 +7,30 @@ class SoundService {
   private audioCache: { [path: string]: HTMLAudioElement } = {};
 
   /**
+   * Resolves the full path for an asset, taking BASE_URL into account.
+   */
+  private getFullPath(path: string): string {
+    if (path.startsWith('http') || path.startsWith('data:')) return path;
+    
+    // In Vite, import.meta.env.BASE_URL is usually available
+    const baseUrl = (import.meta.env && import.meta.env.BASE_URL) || '/';
+    const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+    
+    const result = baseUrl.endsWith('/') ? `${baseUrl}${normalizedPath}` : `${baseUrl}/${normalizedPath}`;
+    console.log('Resolving sound path:', path, '->', result);
+    return result;
+  }
+
+  /**
    * Preloads an audio file and caches it.
    * @param path The path to the audio file.
    */
   preload(path: string) {
-    if (this.audioCache[path]) return;
-    const audio = new Audio(path);
+    const fullPath = this.getFullPath(path);
+    if (this.audioCache[fullPath]) return;
+    const audio = new Audio(fullPath);
     audio.load();
-    this.audioCache[path] = audio;
+    this.audioCache[fullPath] = audio;
   }
 
   /**
@@ -43,12 +59,14 @@ class SoundService {
     // unless the user explicitly turned it off.
     if (isEnabled === false) return;
 
+    const fullPath = this.getFullPath(path);
+
     try {
-      let audio = this.audioCache[path];
+      let audio = this.audioCache[fullPath];
       if (!audio) {
-        audio = new Audio(path);
+        audio = new Audio(fullPath);
         audio.preload = 'auto'; // Force preload
-        this.audioCache[path] = audio;
+        this.audioCache[fullPath] = audio;
       }
       
       // Reset if already playing
@@ -57,10 +75,10 @@ class SoundService {
       
       if (playPromise !== undefined) {
         playPromise.catch(e => {
-          console.warn('Sound playback failed (likely blocked):', e);
+          console.warn('Sound playback failed (likely blocked or 404):', e, 'Path:', fullPath);
           // Try one more time with a fresh object if cached one failed
-          const fallback = new Audio(path);
-          fallback.play().catch(err => console.error('Fallback sound playback failed:', err));
+          const fallback = new Audio(fullPath);
+          fallback.play().catch(err => console.error('Fallback sound playback failed:', err, 'Path:', fullPath));
         });
       }
     } catch (e) {
