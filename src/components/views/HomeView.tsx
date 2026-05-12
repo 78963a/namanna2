@@ -313,10 +313,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           <span>
                             {chunk.startType === 'time' && chunk.startTime ? chunk.startTime.replace(/시/g, '') : (chunk.situation || '언제든')}
                           </span>
-                          {chunk.isAlarmEnabled ? (
-                            <Bell className="w-3 h-3 ml-0.5 opacity-70" />
-                          ) : (
-                            <BellOff className="w-3 h-3 ml-0.5 opacity-40" />
+                          {chunk.startType === 'time' && (
+                            chunk.isAlarmEnabled ? (
+                              <Bell className="w-3 h-3 ml-0.5 opacity-70" />
+                            ) : (
+                              <BellOff className="w-3 h-3 ml-0.5 opacity-40" />
+                            )
                           )}
                         </div>
                         <div className="flex items-center px-2 py-1 bg-slate-100 rounded-[8px] text-slate-600 text-[10px] font-black">

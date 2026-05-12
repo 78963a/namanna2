@@ -531,10 +531,29 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   // --- [잔소리 기능 (Nagging Function) 로직] ---
   // 사용자가 설정한 문구와 시점에 맞춰 음성 안내를 실행합니다.
   useEffect(() => {
-    if (!activeTask || activeTask.isPaused || !activeTask.startTime || !userData.isVoiceEnabled || !userData.naggingSettings) return;
+    if (!activeTask || activeTask.isPaused || !activeTask.startTime || !userData.isVoiceEnabled) return;
+
+    const elapsed = getElapsed(activeTask);
+    
+    // 1. 트리거 루틴(첫 루틴) 시작 시 효과음 재생
+    if (elapsed === 0) {
+      // 미실행 루틴 그룹인지 확인
+      const chunk = userData.routineChunks.find(c => c.tasks.some(t => t.id === activeTask.id));
+      if (chunk) {
+        const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
+        const isFirstScheduled = scheduledTasks[0]?.id === activeTask.id;
+        // 한 번도 실행된 적 없는 그룹인지 확인 (모든 오늘 루틴이 미완료이며 누적시간이 0)
+        const isGroupBrandNew = scheduledTasks.every(t => !t.completed && (!t.accumulatedDuration || t.accumulatedDuration === 0));
+        
+        if (isFirstScheduled && isGroupBrandNew) {
+          soundService.play('/driken5482-applause-cheer-236786.mp3', userData.isVoiceEnabled);
+        }
+      }
+    }
+
+    if (!userData.naggingSettings) return;
 
     const settings = userData.naggingSettings;
-    const elapsed = getElapsed(activeTask);
     const target = (activeTask.targetDuration || 0) * 60;
     const remaining = target - elapsed;
     
@@ -545,8 +564,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
       m: Math.floor((elapsed - target) / 60)
     };
 
-    // 1. 루틴 시작 알림 (0초 또는 재개 시점)
-    if (settings.startEnabled && elapsed === 0) {
+    // 2. 루틴 시작 알림 (0초 또는 재개 시점)
+    if (elapsed === 0 && settings.startEnabled) {
       // 효과음이 끝날 때까지 기다렸다가 재생 (최대 3초)
       const trySpeak = (retry = 0) => {
         if (soundService.isPlaying && retry < 15) {
@@ -635,6 +654,25 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm`}
                 >
                   <BarChart3 className="w-5 h-5" />
+                </button>
+
+                {/* 음성안내아이콘 */}
+                <button 
+                  onClick={() => {
+                    soundService.unlock();
+                    voiceService.unlock();
+                    if (typeof window !== 'undefined' && window.speechSynthesis) {
+                      window.speechSynthesis.cancel();
+                    }
+                    setUserData(prev => ({ ...prev, isVoiceEnabled: !prev.isVoiceEnabled }));
+                  }}
+                  className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white border shadow-sm hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 ${
+                    userData.isVoiceEnabled 
+                      ? 'border-blue-400 text-blue-500 shadow-blue-50' 
+                      : 'border-slate-100 text-slate-400'
+                  }`}
+                >
+                  {userData.isVoiceEnabled ? <Volume2 className="w-5 h-5" strokeWidth={2.5} /> : <VolumeX className="w-5 h-5" />}
                 </button>
 
                 {/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}
@@ -892,10 +930,12 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   <span>
                     {chunk.startType === 'time' && chunk.startTime ? chunk.startTime.replace(/시/g, '') : (chunk.situation || '언제든')}
                   </span>
-                  {chunk.isAlarmEnabled ? (
-                    <Bell className="w-3.5 h-3.5 ml-1 opacity-70" />
-                  ) : (
-                    <BellOff className="w-3.5 h-3.5 ml-1 opacity-40" />
+                  {chunk.startType === 'time' && (
+                    chunk.isAlarmEnabled ? (
+                      <Bell className="w-3.5 h-3.5 ml-1 opacity-70" />
+                    ) : (
+                      <BellOff className="w-3.5 h-3.5 ml-1 opacity-40" />
+                    )
                   )}
                 </div>
                 <div className="flex items-center px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
@@ -3912,6 +3952,8 @@ export default function App() {
     if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
+    soundService.unlock();
+    voiceService.unlock();
     const chunk = userData.routineChunks.find(c => c.id === chunkId);
     if (!chunk) return;
 
@@ -4025,7 +4067,9 @@ export default function App() {
 
   const skipTask = (id: string) => {
     soundService.unlock();
+    soundService.stop();
     voiceService.unlock();
+    voiceService.stop();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
@@ -4100,7 +4144,9 @@ export default function App() {
 
   const laterTask = (id: string) => {
     soundService.unlock();
+    soundService.stop();
     voiceService.unlock();
+    voiceService.stop();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
@@ -4178,7 +4224,6 @@ export default function App() {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
-      const autoStart = prev.nextRoutineAutoStart;
       const next = {
         ...prev,
         routineChunks: prev.routineChunks.map(chunk => {
@@ -4190,8 +4235,8 @@ export default function App() {
                 completed: false,
                 status: TaskStatus.IN_PROGRESS,
                 laterTimestamp: undefined,
-                isPaused: !autoStart,
-                startTime: autoStart ? nowStr : undefined,
+                isPaused: false,
+                startTime: nowStr,
                 endTime: undefined,
                 duration: undefined,
                 accumulatedDuration: resetTimer ? 0 : (task.accumulatedDuration || 0)
@@ -4227,7 +4272,6 @@ export default function App() {
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     
     setUserData(prev => {
-      const autoStart = prev.nextRoutineAutoStart;
       // If there's a different active task, pause it
       let activeTaskId: string | null = null;
       for (const chunk of prev.routineChunks) {
@@ -4249,8 +4293,8 @@ export default function App() {
                 completed: false,
                 status: TaskStatus.IN_PROGRESS,
                 laterTimestamp: undefined,
-                isPaused: !autoStart,
-                startTime: autoStart ? nowStr : undefined,
+                isPaused: false,
+                startTime: nowStr,
                 endTime: undefined,
                 duration: undefined,
                 accumulatedDuration: resetTimer ? 0 : (task.accumulatedDuration || 0)
@@ -4454,6 +4498,10 @@ export default function App() {
       if (!foundTask || !targetChunkId) return prev;
 
       const isBecomingCompleted = !foundTask.completed;
+      if (isBecomingCompleted) {
+        soundService.stop();
+        voiceService.stop();
+      }
       
       const newChunks = prev.routineChunks.map(chunk => {
         if (chunk.id === targetChunkId) {
@@ -5805,7 +5853,7 @@ export default function App() {
               <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-1">
                   <h3 className="text-base font-black text-slate-800">루틴 종료 후 알림</h3>
-                  <p className="text-[11px] font-bold text-slate-400 leading-tight">시간제한루틴의 경우, 지날 때마다 지난 시간을 안내합니다.</p>
+                  <p className="text-[11px] font-bold text-slate-400 leading-tight">시간제한루틴의 경우, 사용자가 지정한 시간이 경과할 때마다 지난 시간을 안내합니다.</p>
                 </div>
                 <div className="flex items-center gap-3">
                   {settings.overTimeEnabled && (
@@ -5814,8 +5862,13 @@ export default function App() {
                         type="number"
                         min="1"
                         max="60"
-                        value={settings.overTimeInterval}
-                        onChange={(e) => updateNagging('overTimeInterval', parseInt(e.target.value) || 1)}
+                        value={settings.overTimeInterval || ''}
+                        onChange={(e) => updateNagging('overTimeInterval', e.target.value === '' ? '' : parseInt(e.target.value))}
+                        onBlur={() => {
+                          if (!settings.overTimeInterval || (typeof settings.overTimeInterval === 'number' && settings.overTimeInterval < 1)) {
+                            updateNagging('overTimeInterval', 1);
+                          }
+                        }}
                         className="w-10 text-center text-xs font-black p-1 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
                       />
                       <span className="text-[10px] font-black text-slate-400">분</span>

@@ -57,6 +57,17 @@ class SoundService {
   }
 
   /**
+   * Immediately stops all ongoing sounds.
+   */
+  stop() {
+    Object.values(this.audioCache).forEach(audio => {
+      audio.pause();
+      audio.currentTime = 0;
+    });
+    this.activeCount = 0;
+  }
+
+  /**
    * Plays a sound effect.
    */
   play(path: string, isEnabled: boolean = true) {

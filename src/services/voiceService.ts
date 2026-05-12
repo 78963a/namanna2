@@ -108,6 +108,15 @@ class VoiceService {
 
     this.speak(msg);
   }
+
+  /**
+   * Immediately stops any ongoing speech.
+   */
+  stop() {
+    if (this.synth) {
+      this.synth.cancel();
+    }
+  }
 }
 
 export const voiceService = new VoiceService();
