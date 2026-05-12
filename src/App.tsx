@@ -112,13 +112,9 @@ import {
 } from './utils';
 import { CheckCheckIcon } from './components/CheckCheckIcon';
 import { voiceService } from './services/voiceService';
+import { soundService } from './services/soundService';
 
-const playAudio = (path: string) => {
-  const audio = new Audio(path);
-  audio.play().catch(e => console.log('Audio playback failed or blocked:', e));
-};
-
-// Components
+// --- Application ---
 import { HeaderBox } from './components/layout/HeaderBox';
 import { HomeView } from './components/views/HomeView';
 import { StatsView } from './components/views/StatsView';
@@ -384,7 +380,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   useEffect(() => {
     if (animationStage === 'title') {
-      playAudio('/freesound_community-success-fanfare-trumpets-6185.mp3');
+      soundService.play('/freesound_community-success-fanfare-trumpets-6185.mp3', userData.isVoiceEnabled);
       const timer = setTimeout(() => {
         setAnimationStage('fireworks');
         
@@ -2903,6 +2899,14 @@ export default function App() {
   const [selectedChunkId, setSelectedChunkId] = useState<string | null>(null);
   const [showCheckInCelebration, setShowCheckInCelebration] = useState(false);
   const [isForeground, setIsForeground] = useState(true);
+
+  // Preload sounds
+  useEffect(() => {
+    soundService.preload('/tithuh-level-up-523624.mp3');
+    soundService.preload('/freesound_community-success-fanfare-trumpets-6185.mp3');
+    soundService.preload('/freesound_community-piglevelwin2mp3-14800.mp3');
+  }, []);
+
   const [activityLog, setActivityLog] = useState<Record<string, number[]>>(() => {
     const saved = localStorage.getItem('routine_activity_log');
     return saved ? JSON.parse(saved) : {};
@@ -2941,7 +2945,8 @@ export default function App() {
         autoReorderInProgressGroups: true,
         firstRoutineAutoStart: false,
         nextRoutineAutoStart: false,
-        userName: '나'
+        userName: '나',
+        isVoiceEnabled: true
       };
     }
 
@@ -3002,6 +3007,7 @@ export default function App() {
     
     if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
     if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
+    if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
     
     if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
     if (parsed.routineGroupHistory === undefined) parsed.routineGroupHistory = [];
@@ -3232,7 +3238,7 @@ export default function App() {
         // [수정] 1.5초 여유를 둔 후에 애니메이션 작동
         const timer = setTimeout(() => {
           setShowPerfectDay(true);
-          playAudio('/freesound_community-piglevelwin2mp3-14800.mp3');
+          soundService.play('/freesound_community-piglevelwin2mp3-14800.mp3', userData.isVoiceEnabled);
           // 표시한 날짜를 기록
           setUserData(prev => ({
             ...prev,
@@ -3784,6 +3790,7 @@ export default function App() {
   };
 
   const handleCheckIn = () => {
+    soundService.unlock();
     voiceService.unlock();
     if (!canCheckIn) return;
 
@@ -3837,6 +3844,7 @@ export default function App() {
   };
 
   const handleLateCheckIn = () => {
+    soundService.unlock();
     voiceService.unlock();
     const checkInTimeStr = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => ({
@@ -3853,6 +3861,7 @@ export default function App() {
   };
 
   const skipTask = (id: string) => {
+    soundService.unlock();
     voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
@@ -3927,6 +3936,7 @@ export default function App() {
   };
 
   const laterTask = (id: string) => {
+    soundService.unlock();
     voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
@@ -4000,6 +4010,7 @@ export default function App() {
   };
 
   const startTask = (taskId: string, resetTimer: boolean = true) => {
+    soundService.unlock();
     voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
@@ -4047,6 +4058,7 @@ export default function App() {
   };
 
   const onRestart = (taskId: string, resetTimer: boolean = true) => {
+    soundService.unlock();
     voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
@@ -4258,6 +4270,7 @@ export default function App() {
   };
 
   const toggleTask = (id: string, closingData?: { note?: string, satisfaction?: number }) => {
+    soundService.unlock();
     voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
@@ -4308,7 +4321,7 @@ export default function App() {
                   updated.closingNote = closingData.note;
                   updated.satisfaction = closingData.satisfaction;
                 }
-                playAudio('/tithuh-level-up-523624.mp3');
+                soundService.play('/tithuh-level-up-523624.mp3', userData.isVoiceEnabled);
               } else {
                 // [수정] 완료 취소 시 기존 duration 기록을 accumulatedDuration으로 복구하여 이어하기 가능하게 함
                 updated.accumulatedDuration = t.duration ?? t.accumulatedDuration ?? 0;
@@ -4789,6 +4802,7 @@ export default function App() {
   const isCheckCheckAvailable = checkCheckDiff >= checkCheckIntervalMs;
 
   const handleCheckCheckClick = () => {
+    soundService.unlock();
     if (isCheckCheckAvailable) {
       setUserData(prev => {
         const currentCheckCount = (prev.dailyCheckCheckCounts?.[todayStr]) || 0;
@@ -5613,6 +5627,8 @@ export default function App() {
             {/* 음성안내아이콘 */}
             <button 
               onClick={() => {
+                soundService.unlock();
+                voiceService.unlock();
                 if (typeof window !== 'undefined' && window.speechSynthesis) {
                   window.speechSynthesis.cancel();
                 }
