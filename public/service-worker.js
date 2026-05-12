@@ -15,11 +15,35 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// 메세지 수신: 업데이트 적용을 위한 skipWaiting 실행
+// 메세지 수신: 업데이트 적용을 위한 skipWaiting 실행 및 알림 표시
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+  
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, options } = event.data.payload;
+    self.registration.showNotification(title, options);
+  }
+});
+
+// 알림 클릭 이벤트: 앱 활성화
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      if (clientList.length > 0) {
+        let client = clientList[0];
+        for (let i = 0; i < clientList.length; i++) {
+          if (clientList[i].focused) {
+            client = clientList[i];
+          }
+        }
+        return client.focus();
+      }
+      return clients.openWindow('/');
+    })
+  );
 });
 
 // 서비스 워커 활성화: 오래된 캐시 정리

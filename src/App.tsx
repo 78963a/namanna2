@@ -22,6 +22,8 @@ import {
   Edit2,
   AlertCircle,
   XCircle,
+  Bell,
+  BellOff,
   Play,
   Pause,
   Timer,
@@ -113,6 +115,7 @@ import {
 import { CheckCheckIcon } from './components/CheckCheckIcon';
 import { voiceService } from './services/voiceService';
 import { soundService } from './services/soundService';
+import { notificationService } from './services/notificationService';
 
 // --- Application ---
 import { HeaderBox } from './components/layout/HeaderBox';
@@ -2899,13 +2902,33 @@ export default function App() {
   const [selectedChunkId, setSelectedChunkId] = useState<string | null>(null);
   const [showCheckInCelebration, setShowCheckInCelebration] = useState(false);
   const [isForeground, setIsForeground] = useState(true);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
 
-  // Preload sounds
+  // Preload sounds and check notification permission
   useEffect(() => {
     soundService.preload('/tithuh-level-up-523624.mp3');
     soundService.preload('/freesound_community-success-fanfare-trumpets-6185.mp3');
     soundService.preload('/freesound_community-piglevelwin2mp3-14800.mp3');
+    
+    // Auto-request permission on mount if first time
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      notificationService.requestPermission().then(setNotificationPermission);
+    }
   }, []);
+
+  // Update notification permission state if changed externally
+  useEffect(() => {
+    if (typeof Notification === 'undefined') return;
+    const checkPermission = () => {
+      if (Notification.permission !== notificationPermission) {
+        setNotificationPermission(Notification.permission);
+      }
+    };
+    window.addEventListener('focus', checkPermission);
+    return () => window.removeEventListener('focus', checkPermission);
+  }, [notificationPermission]);
 
   const [activityLog, setActivityLog] = useState<Record<string, number[]>>(() => {
     const saved = localStorage.getItem('routine_activity_log');
@@ -2946,7 +2969,8 @@ export default function App() {
         firstRoutineAutoStart: false,
         nextRoutineAutoStart: false,
         userName: '나',
-        isVoiceEnabled: true
+        isVoiceEnabled: true,
+        isWakeUpAlarmEnabled: true
       };
     }
 
@@ -3008,6 +3032,7 @@ export default function App() {
     if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
     if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
     if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
+    if (parsed.isWakeUpAlarmEnabled === undefined) parsed.isWakeUpAlarmEnabled = true;
     
     if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
     if (parsed.routineGroupHistory === undefined) parsed.routineGroupHistory = [];
@@ -3485,9 +3510,17 @@ export default function App() {
   }, [currentTime, userData.routineChunks, todayStr, activeAlarmChunk]);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentTime(now);
+      
+      // Every minute (roughly), check for notifications
+      if (now.getSeconds() === 0) {
+        notificationService.checkAndTrigger(userData, now, todayStr);
+      }
+    }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [userData, todayStr]);
 
   // Removed auto-pause when navigating away from execution screen as per user request
   // Current routine should continue counting in the background
@@ -4782,6 +4815,10 @@ export default function App() {
     });
   };
 
+  const toggleWakeUpAlarm = () => {
+    setUserData(prev => ({ ...prev, isWakeUpAlarmEnabled: !prev.isWakeUpAlarmEnabled }));
+  };
+
   const updateResetTime = (time: string) => {
     setConfirmModal({
       isOpen: true,
@@ -5089,6 +5126,43 @@ export default function App() {
             </div>
 
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">알림 설정</h3>
+              </div>
+              
+              <div className="space-y-4 pt-1">
+                <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10"> 기상 및 루틴 시작 시간에 맞춰 브라우저 알림을 보냅니다.</p>
+                  </div>
+                  <div className="flex flex-col items-start gap-2 ml-10">
+                    <button 
+                      onClick={async () => {
+                        const status = await notificationService.requestPermission();
+                        setNotificationPermission(status);
+                      }}
+                      className={`h-10 px-4 rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center ${
+                        notificationPermission === 'granted' 
+                          ? 'bg-green-100 text-green-700' 
+                          : notificationPermission === 'denied'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-indigo-600 text-white hover:bg-slate-700'
+                      }`}
+                    >
+                      {notificationPermission === 'granted' ? '권한 허용됨' : notificationPermission === 'denied' ? '권한 거부됨' : '알림 받기'}
+                    </button>
+                    {notificationPermission === 'denied' && (
+                      <span className="text-[9px] text-red-400 font-bold whitespace-nowrap">* 브라우저 설정에서 직접 해제해주세요</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Settings className="w-5 h-5 text-indigo-600" />
@@ -5108,9 +5182,23 @@ export default function App() {
                     const input = document.getElementById('wakeUpTimeInput') as HTMLInputElement;
                     if (input) updateWakeUpTime(input.value);
                   }}
-                  className="bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+                  className="h-10 bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md shrink-0"
                 >
                   변경
+                </button>
+                <button 
+                  onClick={() => {
+                    soundService.unlock();
+                    toggleWakeUpAlarm();
+                  }}
+                  className={`h-10 px-4 rounded-xl font-bold text-sm transition-all shadow-md shrink-0 flex items-center gap-1.5 ${
+                    userData.isWakeUpAlarmEnabled !== false 
+                      ? 'bg-amber-100 text-amber-700' 
+                      : 'bg-slate-100 text-slate-400'
+                  }`}
+                >
+                  {userData.isWakeUpAlarmEnabled !== false ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                  알람
                 </button>
               </div>
             </div>

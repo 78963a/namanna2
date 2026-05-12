@@ -142,6 +142,7 @@ export interface UserData {
   dailyActivityLog?: { [date: string]: number[] };
   lastPerfectDayAnimationDate?: string; // YYYY-MM-DD
   isVoiceEnabled?: boolean;
+  isWakeUpAlarmEnabled?: boolean;
 }
 
 /**
