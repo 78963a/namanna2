@@ -4322,6 +4322,9 @@ export default function App() {
                   updated.satisfaction = closingData.satisfaction;
                 }
                 soundService.play('/tithuh-level-up-523624.mp3', userData.isVoiceEnabled);
+                if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+                  window.navigator.vibrate([200, 100, 200]);
+                }
               } else {
                 // [수정] 완료 취소 시 기존 duration 기록을 accumulatedDuration으로 복구하여 이어하기 가능하게 함
                 updated.accumulatedDuration = t.duration ?? t.accumulatedDuration ?? 0;

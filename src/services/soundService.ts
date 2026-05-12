@@ -1,4 +1,6 @@
 
+/// <reference types="vite/client" />
+
 /**
  * Service for handling sound effects and managing audio logic.
  */
