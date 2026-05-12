@@ -113,6 +113,11 @@ import {
 import { CheckCheckIcon } from './components/CheckCheckIcon';
 import { voiceService } from './services/voiceService';
 
+const playAudio = (path: string) => {
+  const audio = new Audio(path);
+  audio.play().catch(e => console.log('Audio playback failed or blocked:', e));
+};
+
 // Components
 import { HeaderBox } from './components/layout/HeaderBox';
 import { HomeView } from './components/views/HomeView';
@@ -379,6 +384,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   useEffect(() => {
     if (animationStage === 'title') {
+      playAudio('/freesound_community-success-fanfare-trumpets-6185.mp3');
       const timer = setTimeout(() => {
         setAnimationStage('fireworks');
         
@@ -3226,6 +3232,7 @@ export default function App() {
         // [수정] 1.5초 여유를 둔 후에 애니메이션 작동
         const timer = setTimeout(() => {
           setShowPerfectDay(true);
+          playAudio('/freesound_community-piglevelwin2mp3-14800.mp3');
           // 표시한 날짜를 기록
           setUserData(prev => ({
             ...prev,
@@ -4301,6 +4308,7 @@ export default function App() {
                   updated.closingNote = closingData.note;
                   updated.satisfaction = closingData.satisfaction;
                 }
+                playAudio('/tithuh-level-up-523624.mp3');
               } else {
                 // [수정] 완료 취소 시 기존 duration 기록을 accumulatedDuration으로 복구하여 이어하기 가능하게 함
                 updated.accumulatedDuration = t.duration ?? t.accumulatedDuration ?? 0;
