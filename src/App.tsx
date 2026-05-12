@@ -384,7 +384,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   useEffect(() => {
     if (animationStage === 'title') {
-      soundService.play('/freesound_community-success-fanfare-trumpets-6185.mp3', userData.isVoiceEnabled);
+      soundService.play('/dragon-studio-fireworks-02-419019.mp3', userData.isVoiceEnabled);
       const timer = setTimeout(() => {
         setAnimationStage('fireworks');
         
@@ -4029,6 +4029,7 @@ export default function App() {
 
     // Show celebration
     setShowCheckInCelebration(true);
+    soundService.play('/freesound_community-success-fanfare-trumpets-6185.mp3', userData.isVoiceEnabled);
     setTimeout(() => setShowCheckInCelebration(false), 3000);
 
     // Special confetti for check-in
