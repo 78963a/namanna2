@@ -293,6 +293,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     activeTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed);
   }
   
+  // 3순위: 일시정지 상태거나 기록이 있는 태스크 (상태 소실 방어)
+  if (!activeTask) {
+    activeTask = scheduledTasks.find(t => (t.isPaused || (t.accumulatedDuration || 0) > 0) && !t.completed);
+  }
+  
   // 20.2. 트리거 루틴 (미실행 그룹인 경우 첫 번째 루틴을 현재 루틴으로 자동 선정)
   // '미실행' 판단: 모든 루틴이 시작되지 않았고, 완료/스킵/나중에 된 것이 없음
   const isInitiallyUnstarted = scheduledTasks.every(t => 
@@ -578,7 +583,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     }
 
     // 2. 루틴 종료 전 알림
-    if (settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && remaining > 0) {
+    if (settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60 && remaining > 0) {
       voiceService.speakNagging(`beforeEnd-${activeTask.id}-${elapsed}`, settings.beforeEndMessage, variables);
     }
 
@@ -872,6 +877,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                       userName={userData.userName}
                       startTime={entry?.firstTaskStartTime}
                       endTime={entry?.completedAt}
+                      userData={userData}
+                      todayStr={todayStr}
                     />
                   );
                 })()}
@@ -3961,31 +3968,53 @@ export default function App() {
     const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
     const isFinished = (t: Task) => t.completed || t.status === TaskStatus.PERFECT || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.SKIP;
     
-    // 1. Active task (already running)
+    // 1. Currently active task (has startTime)
     let targetTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !isFinished(t));
     
     // If no active task, find the next one to start
     if (!targetTask) {
-      // 2. First unstarted task
-      targetTask = scheduledTasks.find(t => !t.startTime && !isFinished(t));
+      // 2. Already IN_PROGRESS or Paused task
+      targetTask = scheduledTasks.find(t => (t.status === TaskStatus.IN_PROGRESS || t.isPaused || (t.accumulatedDuration || 0) > 0) && !isFinished(t));
       
-      // 3. First paused task
       if (!targetTask) {
-        targetTask = scheduledTasks.find(t => t.startTime && t.isPaused && !isFinished(t));
+        // 3. First unstarted task
+        targetTask = scheduledTasks.find(t => !t.startTime && !isFinished(t));
       }
       
-      // 4. First later task
       if (!targetTask) {
+        // 4. First later task
         targetTask = scheduledTasks.find(t => t.laterTimestamp && !isFinished(t));
       }
+    }
+
+    // Ensure the target task has IN_PROGRESS status and others don't (within this chunk)
+    // Only update if needed to avoid unnecessary state changes
+    if (targetTask && targetTask.status !== TaskStatus.IN_PROGRESS) {
+      setUserData(prev => {
+        const next = {
+          ...prev,
+          routineChunks: prev.routineChunks.map(c => {
+            if (c.id === chunkId) {
+              return {
+                ...c,
+                tasks: c.tasks.map(task => {
+                  if (task.id === targetTask!.id) return { ...task, status: TaskStatus.IN_PROGRESS };
+                  if (task.status === TaskStatus.IN_PROGRESS) return { ...task, status: TaskStatus.NOT_STARTED };
+                  return task;
+                })
+              };
+            }
+            return c;
+          })
+        };
+        return syncHistory(next, todayStr);
+      });
     }
 
     setSelectedChunkId(chunkId);
     setActiveTab('execution');
 
-    // Only start if it's not already active (to avoid resetting startTime)
-    // [수정] 일시정지된 태스크가 자동으로 시작되지 않도록 보장. 
-    // '첫 루틴 자동 시작'은 전체 그룹이 '미실행' 상태(어떤 태스크도 시작/일시정지/완료된 적 없음)일 때만 동작하도록 함.
+    // Handle auto-start if applicable
     const isAnyTaskEngaged = scheduledTasks.some(t => t.startTime || isFinished(t) || t.isPaused || (t.accumulatedDuration !== undefined && t.accumulatedDuration > 0));
     const isGroupUnstarted = !isAnyTaskEngaged;
     
@@ -4222,6 +4251,7 @@ export default function App() {
   const startTask = (taskId: string, resetTimer: boolean = true) => {
     soundService.unlock();
     voiceService.unlock();
+    voiceService.stop();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
@@ -4269,6 +4299,7 @@ export default function App() {
   const onRestart = (taskId: string, resetTimer: boolean = true) => {
     soundService.unlock();
     voiceService.unlock();
+    voiceService.stop();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     
@@ -4326,6 +4357,7 @@ export default function App() {
 
   const togglePauseTask = (id: string, forceStart: boolean = false) => {
     voiceService.unlock();
+    voiceService.stop();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
@@ -4402,6 +4434,7 @@ export default function App() {
       title: '루틴 초기화',
       message: '모든 루틴의 실행여부와 타이머가 초기화됩니다.',
       onConfirm: () => {
+        voiceService.stop();
         setUserData(prev => {
           const chunk = prev.routineChunks.find(c => c.id === chunkId);
           if (!chunk) return prev;

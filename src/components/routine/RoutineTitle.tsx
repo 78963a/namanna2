@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { RoutineChunk, UserData } from '../../types';
-import { getJosa } from '../../utils';
+import { getJosa, getEffectiveDate } from '../../utils';
 import phrases from '../../phrases.json';
 
 interface RoutineTitleProps {
@@ -13,6 +13,7 @@ interface RoutineTitleProps {
   endTime?: string | null;
   isExecutionTitle?: boolean;
   userData?: UserData;
+  todayStr?: string;
 }
 
 export const RoutineTitle: React.FC<RoutineTitleProps> = ({ 
@@ -24,7 +25,8 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
   startTime,
   endTime,
   isExecutionTitle = false,
-  userData
+  userData,
+  todayStr
 }) => {
   const processedMessage = useMemo(() => {
     const context = isExecutionTitle ? (phrases.settings as any).execution_settings : phrases.settings;
@@ -127,8 +129,11 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     const messages = phrases.routine_messages[key as keyof typeof phrases.routine_messages] as string[];
     if (!messages || messages.length === 0) return '';
     
-    // Use a stable random based on chunk id and today's date to avoid flickering
-    const today = new Date().toISOString().split('T')[0];
+    // and ensure the phrase stays the same for the entire logical day.
+    const today = todayStr || (() => {
+      const resetH = userData?.resetTime ? parseInt(userData.resetTime.split(':')[0]) : 0;
+      return getEffectiveDate(new Date(), resetH);
+    })();
     const seed = chunk.id + today + key;
     let hash = 0;
     for (let i = 0; i < seed.length; i++) {
@@ -192,7 +197,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     message = message.replace(/\{\{endTime\}\}/g, getStyledHtml('endTime', endTime || '--:--'));
 
     return message;
-  }, [chunk.id, chunk.name, chunk.purpose, chunk.scheduledDays, chunk.startType, chunk.startTime, chunk.situation, chunk.tasks, status, selectedPhrase, userName, startTime, endTime, isExecutionTitle]);
+  }, [chunk.id, chunk.name, chunk.purpose, chunk.scheduledDays, chunk.startType, chunk.startTime, chunk.situation, chunk.tasks, status, selectedPhrase, userName, startTime, endTime, isExecutionTitle, todayStr, userData?.resetTime]);
 
   const context = isExecutionTitle ? (phrases.settings as any).execution_settings : phrases.settings;
   const baseStyle = (context as any).base_style;
