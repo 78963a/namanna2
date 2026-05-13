@@ -70,7 +70,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onCancel}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200]"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200] touch-none"
           />
           <motion.div 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}

@@ -128,11 +128,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
   const wakeUpStats = useMemo(() => {
     const history = userData.wakeUpTimeHistory || [];
     
-    // Collect all dates that have some kind of activity
+    // Only include today and dates that have actual wake-up records
     const activityDates = new Set<string>();
-    Object.keys(userData.dailyCompletionRate || {}).forEach(d => { if (d) activityDates.add(d); });
-    (userData.taskHistory || []).forEach(h => { if (h && h.date) activityDates.add(h.date); });
-    (userData.routineGroupHistory || []).forEach(h => { if (h && h.date) activityDates.add(h.date); });
+    activityDates.add(todayStr); // Always include today
     history.forEach(h => { if (h && h.date) activityDates.add(h.date); });
 
     const allDatesSorted = Array.from(activityDates).sort((a, b) => b.localeCompare(a));

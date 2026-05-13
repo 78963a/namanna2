@@ -96,7 +96,7 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden bg-slate-900/80 backdrop-blur-md cursor-pointer"
+      className="fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden bg-slate-900/80 backdrop-blur-md cursor-pointer touch-none"
       onClick={onClose}
     >
       <AnimatePresence>

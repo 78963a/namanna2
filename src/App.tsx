@@ -3311,6 +3311,23 @@ export default function App() {
     onConfirm: () => {}
   });
 
+  // Prevent background scrolling when modals are open
+  useEffect(() => {
+    const isModalOpen = isSettingsOpen || isAddGroupModalOpen || confirmModal.isOpen || !!activeAlarmChunk || showPerfectDay;
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+      // Use overscroll-behavior to prevent pull-to-refresh and background scroll on touch devices
+      document.body.style.overscrollBehavior = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.overscrollBehavior = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.overscrollBehavior = '';
+    };
+  }, [isSettingsOpen, isAddGroupModalOpen, confirmModal.isOpen, activeAlarmChunk, showPerfectDay]);
+
   const [isAddRoutineDirty, setIsAddRoutineDirty] = useState(false);
 
   const handleTabTransition = (targetTab: 'home' | 'stats' | 'execution' | 'settings' | 'add', extraAction?: () => void) => {
@@ -3746,7 +3763,62 @@ export default function App() {
     saveData(userData);
   }, [userData]);
 
-  // --- Helpers ---
+  // --- Screen Wake Lock ---
+  const wakeLockRef = useRef<any>(null);
+
+  const requestWakeLock = async () => {
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+        console.log('Wake Lock acquired');
+      } catch (err: any) {
+        console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+      }
+    }
+  };
+
+  const releaseWakeLock = async () => {
+    if (wakeLockRef.current) {
+      try {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+        console.log('Wake Lock released');
+      } catch (err: any) {
+        console.error(`Wake Lock release error: ${err.name}, ${err.message}`);
+      }
+    }
+  };
+
+  // Monitor active task and manage wake lock
+  useEffect(() => {
+    const isAnyActive = userData.routineChunks.some(chunk => 
+      chunk.tasks.some(task => task.status === TaskStatus.IN_PROGRESS && !task.isPaused && !task.completed)
+    );
+
+    if (isAnyActive) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+
+    return () => { releaseWakeLock(); };
+  }, [userData.routineChunks]);
+
+  // Handle visibility changes (re-acquire lock if returning from background while task is active)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const isAnyActive = userData.routineChunks.some(chunk => 
+        chunk.tasks.some(task => task.status === TaskStatus.IN_PROGRESS && !task.isPaused && !task.completed)
+      );
+      
+      if (document.visibilityState === 'visible' && isAnyActive) {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [userData.routineChunks]);
   const syncHistory = (data: UserData, today: string): UserData => {
     const [y, m, d] = today.split('-').map(Number);
     const syncDate = new Date(y, m - 1, d);
@@ -6377,7 +6449,7 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsSettingsOpen(false)}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 touch-none"
             />
             <motion.div 
               initial={{ opacity: 0, y: 100 }}
@@ -6421,7 +6493,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100]"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] touch-none"
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
