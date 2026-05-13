@@ -1,5 +1,5 @@
 {
   "name": "단순한 하루, 단하루",
   "description": "모든 거대한 업적도 작은 하루의 반복이 모여서 이루어지는 법. ",
-  "requestFramePermissions": []
+  "requestFramePermissions": ["screen-wake-lock"]
 }

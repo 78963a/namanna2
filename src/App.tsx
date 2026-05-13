@@ -5414,11 +5414,16 @@ export default function App() {
   }, [userData.dailyCheckCheckCounts, todayStr]);
 
   const challengeDays = useMemo(() => {
-    if (!userData.startDate) return 1;
-    return getDaysBetween(userData.startDate, todayStr);
-  }, [userData.startDate, todayStr]);
+    const dates = Object.keys(userData.dailyCompletionRate || {}).filter(d => !!d);
+    if (dates.length === 0) return 1;
+    const earliestDate = dates.reduce((min, d) => d < min ? d : min, dates[0]);
+    return getDaysBetween(earliestDate, todayStr);
+  }, [userData.dailyCompletionRate, todayStr]);
 
-  const successDays = userData.history.length;
+  const successDays = useMemo(() => {
+    const rates = Object.values(userData.dailyCompletionRate || {}) as number[];
+    return rates.filter(rate => rate > 0).length;
+  }, [userData.dailyCompletionRate]);
 
   const renderSettingsContent = (mode: 'main' | 'modal') => {
     if (settingsSubView.type === 'main') {
