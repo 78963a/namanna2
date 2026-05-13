@@ -128,19 +128,36 @@ export const StatsView: React.FC<StatsViewProps> = ({
   const wakeUpStats = useMemo(() => {
     const history = userData.wakeUpTimeHistory || [];
     
-    // Sort all history by date (recent first)
-    const sortedAll = [...history].sort((a, b) => b.date.localeCompare(a));
+    // Collect all dates that have some kind of activity
+    const activityDates = new Set<string>();
+    Object.keys(userData.dailyCompletionRate || {}).forEach(d => { if (d) activityDates.add(d); });
+    (userData.taskHistory || []).forEach(h => { if (h && h.date) activityDates.add(h.date); });
+    (userData.routineGroupHistory || []).forEach(h => { if (h && h.date) activityDates.add(h.date); });
+    history.forEach(h => { if (h && h.date) activityDates.add(h.date); });
+
+    const allDatesSorted = Array.from(activityDates).sort((a, b) => b.localeCompare(a));
     
     const historyByYear: { [year: string]: any[] } = {};
-    sortedAll.forEach(entry => {
-      const year = entry.date.split('-')[0];
+    allDatesSorted.forEach(date => {
+      const year = date.split('-')[0];
       if (!historyByYear[year]) historyByYear[year] = [];
       
-      const isLate = timeToMinutes(entry.wakeUpTime) > timeToMinutes(userData.targetWakeUpTime) + 10;
+      const entry = history.find(h => h.date === date);
+      let entryStatus: string = '미기록';
+      let targetTime = userData.dailyTargetWakeUpTime?.[date] || userData.targetWakeUpTime;
+      let wakeUpTimeFormatted = '--:--';
+
+      if (entry) {
+        entryStatus = entry.status || '달성';
+        targetTime = entry.targetTime || targetTime;
+        wakeUpTimeFormatted = entry.wakeUpTime.split(':').slice(0, 2).join(':');
+      }
+
       historyByYear[year].push({
-        date: entry.date,
-        time: entry.wakeUpTime,
-        status: isLate ? '지각' : '달성'
+        date,
+        wakeUpTime: wakeUpTimeFormatted,
+        targetTime: targetTime,
+        status: entryStatus
       });
     });
 
@@ -162,7 +179,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
       avgTime30: getAvgForPeriod(last30Days),
       historyByYear
     };
-  }, [userData.wakeUpTimeHistory, userData.targetWakeUpTime, last7Days, last30Days]);
+  }, [userData.wakeUpTimeHistory, userData.targetWakeUpTime, userData.dailyTargetWakeUpTime, userData.dailyCompletionRate, userData.taskHistory, userData.routineGroupHistory, last7Days, last30Days]);
 
   // --- Achievement Stats ---
   const achievementStats = useMemo(() => {
@@ -1463,7 +1480,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             <thead>
                               <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
                                 <th className="px-2 py-2">날짜</th>
-                                <th className="px-2 py-2">기상 시각</th>
+                                <th className="px-2 py-2">목표 시각</th>
+                                <th className="px-2 py-2 font-black text-indigo-600">기상 시각</th>
                                 <th className="px-2 py-2 text-right">상태</th>
                               </tr>
                             </thead>
@@ -1471,7 +1489,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
                               {wakeUpStats.historyByYear[year].map((h, i) => (
                                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                                   <td className={`px-2 py-2 font-bold ${isSunday(h.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{h.date.split('-').slice(1).join('/')}</td>
-                                  <td className="px-2 py-2 font-black text-slate-700">{h.time || '--:--'}</td>
+                                  <td className="px-2 py-2 font-bold text-slate-400">{h.targetTime}</td>
+                                  <td className="px-2 py-2 font-black text-indigo-600">{h.wakeUpTime || '--:--'}</td>
                                   <td className="px-2 py-2 text-right">
                                     <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black ${
                                       h.status === '달성' ? 'bg-emerald-100 text-emerald-600' : 

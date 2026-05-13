@@ -83,6 +83,8 @@ export enum TaskStatus {
 export interface WakeUpTimeHistoryEntry {
   date: string;
   wakeUpTime: string; // HH:mm:ss
+  targetTime: string; // HH:mm
+  status: '달성' | '지각' | '미기록';
 }
 
 export interface RoutineGroupHistoryEntry {
@@ -145,6 +147,7 @@ export interface UserData {
   lastResetDate: string | null;
   dailyCheckCheckCounts: { [date: string]: number };
   dailyCheckIn?: { [date: string]: string }; // date -> time
+  dailyTargetWakeUpTime?: { [date: string]: string }; // date -> target time (HH:mm)
   inactiveChunks?: { [date: string]: string[] }; // date -> chunkId[]
   dailyTaskStatus?: { [date: string]: { [taskId: string]: TaskStatus } };
   wakeUpTimeHistory?: WakeUpTimeHistoryEntry[];

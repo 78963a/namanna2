@@ -3181,6 +3181,7 @@ export default function App() {
     if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
     if (parsed.routineGroupHistory === undefined) parsed.routineGroupHistory = [];
     if (parsed.taskHistory === undefined) parsed.taskHistory = [];
+    if (parsed.dailyTargetWakeUpTime === undefined) parsed.dailyTargetWakeUpTime = {};
 
     // Migration for chunks
     if (parsed.routine && !parsed.routineChunks) {
@@ -3757,12 +3758,34 @@ export default function App() {
     // Update WakeUp History if checked in today
     if (data.lastCheckInDate === today) {
       const checkInTime = data.dailyCheckIn?.[today];
+      const savedTarget = data.dailyTargetWakeUpTime?.[today] || data.targetWakeUpTime;
+      
       if (checkInTime) {
+        // Calculate status
+        const [targetH, targetM] = savedTarget.split(':').map(Number);
+        const [checkH, checkM, checkS] = checkInTime.split(':').map(Number);
+        
+        const targetDateForStatus = new Date(syncDate);
+        targetDateForStatus.setHours(targetH, targetM, 0, 0);
+        
+        const checkInDateForStatus = new Date(syncDate);
+        checkInDateForStatus.setHours(checkH, checkM, checkS || 0, 0);
+        
+        const lateLimit = phrases.wakeUpCheckInSettings?.lateWindowMinutes || 10;
+        const status = checkInDateForStatus.getTime() > targetDateForStatus.getTime() + (lateLimit * 60 * 1000) ? '지각' : '달성';
+
         const existingIdx = newWakeUpHistory.findIndex(h => h.date === today);
+        const newEntry: WakeUpTimeHistoryEntry = { 
+          date: today, 
+          wakeUpTime: checkInTime,
+          targetTime: savedTarget,
+          status: status as '달성' | '지각'
+        };
+
         if (existingIdx >= 0) {
-          newWakeUpHistory[existingIdx] = { date: today, wakeUpTime: checkInTime };
+          newWakeUpHistory[existingIdx] = newEntry;
         } else {
-          newWakeUpHistory.push({ date: today, wakeUpTime: checkInTime });
+          newWakeUpHistory.push(newEntry);
         }
       }
     }
@@ -4050,6 +4073,10 @@ export default function App() {
           ...(prev.dailyCheckIn || {}),
           [todayStr]: checkInTimeStr
         },
+        dailyTargetWakeUpTime: {
+          ...(prev.dailyTargetWakeUpTime || {}),
+          [todayStr]: prev.targetWakeUpTime
+        },
         history: [...prev.history, { date: todayStr, time: checkInTimeStr }],
         routineChunks: prev.routineChunks
       };
@@ -4082,17 +4109,24 @@ export default function App() {
     soundService.unlock();
     voiceService.unlock();
     const checkInTimeStr = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
-    setUserData(prev => ({
-      ...prev,
-      lastCheckInDate: todayStr,
-      dailyCheckIn: {
-        ...(prev.dailyCheckIn || {}),
-        [todayStr]: checkInTimeStr
-      },
-      history: [...prev.history, { date: todayStr, time: checkInTimeStr }],
-      streak: 0,
-      routineChunks: prev.routineChunks
-    }));
+    setUserData(prev => {
+      const next = {
+        ...prev,
+        lastCheckInDate: todayStr,
+        dailyCheckIn: {
+          ...(prev.dailyCheckIn || {}),
+          [todayStr]: checkInTimeStr
+        },
+        dailyTargetWakeUpTime: {
+          ...(prev.dailyTargetWakeUpTime || {}),
+          [todayStr]: prev.targetWakeUpTime
+        },
+        history: [...prev.history, { date: todayStr, time: checkInTimeStr }],
+        streak: 0,
+        routineChunks: prev.routineChunks
+      };
+      return syncHistory(next, todayStr);
+    });
   };
 
   const skipTask = (id: string) => {
@@ -5091,6 +5125,7 @@ export default function App() {
           wakeUpTimeHistory: [],
           lastCheckInDate: null,
           dailyCheckIn: {},
+          dailyTargetWakeUpTime: {},
           history: [] // also clear the older WakeUpRecord history if any
         }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
