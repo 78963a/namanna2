@@ -84,27 +84,29 @@ class VoiceService {
   speakNagging(
     triggerId: string,
     template: string,
-    variables: { name?: string; task?: string; n?: number; m?: number }
+    variables: { name?: string; task?: string; n?: number; m?: number; r?: number }
   ) {
     if (this.lastTriggeredId === triggerId) return;
     this.lastTriggeredId = triggerId;
 
     let msg = template;
-    const { name = '', task = '', n = 0, m = 0 } = variables;
+    const { name = '', task = '', n = 0, m = 0, r = 0 } = variables;
 
-    // Replace variables
-    msg = msg.replace(/name/g, name);
-    msg = msg.replace(/task/g, task);
-    msg = msg.replace(/n/g, n.toString());
-    msg = msg.replace(/m/g, m.toString());
-
-    // Apply particle rules (Josa) if variables were used followed by particles
+    // 1. Apply particle rules (Josa) if variables were used followed by particles
+    // MUST be done before simple variable replacement to catch the placeholders
     // e.g. "task가" -> "루틴이"
-    const josaRegex = /(name|task)(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이|가|을|를|은|는|으로|로|이죠|죠)/g;
+    const josaRegex = /(name|task)(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이야\/야|이다\/다|이|가|을|를|은|는|으로|로|이죠|죠|이야|야|이다|다)/g;
     msg = msg.replace(josaRegex, (match, variable, p1) => {
       const val = variable === 'name' ? name : task;
       return val + getJosa(val, p1 as any);
     });
+
+    // 2. Replace remaining solo variables
+    msg = msg.replace(/name/g, name);
+    msg = msg.replace(/task/g, task);
+    msg = msg.replace(/n/g, n.toString());
+    msg = msg.replace(/m/g, m.toString());
+    msg = msg.replace(/r/g, r.toString());
 
     this.speak(msg);
   }

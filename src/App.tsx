@@ -570,7 +570,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     const variables = {
       name: userData.userName || '나',
       task: activeTask.text,
-      n: settings.beforeEndTime,
+      n: Math.floor(elapsed / 60),
+      r: Math.floor(remaining / 60),
       m: Math.floor((elapsed - target) / 60)
     };
 
@@ -587,17 +588,33 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
       trySpeak();
     }
 
-    // 2. 루틴 종료 전 알림
-    if (settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60 && remaining > 0) {
-      voiceService.speakNagging(`beforeEnd-${activeTask.id}-${elapsed}`, settings.beforeEndMessage, variables);
+    // 3. 루틴 진행 중 알림 (정기 알림)
+    if (settings.ongoingEnabled && elapsed > 0 && elapsed < target) {
+      const intervalSeconds = settings.ongoingInterval * 60;
+      // 정각(분)에만 알림을 줄지 아니면 초 단위로 체크할지 고민. 
+      // 이전 로직들과 일관성을 위해 % intervalSeconds === 0 체크 사용.
+      // 단, '종료 전 알림'과 겹치는 경우 '종료 전 알림'만 내보냄.
+      const isBeforeEndTriggered = settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60;
+      
+      if (elapsed % intervalSeconds === 0 && !isBeforeEndTriggered) {
+        voiceService.speakNagging(`ongoing-${activeTask.id}-${elapsed}`, settings.ongoingMessage, variables);
+      }
     }
 
-    // 3. 루틴 종료 알림
+    // 4. 루틴 종료 전 알림
+    if (settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60 && remaining > 0) {
+      voiceService.speakNagging(`beforeEnd-${activeTask.id}-${elapsed}`, settings.beforeEndMessage, {
+        ...variables,
+        r: settings.beforeEndTime // 종료 전 알림의 r은 설정된 값이어야 함 (실제 남은 시간과 동일할 것임)
+      });
+    }
+
+    // 5. 루틴 종료 알림
     if (settings.endEnabled && elapsed === target && target > 0) {
       voiceService.speakNagging(`end-${activeTask.id}`, settings.endMessage, variables);
     }
 
-    // 4. 루틴 종료 후 알림 (초과 시간 정기 안내)
+    // 6. 루틴 종료 후 알림 (초과 시간 정기 안내)
     if (settings.overTimeEnabled && activeTask.taskType === TaskType.TIME_LIMITED && elapsed > target) {
       const overtimeSeconds = elapsed - target;
       const intervalSeconds = settings.overTimeInterval * 60;
@@ -3096,9 +3113,12 @@ export default function App() {
         naggingSettings: {
           startEnabled: false,
           startMessage: 'task',
+          ongoingEnabled: false,
+          ongoingInterval: 1,
+          ongoingMessage: 'task가 n분째 진행중입니다',
           beforeEndEnabled: false,
           beforeEndTime: 1,
-          beforeEndMessage: 'task 종료 n분 전입니다.',
+          beforeEndMessage: 'task 종료 r분 전입니다.',
           endEnabled: false,
           endMessage: 'task 시간이 지났습니다.',
           overTimeEnabled: false,
@@ -3334,6 +3354,41 @@ export default function App() {
   }, [isSettingsOpen, isAddGroupModalOpen, confirmModal.isOpen, activeAlarmChunk, showPerfectDay]);
 
   const [isAddRoutineDirty, setIsAddRoutineDirty] = useState(false);
+  const [isNaggingDirty, setIsNaggingDirty] = useState(false);
+  const [localNaggingSettings, setLocalNaggingSettings] = useState<NaggingSettings | null>(null);
+  const [naggingSuccessMessage, setNaggingSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (naggingSuccessMessage) {
+      const timer = setTimeout(() => setNaggingSuccessMessage(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [naggingSuccessMessage]);
+
+  useEffect(() => {
+    if (settingsSubView.type === 'nagging') {
+      const defaultSettings = {
+        startEnabled: false,
+        startMessage: 'task',
+        ongoingEnabled: false,
+        ongoingInterval: 1,
+        ongoingMessage: 'task가 n분째 진행중입니다',
+        beforeEndEnabled: false,
+        beforeEndTime: 1,
+        beforeEndMessage: 'task 종료 r분 전입니다.',
+        endEnabled: false,
+        endMessage: 'task 시간이 지났습니다.',
+        overTimeEnabled: false,
+        overTimeInterval: 1,
+        overTimeMessage: 'name님, task가 m분 지났어요.'
+      };
+      setLocalNaggingSettings({
+        ...defaultSettings,
+        ...(userData.naggingSettings || {})
+      });
+      setIsNaggingDirty(false);
+    }
+  }, [settingsSubView.type, userData.naggingSettings]);
 
   const handleTabTransition = (targetTab: 'home' | 'stats' | 'execution' | 'settings' | 'add', extraAction?: () => void) => {
     // [코멘트] 탭 전환 시 포커스 해제하여 아이폰 '흔들어서 실행취소'Prompt 방지 시도
@@ -3351,6 +3406,25 @@ export default function App() {
         showCancel: true,
         onConfirm: () => {
           setIsAddRoutineDirty(false);
+          setActiveTab(targetTab);
+          if (extraAction) extraAction();
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        },
+        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+      });
+      return;
+    }
+    if (activeTab === 'settings' && targetTab !== 'settings' && isNaggingDirty) {
+      setConfirmModal({
+        isOpen: true,
+        title: '변경 취소 확인',
+        message: '변경을 취소하시겠습니까?',
+        confirmLabel: '변경 취소하기',
+        cancelLabel: '수정 진행하기',
+        confirmColor: 'indigo',
+        showCancel: true,
+        onConfirm: () => {
+          setIsNaggingDirty(false);
           setActiveTab(targetTab);
           if (extraAction) extraAction();
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -3770,14 +3844,30 @@ export default function App() {
 
   // --- Screen Wake Lock ---
   const wakeLockRef = useRef<any>(null);
+  const wakeLockErrorShown = useRef<boolean>(false);
 
   const requestWakeLock = async () => {
     if ('wakeLock' in navigator) {
+      if (wakeLockRef.current) return; // Already requested
+      
       try {
         wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
         console.log('Wake Lock acquired');
+        
+        // Re-acquire lock if it was released by visibility change (managed by browser)
+        wakeLockRef.current.addEventListener('release', () => {
+          wakeLockRef.current = null;
+          console.log('Wake Lock released by system');
+        });
       } catch (err: any) {
-        console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+        if (!wakeLockErrorShown.current) {
+          if (err.name === 'NotAllowedError') {
+            console.warn('Wake Lock is blocked by browser policy/permissions. This is common in some environments like iframes.');
+          } else {
+            console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+          }
+          wakeLockErrorShown.current = true;
+        }
       }
     }
   };
@@ -4398,9 +4488,10 @@ export default function App() {
             // 20.3.5 다른 루틴을 시작하는 경우 기존 실행 루틴(타이머 중 또는 일시정지 중)은 일시정지 상태로 목록으로 이동
             const wasActive = task.startTime || task.status === TaskStatus.IN_PROGRESS;
             if (wasActive) {
+              const shouldRemainPaused = !!task.startTime || task.isPaused;
               return {
                 ...task,
-                isPaused: true,
+                isPaused: shouldRemainPaused,
                 accumulatedDuration: calculateTaskDuration(task, now),
                 startTime: undefined,
                 status: TaskStatus.NOT_STARTED
@@ -4454,12 +4545,12 @@ export default function App() {
               };
             }
             
-            // 20.3.5 다른 루틴을 시작/다시하는 경우 기존 실행 루틴은 일시정지 상태로 목록으로 이동
             const wasActive = task.startTime || task.status === TaskStatus.IN_PROGRESS;
             if (wasActive) {
+              const shouldRemainPaused = !!task.startTime || task.isPaused;
               return {
                 ...task,
-                isPaused: true,
+                isPaused: shouldRemainPaused,
                 accumulatedDuration: calculateTaskDuration(task, now),
                 startTime: undefined,
                 status: TaskStatus.NOT_STARTED
@@ -4525,10 +4616,10 @@ export default function App() {
               }
             } else if (wasActive && isTargetResuming) {
               // 다른 루틴이 시작되는 경우만 status를 해제함. 
-              // 단순히 한 루틴을 일시정지하는 경우에는 (isTargetResuming이 false임) 건드리지 않음.
+              const shouldRemainPaused = !!task.startTime || task.isPaused;
               return {
                 ...task,
-                isPaused: true,
+                isPaused: shouldRemainPaused,
                 accumulatedDuration: calculateTaskDuration(task, now),
                 startTime: undefined,
                 status: TaskStatus.NOT_STARTED // 현재 루틴 지위 상실
@@ -5869,12 +5960,15 @@ export default function App() {
     }
 
     if (settingsSubView.type === 'nagging') {
-      const settings = userData.naggingSettings || {
+      const defaultSettings = {
         startEnabled: false,
         startMessage: 'task',
+        ongoingEnabled: false,
+        ongoingInterval: 1,
+        ongoingMessage: 'task가 n분째 진행중입니다',
         beforeEndEnabled: false,
         beforeEndTime: 1,
-        beforeEndMessage: 'task 종료 n분 전입니다.',
+        beforeEndMessage: 'task 종료 r분 전입니다.',
         endEnabled: false,
         endMessage: 'task 시간이 지났습니다.',
         overTimeEnabled: false,
@@ -5882,21 +5976,58 @@ export default function App() {
         overTimeMessage: 'name님, task가 m분 지났어요.'
       };
 
+      const settings = localNaggingSettings || {
+        ...defaultSettings,
+        ...(userData.naggingSettings || {})
+      };
+
       const updateNagging = (key: keyof NaggingSettings, value: any) => {
-        setUserData(prev => ({
-          ...prev,
-          naggingSettings: {
-            ...(prev.naggingSettings || settings),
-            [key]: value
-          }
+        setLocalNaggingSettings(prev => ({
+          ...(prev || settings),
+          [key]: value
         }));
+        setIsNaggingDirty(true);
+      };
+
+      const handleNaggingBack = () => {
+        if (isNaggingDirty) {
+          setConfirmModal({
+            isOpen: true,
+            title: '변경 취소 확인',
+            message: '변경을 취소하시겠습니까?',
+            confirmLabel: '변경 취소하기',
+            cancelLabel: '수정 진행하기',
+            confirmColor: 'indigo',
+            showCancel: true,
+            onConfirm: () => {
+              setIsNaggingDirty(false);
+              setSettingsSubView({ type: 'main' });
+              setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            },
+            onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+          });
+        } else {
+          setSettingsSubView({ type: 'main' });
+        }
+      };
+
+      const handleNaggingSave = () => {
+        if (localNaggingSettings) {
+          setUserData(prev => ({
+            ...prev,
+            naggingSettings: localNaggingSettings
+          }));
+          setIsNaggingDirty(false);
+          setNaggingSuccessMessage('잔소리 설정이 저장되었습니다');
+          // Removed setSettingsSubView to stay on the page
+        }
       };
 
       return (
         <div className="flex flex-col h-full overflow-hidden">
           <div className="flex items-center gap-3 mb-6">
             <button 
-              onClick={() => setSettingsSubView({ type: 'main' })}
+              onClick={handleNaggingBack}
               className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 shadow-sm"
             >
               <ChevronLeft className="w-6 h-6" />
@@ -5906,15 +6037,35 @@ export default function App() {
 
           <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-grow pb-10">
             {/* 공통 변수 안내 */}
-            <div className="p-4 bg-indigo-50 rounded-2xl space-y-2 border border-indigo-100">
-              <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4" /> 사용 가능한 변수
-              </h3>
-              <div className="grid grid-cols-2 gap-2 text-[11px] font-bold text-indigo-700">
-                <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">name</span>: 사용자 이름</div>
-                <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">task</span>: 루틴 제목</div>
-                <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">n</span>: 종료 전 분</div>
-                <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">m</span>: 경과된 분</div>
+            <div className="p-4 bg-indigo-50 rounded-2xl space-y-3 border border-indigo-100">
+              <div className="space-y-1.5">
+                <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4" /> 사용 가능한 변수
+                </h3>
+                <div className="grid grid-cols-2 gap-2 text-[11px] font-bold text-indigo-700">
+                  <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">name</span>: 사용자 이름</div>
+                  <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">task</span>: 루틴 제목</div>
+                  <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">n</span>: 시작 후 경과 분</div>
+                  <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">r</span>: 종료 전 남은 분</div>
+                  <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">m</span>: 목표 초과 분</div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-1 border-t border-indigo-200/50">
+                <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4" /> 한글 조사(은/는/이/가 등) 자동 교정
+                </h3>
+                <p className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
+                  <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">name</span>이나 <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">task</span> 뒤에 조사를 붙여 사용하면, 이름이나 루틴 제목의 받침 유무에 따라 자연스럽게 교정되어 출력됩니다.
+                </p>
+                  <p className="text-[10px] font-medium text-indigo-500 mt-1">* 지원: 은/는, 이/가, 을/를, 으로/로, 이죠/죠, 이다/다</p>
+                <div className="bg-indigo-100/50 p-2 rounded-lg space-y-1">
+                  <p className="text-[10px] font-black text-indigo-800">예시 문구 :</p>
+                  <ul className="text-[10px] font-bold text-indigo-700 list-disc list-inside space-y-0.5">
+                    <li>task이/가 n분째 진행중입니다</li>
+                    <li>task을/를 얼른 끝내주세요</li>
+                  </ul>
+                </div>
               </div>
             </div>
 
@@ -5940,6 +6091,53 @@ export default function App() {
                     value={settings.startMessage}
                     onChange={(e) => updateNagging('startMessage', e.target.value)}
                     placeholder="예: task 시작합니다"
+                    className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* 3-1-2. 루틴 진행 중 알림 */}
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-base font-black text-slate-800">루틴 진행 중 알림</h3>
+                  <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴이 진행되는 동안 정기적으로 알림을 보냅니다. 단, '루틴 종료 전 알림'과 겹치는 경우 '루틴 종료 전 알림'만 내보냅니다.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {settings.ongoingEnabled && (
+                    <div className="flex items-center gap-1">
+                      <input 
+                        type="number"
+                        min="1"
+                        max="60"
+                        value={settings.ongoingInterval || ''}
+                        onChange={(e) => updateNagging('ongoingInterval', e.target.value === '' ? '' : parseInt(e.target.value))}
+                        onBlur={() => {
+                          if (!settings.ongoingInterval || (typeof settings.ongoingInterval === 'number' && settings.ongoingInterval < 1)) {
+                            updateNagging('ongoingInterval', 1);
+                          }
+                        }}
+                        className="w-10 text-center text-xs font-black p-1 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
+                      />
+                      <span className="text-[10px] font-black text-slate-400">분</span>
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => updateNagging('ongoingEnabled', !settings.ongoingEnabled)}
+                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.ongoingEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.ongoingEnabled ? 'left-7' : 'left-1'}`} />
+                  </button>
+                </div>
+              </div>
+              {settings.ongoingEnabled && (
+                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                  <input 
+                    type="text"
+                    value={settings.ongoingMessage}
+                    onChange={(e) => updateNagging('ongoingMessage', e.target.value)}
                     className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   />
                 </div>
@@ -6061,12 +6259,20 @@ export default function App() {
             </div>
           </div>
           
-          <button 
-            onClick={() => setSettingsSubView({ type: 'main' })}
-            className="w-full mt-4 bg-slate-900 text-white font-black py-4 rounded-[15px] hover:bg-slate-800 transition-all shadow-lg"
-          >
-            확인
-          </button>
+          <div className="flex gap-3 mt-6">
+            <button 
+              onClick={handleNaggingBack}
+              className="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-[15px] hover:bg-slate-200 transition-all"
+            >
+              취소
+            </button>
+            <button 
+              onClick={handleNaggingSave}
+              className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+            >
+              저장
+            </button>
+          </div>
         </div>
       );
     }
@@ -6678,7 +6884,7 @@ export default function App() {
             </div>
           </motion.div>
         )}
-        {deletionMessage && (
+        {(deletionMessage || naggingSuccessMessage) && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -6686,8 +6892,12 @@ export default function App() {
             className="fixed bottom-24 left-4 right-4 flex justify-center z-[9999] pointer-events-none"
           >
             <div className="bg-slate-900/90 backdrop-blur-md text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 border border-white/10">
-              <Trash2 className="w-4 h-4 text-rose-400" />
-              <span className="text-sm font-black tracking-tight">{deletionMessage}</span>
+              {deletionMessage ? (
+                <Trash2 className="w-4 h-4 text-rose-400" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              )}
+              <span className="text-sm font-black tracking-tight">{deletionMessage || naggingSuccessMessage}</span>
             </div>
           </motion.div>
         )}
