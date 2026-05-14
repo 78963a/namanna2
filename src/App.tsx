@@ -221,6 +221,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   const activeTaskRef = useRef<HTMLDivElement>(null);
   const scrollBottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const naggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isAlreadyFinalized = useMemo(() => {
     if (!selectedChunkId) return false;
@@ -538,6 +539,17 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     setAnimationStage('none');
   };
 
+  // 루틴 변경 시 음성 안내 즉시 중단 (Nagging voice stop on routine change)
+  useEffect(() => {
+    return () => {
+      if (naggingTimeoutRef.current) {
+        clearTimeout(naggingTimeoutRef.current);
+        naggingTimeoutRef.current = null;
+      }
+      voiceService.stop();
+    };
+  }, [activeTask?.id]);
+
   // --- [잔소리 기능 (Nagging Function) 로직] ---
   // 사용자가 설정한 문구와 시점에 맞춰 음성 안내를 실행합니다.
   useEffect(() => {
@@ -577,12 +589,19 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
     // 2. 루틴 시작 알림 (0초 또는 재개 시점)
     if (elapsed === 0 && settings.startEnabled) {
+      if (naggingTimeoutRef.current) {
+        clearTimeout(naggingTimeoutRef.current);
+      }
       // 효과음이 끝날 때까지 기다렸다가 재생 (최대 3초)
       const trySpeak = (retry = 0) => {
         if (soundService.isPlaying && retry < 15) {
-          setTimeout(() => trySpeak(retry + 1), 200);
+          naggingTimeoutRef.current = setTimeout(() => {
+            naggingTimeoutRef.current = null;
+            trySpeak(retry + 1);
+          }, 200);
         } else {
           voiceService.speakNagging(`start-${activeTask.id}`, settings.startMessage || 'task', variables);
+          naggingTimeoutRef.current = null;
         }
       };
       trySpeak();
@@ -2478,12 +2497,42 @@ const RoutineGroupFormView: React.FC<{
     if (mode === 'add') {
       const isDirty = name.trim() !== '' || purpose.trim() !== '' || triggerTask.text.trim() !== '' || routineList.length > 0;
       onDirtyChange?.(isDirty);
-    } else {
-      // In edit mode, compare with initial values if needed, 
-      // but the user only explicitly asked for the "new routine group" screen
-      onDirtyChange?.(false); 
+    } else if (mode === 'edit' && initialChunk) {
+      // Comparison logic for edit mode
+      const isNameNew = name !== initialChunk.name;
+      const isPurposeNew = purpose !== (initialChunk.purpose || '');
+      const isDaysNew = JSON.stringify([...scheduledDays].sort()) !== JSON.stringify([...initialChunk.scheduledDays].sort());
+      const isStartTimeNew = (startType === 'time' ? startTime : '') !== (initialChunk.startTime || '');
+      const isStartTypeNew = startType !== (initialChunk.startType || 'anytime');
+      const isSituationNew = situation !== (initialChunk.situation || '');
+      const isAlarmNew = isAlarmEnabled !== (initialChunk.isAlarmEnabled || false);
+
+      // Tasks comparison
+      const initialTasks = initialChunk.tasks || [];
+      const isTriggerNew = initialTasks.length === 0 || 
+        triggerTask.text !== initialTasks[0].text || 
+        triggerTask.duration !== initialTasks[0].targetDuration || 
+        triggerTask.type !== initialTasks[0].taskType;
+      
+      const currentRoutineListTasks = routineList;
+      const initialRoutineListTasks = initialTasks.slice(1);
+      
+      let isRoutineListNew = currentRoutineListTasks.length !== initialRoutineListTasks.length;
+      if (!isRoutineListNew) {
+        for (let i = 0; i < currentRoutineListTasks.length; i++) {
+          if (currentRoutineListTasks[i].text !== initialRoutineListTasks[i].text || 
+              currentRoutineListTasks[i].duration !== initialRoutineListTasks[i].targetDuration || 
+              currentRoutineListTasks[i].type !== initialRoutineListTasks[i].taskType) {
+            isRoutineListNew = true;
+            break;
+          }
+        }
+      }
+
+      const isDirty = isNameNew || isPurposeNew || isDaysNew || isStartTimeNew || isStartTypeNew || isSituationNew || isAlarmNew || isTriggerNew || isRoutineListNew;
+      onDirtyChange?.(isDirty);
     }
-  }, [name, purpose, triggerTask.text, routineList, mode, onDirtyChange]);
+  }, [name, purpose, triggerTask, routineList, scheduledDays, startTime, startType, situation, isAlarmEnabled, mode, initialChunk, onDirtyChange]);
 
   const addRoutineToList = () => {
     if (!currentRoutineInput.text.trim()) return;
@@ -2985,8 +3034,54 @@ const RoutineGroupFormView: React.FC<{
           <button 
             onClick={() => {
               if (mode === 'edit') {
-                if (setIsSettingsOpen) setIsSettingsOpen(false);
-                if (setSettingsSubView) setSettingsSubView({ type: 'main' });
+                const isNameNew = name !== initialChunk?.name;
+                const isPurposeNew = purpose !== (initialChunk?.purpose || '');
+                const isDaysNew = JSON.stringify([...scheduledDays].sort()) !== JSON.stringify([...(initialChunk?.scheduledDays || [])].sort());
+                const isStartTimeNew = (startType === 'time' ? startTime : '') !== (initialChunk?.startTime || '');
+                const isStartTypeNew = startType !== (initialChunk?.startType || 'anytime');
+                const isSituationNew = situation !== (initialChunk?.situation || '');
+                const isAlarmNew = isAlarmEnabled !== (initialChunk?.isAlarmEnabled || false);
+
+                const currentTasks = routineList;
+                const initialTasks = initialChunk?.tasks?.slice(1) || [];
+                let isRoutineListNew = currentTasks.length !== initialTasks.length;
+                if (!isRoutineListNew) {
+                  for (let i = 0; i < currentTasks.length; i++) {
+                    if (currentTasks[i].text !== initialTasks[i].text || 
+                        currentTasks[i].duration !== initialTasks[i].targetDuration || 
+                        currentTasks[i].type !== initialTasks[i].taskType) {
+                      isRoutineListNew = true;
+                      break;
+                    }
+                  }
+                }
+
+                const isTriggerNew = (initialChunk?.tasks?.length || 0) === 0 || 
+                  triggerTask.text !== initialChunk?.tasks[0].text || 
+                  triggerTask.duration !== initialChunk?.tasks[0].targetDuration || 
+                  triggerTask.type !== initialChunk?.tasks[0].taskType;
+
+                const isDirty = isNameNew || isPurposeNew || isDaysNew || isStartTimeNew || isStartTypeNew || isSituationNew || isAlarmNew || isTriggerNew || isRoutineListNew;
+
+                if (isDirty) {
+                  setConfirmModal({
+                    isOpen: true,
+                    title: '변경 취소 확인',
+                    message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+                    confirmLabel: '취소하고 나가기',
+                    cancelLabel: '계속 수정하기',
+                    confirmColor: 'indigo',
+                    showCancel: true,
+                    onConfirm: () => {
+                      if (setIsSettingsOpen) setIsSettingsOpen(false);
+                      if (setSettingsSubView) setSettingsSubView({ type: 'main' });
+                      setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    }
+                  });
+                } else {
+                  if (setIsSettingsOpen) setIsSettingsOpen(false);
+                  if (setSettingsSubView) setSettingsSubView({ type: 'main' });
+                }
               } else {
                 onDirtyChange?.(false);
                 setActiveTab('home');
@@ -3354,6 +3449,7 @@ export default function App() {
   }, [isSettingsOpen, isAddGroupModalOpen, confirmModal.isOpen, activeAlarmChunk, showPerfectDay]);
 
   const [isAddRoutineDirty, setIsAddRoutineDirty] = useState(false);
+  const [isEditRoutineDirty, setIsEditRoutineDirty] = useState(false);
   const [isNaggingDirty, setIsNaggingDirty] = useState(false);
   const [localNaggingSettings, setLocalNaggingSettings] = useState<NaggingSettings | null>(null);
   const [naggingSuccessMessage, setNaggingSuccessMessage] = useState<string | null>(null);
@@ -3390,6 +3486,46 @@ export default function App() {
     }
   }, [settingsSubView.type, userData.naggingSettings]);
 
+  const handleSettingsClose = () => {
+    if (settingsSubView.type === 'nagging' && isNaggingDirty) {
+      setConfirmModal({
+        isOpen: true,
+        title: '변경 취소 확인',
+        message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+        confirmLabel: '취소하고 나가기',
+        cancelLabel: '계속 수정하기',
+        confirmColor: 'indigo',
+        showCancel: true,
+        onConfirm: () => {
+          setIsNaggingDirty(false);
+          setIsSettingsOpen(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        },
+        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+      });
+      return;
+    }
+    if (settingsSubView.type === 'detail' && isEditRoutineDirty) {
+      setConfirmModal({
+        isOpen: true,
+        title: '변경 취소 확인',
+        message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+        confirmLabel: '취소하고 나가기',
+        cancelLabel: '계속 수정하기',
+        confirmColor: 'indigo',
+        showCancel: true,
+        onConfirm: () => {
+          setIsEditRoutineDirty(false);
+          setIsSettingsOpen(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        },
+        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+      });
+      return;
+    }
+    setIsSettingsOpen(false);
+  };
+
   const handleTabTransition = (targetTab: 'home' | 'stats' | 'execution' | 'settings' | 'add', extraAction?: () => void) => {
     // [코멘트] 탭 전환 시 포커스 해제하여 아이폰 '흔들어서 실행취소'Prompt 방지 시도
     if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
@@ -3414,17 +3550,18 @@ export default function App() {
       });
       return;
     }
-    if (activeTab === 'settings' && targetTab !== 'settings' && isNaggingDirty) {
+    if (activeTab === 'settings' && targetTab !== 'settings' && (isNaggingDirty || isEditRoutineDirty)) {
       setConfirmModal({
         isOpen: true,
         title: '변경 취소 확인',
-        message: '변경을 취소하시겠습니까?',
-        confirmLabel: '변경 취소하기',
-        cancelLabel: '수정 진행하기',
+        message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+        confirmLabel: '취소하고 나가기',
+        cancelLabel: '계속 수정하기',
         confirmColor: 'indigo',
         showCancel: true,
         onConfirm: () => {
           setIsNaggingDirty(false);
+          setIsEditRoutineDirty(false);
           setActiveTab(targetTab);
           if (extraAction) extraAction();
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -4331,6 +4468,9 @@ export default function App() {
               };
             } else if (updated.status === TaskStatus.IN_PROGRESS) {
               // Clear IN_PROGRESS from other tasks in this chunk
+              updated.isPaused = !!updated.startTime || (updated.isPaused && (updated.accumulatedDuration || 0) > 0);
+              updated.accumulatedDuration = calculateTaskDuration(updated, now);
+              updated.startTime = undefined;
               updated.status = TaskStatus.NOT_STARTED;
             }
             return updated;
@@ -4410,6 +4550,9 @@ export default function App() {
               };
             } else if (updated.status === TaskStatus.IN_PROGRESS) {
               // Clear IN_PROGRESS from other tasks
+              updated.isPaused = !!updated.startTime || (updated.isPaused && (updated.accumulatedDuration || 0) > 0);
+              updated.accumulatedDuration = calculateTaskDuration(updated, now);
+              updated.startTime = undefined;
               updated.status = TaskStatus.NOT_STARTED;
             }
             return updated;
@@ -4488,7 +4631,7 @@ export default function App() {
             // 20.3.5 다른 루틴을 시작하는 경우 기존 실행 루틴(타이머 중 또는 일시정지 중)은 일시정지 상태로 목록으로 이동
             const wasActive = task.startTime || task.status === TaskStatus.IN_PROGRESS;
             if (wasActive) {
-              const shouldRemainPaused = !!task.startTime || task.isPaused;
+              const shouldRemainPaused = !!task.startTime || (task.isPaused && (task.accumulatedDuration || 0) > 0);
               return {
                 ...task,
                 isPaused: shouldRemainPaused,
@@ -4547,7 +4690,7 @@ export default function App() {
             
             const wasActive = task.startTime || task.status === TaskStatus.IN_PROGRESS;
             if (wasActive) {
-              const shouldRemainPaused = !!task.startTime || task.isPaused;
+              const shouldRemainPaused = !!task.startTime || (task.isPaused && (task.accumulatedDuration || 0) > 0);
               return {
                 ...task,
                 isPaused: shouldRemainPaused,
@@ -4616,7 +4759,7 @@ export default function App() {
               }
             } else if (wasActive && isTargetResuming) {
               // 다른 루틴이 시작되는 경우만 status를 해제함. 
-              const shouldRemainPaused = !!task.startTime || task.isPaused;
+              const shouldRemainPaused = !!task.startTime || (task.isPaused && (task.accumulatedDuration || 0) > 0);
               return {
                 ...task,
                 isPaused: shouldRemainPaused,
@@ -4793,6 +4936,9 @@ export default function App() {
               }
             } else if (updated.status === TaskStatus.IN_PROGRESS && isBecomingCompleted) {
               // Clear IN_PROGRESS if we are completing the current task
+              updated.isPaused = !!updated.startTime || (updated.isPaused && (updated.accumulatedDuration || 0) > 0);
+              updated.accumulatedDuration = calculateTaskDuration(updated, now);
+              updated.startTime = undefined;
               updated.status = TaskStatus.NOT_STARTED;
             }
             return updated;
@@ -5112,6 +5258,7 @@ export default function App() {
       ...prev,
       routineChunks: prev.routineChunks.map(c => c.id === id ? { ...c, ...updatedData } : c)
     }));
+    setIsEditRoutineDirty(false);
   };
 
   const updateChunkInfo = (id: string, newName: string, newPurpose: string) => {
@@ -5949,7 +6096,7 @@ export default function App() {
           
           {mode === 'modal' && (
             <button 
-              onClick={() => setIsSettingsOpen(false)}
+              onClick={handleSettingsClose}
               className="w-full mt-6 bg-slate-900 text-white font-bold py-4 rounded-[10px] hover:bg-slate-800 transition-colors flex-shrink-0"
             >
               저장하고 닫기
@@ -5993,10 +6140,10 @@ export default function App() {
         if (isNaggingDirty) {
           setConfirmModal({
             isOpen: true,
-            title: '변경 취소 확인',
-            message: '변경을 취소하시겠습니까?',
-            confirmLabel: '변경 취소하기',
-            cancelLabel: '수정 진행하기',
+           title: '변경 취소 확인',
+           message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+            confirmLabel: '취소하고 나가기',
+            cancelLabel: '계속 수정하기',
             confirmColor: 'indigo',
             showCancel: true,
             onConfirm: () => {
@@ -6291,6 +6438,7 @@ export default function App() {
             setIsSettingsOpen={setIsSettingsOpen}
             userData={userData}
             mode="edit"
+            onDirtyChange={(isDirty) => setIsEditRoutineDirty(isDirty)}
           />
         </div>
       </div>
@@ -6678,7 +6826,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsSettingsOpen(false)}
+              onClick={handleSettingsClose}
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 touch-none"
             />
             <motion.div 
