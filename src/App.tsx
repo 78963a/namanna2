@@ -3095,7 +3095,7 @@ export default function App() {
           beforeEndTime: 1,
           beforeEndMessage: 'task 종료 n분 전입니다.',
           endEnabled: false,
-          endMessage: 'task 시간이 경과되었습니다.',
+          endMessage: 'task 시간이 지났습니다.',
           overTimeEnabled: false,
           overTimeInterval: 1,
           overTimeMessage: 'name님, task가 m분 지났어요.'
@@ -3171,7 +3171,7 @@ export default function App() {
         beforeEndTime: 1,
         beforeEndMessage: 'task 종료 n분 전입니다.',
         endEnabled: false,
-        endMessage: 'task 시간이 경과되었습니다.',
+        endMessage: 'task 시간이 지났습니다.',
         overTimeEnabled: false,
         overTimeInterval: 1,
         overTimeMessage: 'name님, task가 m분 지났어요.'
@@ -5857,7 +5857,7 @@ export default function App() {
         beforeEndTime: 1,
         beforeEndMessage: 'task 종료 n분 전입니다.',
         endEnabled: false,
-        endMessage: 'task 시간이 경과되었습니다.',
+        endMessage: 'task 시간이 지났습니다.',
         overTimeEnabled: false,
         overTimeInterval: 1,
         overTimeMessage: 'name님, task가 m분 지났어요.'
