@@ -40,14 +40,14 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     const replaceWithJosa = (msg: string, tag: 'title' | 'purpose' | 'userName' | 'triggerTask', value: string, html: string) => {
       if (!msg) return "";
       // 1. Handle standard particles attached to placeholders
-      const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|이|가|을|를|은|는|으로|로|이죠|죠)`, 'g');
+      const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|야/이야|이야/야|다/이다|이다/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)`, 'g');
       let result = msg.replace(regex, (_, p1) => {
         return html + getJosa(value, p1 as any);
       });
 
       if (!result) return "";
       // 2. Handle specific particle tags following the placeholder
-      const particleRegex = new RegExp(`\\{\\{${tag}\\}\\}\\{\\{particle:(이/가|을/를|은/는|으로/로|이죠/죠|이|가|을|를|은|는|으로|로|이죠|죠)\\}\\}(\\s|$)`, 'g');
+      const particleRegex = new RegExp(`\\{\\{${tag}\\}\\}\\{\\{particle:(이/가|을/를|은/는|으로/로|이죠/죠|야/이야|이야/야|다/이다|이다/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)\\}\\}(\\s|$)`, 'g');
       result = result.replace(particleRegex, (_, p1, trailing) => {
         return html + getJosa(value, p1 as any) + trailing;
       });

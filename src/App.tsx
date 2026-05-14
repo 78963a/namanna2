@@ -285,8 +285,13 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   })();
 
   // 20.3. 현재 루틴(Current Task) 선정 우선순위 로직
+  // 0순위: 기록된 activeTaskId가 있고, 오늘 수행 대상이며 완료되지 않은 경우
+  let activeTask = chunk?.activeTaskId ? scheduledTasks.find(t => t.id === chunk.activeTaskId && !t.completed && t.status !== TaskStatus.SKIP) : undefined;
+  
   // 1순위: '현재 루틴'으로 마킹되어 있거나 타이머가 돌아가고 있는 루틴
-  let activeTask = scheduledTasks.find(t => t.status === TaskStatus.IN_PROGRESS && !t.completed);
+  if (!activeTask) {
+    activeTask = scheduledTasks.find(t => t.status === TaskStatus.IN_PROGRESS && !t.completed);
+  }
   
   // 2순위: 타이머가 돌아가고 있다면 (비정상 상태 방어)
   if (!activeTask) {
@@ -793,7 +798,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   // Resolve particles but keep the placeholder for RoutineTitle to style
                   const resolveParticles = (msg: string, tag: string, value: string) => {
                     if (!msg) return "";
-                    const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|이|가|을|를|은|는|으로|로|이죠|죠)`, 'g');
+                    const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|야/이야|이야/야|다/이다|이다/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)`, 'g');
                     return msg.replace(regex, (_, p1) => {
                       return `{{${tag}}}` + getJosa(value, p1 as any);
                     });
@@ -4063,8 +4068,13 @@ export default function App() {
     const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
     const isFinished = (t: Task) => t.completed || t.status === TaskStatus.PERFECT || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.SKIP;
     
+    // 0. Previously recorded active task
+    let targetTask = chunk.activeTaskId ? scheduledTasks.find(t => t.id === chunk.activeTaskId && !isFinished(t)) : undefined;
+
     // 1. Currently active task (has startTime)
-    let targetTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !isFinished(t));
+    if (!targetTask) {
+      targetTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !isFinished(t));
+    }
     
     // If no active task, find the next one to start
     if (!targetTask) {
@@ -4083,8 +4093,8 @@ export default function App() {
     }
 
     // Ensure the target task has IN_PROGRESS status and others don't (within this chunk)
-    // Only update if needed to avoid unnecessary state changes
-    if (targetTask && targetTask.status !== TaskStatus.IN_PROGRESS) {
+    // Also record it as activeTaskId
+    if (targetTask) {
       setUserData(prev => {
         const next = {
           ...prev,
@@ -4092,6 +4102,7 @@ export default function App() {
             if (c.id === chunkId) {
               return {
                 ...c,
+                activeTaskId: targetTask!.id,
                 tasks: c.tasks.map(task => {
                   if (task.id === targetTask!.id) return { ...task, status: TaskStatus.IN_PROGRESS };
                   if (task.status === TaskStatus.IN_PROGRESS) return { ...task, status: TaskStatus.NOT_STARTED };
@@ -4256,9 +4267,11 @@ export default function App() {
           };
 
           const nextTask = getNext(updatedTasks);
+          const nextActiveId = nextTask ? nextTask.id : undefined;
 
           return {
             ...chunk,
+            activeTaskId: nextActiveId,
             tasks: updatedTasks.map(t => {
               if (nextTask && t.id === nextTask.id) {
                 return { 
@@ -4332,9 +4345,11 @@ export default function App() {
           };
 
           const nextTask = getNext(updatedTasks);
+          const nextActiveId = nextTask ? nextTask.id : undefined;
 
           return {
             ...chunk,
+            activeTaskId: nextActiveId,
             tasks: updatedTasks.map(t => {
               if (nextTask && t.id === nextTask.id) {
                 return { 
@@ -4395,7 +4410,7 @@ export default function App() {
             return task;
           });
           
-          return { ...chunk, tasks: newTasks };
+          return { ...chunk, activeTaskId: taskId, tasks: newTasks };
         })
       };
       return syncHistory(next, todayStr);
@@ -4454,7 +4469,7 @@ export default function App() {
             return task;
           });
           
-          return { ...chunk, tasks: newTasks };
+          return { ...chunk, activeTaskId: taskId, tasks: newTasks };
         })
       };
       return syncHistory(next, todayStr);
@@ -4527,7 +4542,7 @@ export default function App() {
 
             return task;
           });
-          return { ...chunk, tasks: newTasks };
+          return { ...chunk, activeTaskId: id, tasks: newTasks };
         }),
       };
       return syncHistory(next, todayStr);
@@ -4557,6 +4572,7 @@ export default function App() {
             if (c.id === chunkId) {
               return {
                 ...c,
+                activeTaskId: undefined,
                 tasks: c.tasks.map(t => ({
                   ...t,
                   completed: false,
@@ -4712,6 +4728,7 @@ export default function App() {
             };
 
             const nextTask = getNext(updatedTasks);
+            const nextActiveId = nextTask ? nextTask.id : undefined;
             
             // Check if all tasks in this chunk are now completed
             const allCompleted = updatedTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
@@ -4725,6 +4742,7 @@ export default function App() {
             return {
               ...chunk,
               completionDates: newCompletionDates,
+              activeTaskId: nextActiveId,
               tasks: updatedTasks.map(t => {
                 if (nextTask && t.id === nextTask.id) {
                   return { 
@@ -4743,6 +4761,7 @@ export default function App() {
           // If un-doing completion
           return {
             ...chunk,
+            activeTaskId: id,
             tasks: updatedTasks
           };
         }

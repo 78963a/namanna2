@@ -60,6 +60,7 @@ export interface RoutineChunk {
   lastAlarmTriggeredDate?: string;
   startType?: 'anytime' | 'situation' | 'time';
   situation?: string;
+  activeTaskId?: string;
 }
 
 /**
