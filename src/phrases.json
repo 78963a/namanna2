@@ -72,8 +72,8 @@
     "COMPLETION_SELECTION_TEMPLATES": [
       "내가 {{title}} 해냄.",
       "나는 {{purpose}}야/이야.",
-      "내 이름은 {{userName}}, {{purpose}}이죠/죠.",
-      "{{duration}}만에 {{purpose}}이/가 된 {{userName}}",
+      "내 이름은 {{userName}}, {{title}}을/를 완료한 {{purpose}}이죠/죠.",
+      "{{title}}을/를 {{duration}}만에 완료하고 {{purpose}}이/가 된 {{userName}}",
       "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
     ],
     "INACTIVE": [

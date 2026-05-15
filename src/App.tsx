@@ -6200,17 +6200,13 @@ export default function App() {
 
               <div className="space-y-1.5 pt-1 border-t border-indigo-200/50">
                 <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4" /> 한글 조사(은/는/이/가 등) 자동 교정
+                  <AlertCircle className="w-4 h-4" /> 한글 조사 자동 교정
                 </h3>
-                <p className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
-                  <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">name</span>이나 <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">task</span> 뒤에 조사를 붙여 사용하면, 이름이나 루틴 제목의 받침 유무에 따라 자연스럽게 교정되어 출력됩니다.
-                </p>
-                  <p className="text-[10px] font-medium text-indigo-500 mt-1">* 지원: 은/는, 이/가, 을/를, 으로/로, 이죠/죠, 이다/다</p>
-                <div className="bg-indigo-100/50 p-2 rounded-lg space-y-1">
-                  <p className="text-[10px] font-black text-indigo-800">예시 문구 :</p>
-                  <ul className="text-[10px] font-bold text-indigo-700 list-disc list-inside space-y-0.5">
-                    <li>task이/가 n분째 진행중입니다</li>
-                    <li>task을/를 얼른 끝내주세요</li>
+                <div className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
+                  <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">name</span>이나 <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">task</span> 뒤에 <span className="font-black text-indigo-800">'이/가'</span>와 같이 슬래시(/)로 구분된 조사를 사용하면 받침 유무에 따라 알맞게 교정됩니다. 
+                  <p className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">* 지원: 은/는, 이/가, 을/를, 으로/로, 이죠/죠, 이다/다</p>
+                  <ul className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
+                    <li>예를들어 "task이/가 n분째 진행중입니다"를 입력하시면, "운동이 5분째 진행중입니다" 또는 "운동하기가 5분째 진행중입니다"와 같이 적절한 조사가 출력됩니다. </li>
                   </ul>
                 </div>
               </div>

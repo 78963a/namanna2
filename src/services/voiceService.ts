@@ -92,10 +92,10 @@ class VoiceService {
     let msg = template;
     const { name = '', task = '', n = 0, m = 0, r = 0 } = variables;
 
-    // 1. Apply particle rules (Josa) if variables were used followed by particles
-    // MUST be done before simple variable replacement to catch the placeholders
-    // e.g. "task가" -> "루틴이"
-    const josaRegex = /(name|task)(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이야\/야|이다\/다|이|가|을|를|은|는|으로|로|이죠|죠|이야|야|이다|다)/g;
+    // 1. Apply particle rules (Josa) if variables were used followed by dual particles
+    // e.g. "task이/가" -> "루틴이" or "커피가"
+    // Single particles like "task가" will be output as is (e.g. "루틴가") as requested.
+    const josaRegex = /(name|task)(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이야\/야|이다\/다)/g;
     msg = msg.replace(josaRegex, (match, variable, p1) => {
       const val = variable === 'name' ? name : task;
       return val + getJosa(val, p1 as any);
