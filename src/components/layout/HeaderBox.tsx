@@ -117,7 +117,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
           </div>
           <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
               <span>
-                {challengeDays}일째 도전중, {successDays}일째 성공중. 음성안내업뎃
+                {challengeDays}일째 도전중, {successDays}일째 성공중. 실행화면외에도 음성안내가나오게 변경할것
                </span>
           </div>
         </div>

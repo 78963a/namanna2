@@ -221,6 +221,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   const activeTaskRef = useRef<HTMLDivElement>(null);
   const scrollBottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const naggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isAlreadyFinalized = useMemo(() => {
     if (!selectedChunkId) return false;
@@ -538,6 +539,121 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     setAnimationStage('none');
   };
 
+  // 루틴 변경 시 음성 안내 즉시 중단 (Nagging voice stop on routine change)
+  useEffect(() => {
+    return () => {
+      if (naggingTimeoutRef.current) {
+        clearTimeout(naggingTimeoutRef.current);
+        naggingTimeoutRef.current = null;
+      }
+      voiceService.stop();
+    };
+  }, [activeTask?.id]);
+
+  // --- [잔소리 기능 (Nagging Function) 로직] ---
+  // 사용자가 설정한 문구와 시점에 맞춰 음성 안내를 실행합니다.
+  useEffect(() => {
+    if (!activeTask || activeTask.isPaused || !activeTask.startTime || !userData.isVoiceEnabled) return;
+
+    const elapsed = getElapsed(activeTask);
+    
+    // 1. 트리거 루틴(첫 루틴) 시작 시 효과음 재생
+    if (elapsed === 0) {
+      // 미실행 루틴 그룹인지 확인
+      const chunk = userData.routineChunks.find(c => c.tasks.some(t => t.id === activeTask.id));
+      if (chunk) {
+        const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
+        const isFirstScheduled = scheduledTasks[0]?.id === activeTask.id;
+        // 한 번도 실행된 적 없는 그룹인지 확인 (모든 오늘 루틴이 미완료이며 누적시간이 0)
+        const isGroupBrandNew = scheduledTasks.every(t => !t.completed && (!t.accumulatedDuration || t.accumulatedDuration === 0));
+        
+        if (isFirstScheduled && isGroupBrandNew) {
+          soundService.play('/driken5482-applause-cheer-236786.mp3', userData.isVoiceEnabled);
+        }
+      }
+    }
+
+    if (!userData.naggingSettings) return;
+
+    const settings = userData.naggingSettings;
+    const target = (activeTask.targetDuration || 0) * 60;
+    const remaining = target - elapsed;
+    
+    const variables = {
+      name: userData.userName || '나',
+      task: activeTask.text,
+      n: Math.floor(elapsed / 60),
+      r: Math.floor(remaining / 60),
+      m: Math.floor((elapsed - target) / 60)
+    };
+
+    // 2. 루틴 시작 알림 (0초 또는 재개 시점)
+    if (elapsed === 0 && settings.startEnabled) {
+      if (naggingTimeoutRef.current) {
+        clearTimeout(naggingTimeoutRef.current);
+      }
+      // 효과음이 끝날 때까지 기다렸다가 재생 (최대 3초)
+      const trySpeak = (retry = 0) => {
+        if (soundService.isPlaying && retry < 15) {
+          naggingTimeoutRef.current = setTimeout(() => {
+            naggingTimeoutRef.current = null;
+            trySpeak(retry + 1);
+          }, 200);
+        } else {
+          voiceService.speakNagging(`start-${activeTask.id}`, settings.startMessage || 'task', variables);
+          naggingTimeoutRef.current = null;
+        }
+      };
+      trySpeak();
+    }
+
+    // 3. 루틴 진행 중 알림 (정기 알림)
+    if (settings.ongoingEnabled && elapsed > 0 && elapsed < target) {
+      const intervalSeconds = settings.ongoingInterval * 60;
+      // 정각(분)에만 알림을 줄지 아니면 초 단위로 체크할지 고민. 
+      // 이전 로직들과 일관성을 위해 % intervalSeconds === 0 체크 사용.
+      // 단, '종료 전 알림'과 겹치는 경우 '종료 전 알림'만 내보냄.
+      const isBeforeEndTriggered = settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60;
+      
+      if (elapsed % intervalSeconds === 0 && !isBeforeEndTriggered) {
+        voiceService.speakNagging(`ongoing-${activeTask.id}-${elapsed}`, settings.ongoingMessage, variables);
+      }
+    }
+
+    // 4. 루틴 종료 전 알림
+    if (settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60 && remaining > 0) {
+      voiceService.speakNagging(`beforeEnd-${activeTask.id}-${elapsed}`, settings.beforeEndMessage, {
+        ...variables,
+        r: settings.beforeEndTime // 종료 전 알림의 r은 설정된 값이어야 함 (실제 남은 시간과 동일할 것임)
+      });
+    }
+
+    // 5. 루틴 종료 알림
+    if (settings.endEnabled && elapsed === target && target > 0) {
+      voiceService.speakNagging(`end-${activeTask.id}`, settings.endMessage, variables);
+    }
+
+    // 6. 루틴 종료 후 알림 (초과 시간 정기 안내)
+    const overTimeTargetTypes = settings.overTimeTargetTypes || [TaskType.TIME_LIMITED];
+    const isTargetType = activeTask.taskType && overTimeTargetTypes.includes(activeTask.taskType as TaskType);
+    if (settings.overTimeEnabled && isTargetType && elapsed > target && target > 0) {
+      const overtimeSeconds = elapsed - target;
+      const intervalSeconds = settings.overTimeInterval * 60;
+      if (overtimeSeconds > 0 && overtimeSeconds % intervalSeconds === 0) {
+        voiceService.speakNagging(`overtime-${activeTask.id}-${elapsed}`, settings.overTimeMessage, {
+          ...variables,
+          m: Math.floor(overtimeSeconds / 60)
+        });
+      }
+    }
+  }, [
+    activeTask?.id, 
+    activeTask?.isPaused, 
+    activeTask?.startTime, 
+    activeTask ? getElapsed(activeTask) : 0, 
+    userData.isVoiceEnabled,
+    userData.naggingSettings
+  ]);
 
   if (isCompleted && animationStage !== 'none') {
     // 루틴그룹완료화면 (Routine Group Completion Screen)
@@ -3239,7 +3355,6 @@ export default function App() {
   });
 
   const [currentTime, setCurrentTime] = useState(new Date());
-
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [addGroupStep, setAddGroupStep] = useState(1);
@@ -3610,141 +3725,20 @@ export default function App() {
     }
   };
 
-  const globalNaggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   const globalActiveTask = useMemo(() => {
     for (const chunk of userData.routineChunks) {
-      if (!isChunkScheduledToday(chunk, effectiveDate, userData)) continue;
-      
-      const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
-      
-      // Preferred: Task with IN_PROGRESS status
-      let task = scheduledTasks.find(t => t.status === TaskStatus.IN_PROGRESS && !t.completed);
-      
-      // Secondary: Task that has startTime and is not paused
-      if (!task) {
-        task = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed);
-      }
-
-      // Tertiary: Task that is paused but has some duration
-      if (!task) {
-        task = scheduledTasks.find(t => t.isPaused && !t.completed);
-      }
-
-      if (task) return { task, chunk, chunkId: chunk.id };
+      const active = chunk.tasks.find(t => 
+        t.startTime && 
+        !t.isPaused && 
+        !t.completed && 
+        t.status !== TaskStatus.SKIP && 
+        t.status !== TaskStatus.COMPLETED && 
+        t.status !== TaskStatus.PERFECT
+      );
+      if (active) return { task: active, chunkId: chunk.id };
     }
     return null;
-  }, [userData.routineChunks, effectiveDate]);
-
-  // Stop nagging when task changes
-  useEffect(() => {
-    return () => {
-      if (globalNaggingTimeoutRef.current) {
-        clearTimeout(globalNaggingTimeoutRef.current);
-        globalNaggingTimeoutRef.current = null;
-      }
-      voiceService.stop();
-    };
-  }, [globalActiveTask?.task?.id]);
-
-  // Global Nagging Function Logic
-  useEffect(() => {
-    const activeTask = globalActiveTask?.task;
-    const chunk = globalActiveTask?.chunk;
-    
-    if (!activeTask || activeTask.isPaused || !activeTask.startTime || !userData.isVoiceEnabled) return;
-
-    const elapsed = calculateTaskDuration(activeTask, currentTime);
-    
-    // 1. 트리거 루틴(첫 루틴) 시작 시 효과음 재생
-    if (elapsed === 0) {
-      const scheduledTasks = chunk ? chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData)) : [];
-      const isFirstScheduled = scheduledTasks[0]?.id === activeTask.id;
-      const isGroupBrandNew = scheduledTasks.every(t => !t.completed && (!t.accumulatedDuration || t.accumulatedDuration === 0));
-      
-      if (isFirstScheduled && isGroupBrandNew) {
-        soundService.play('/driken5482-applause-cheer-236786.mp3', userData.isVoiceEnabled);
-      }
-    }
-
-    const settings = userData.naggingSettings;
-    if (!settings) return;
-
-    const target = (activeTask.targetDuration || 0) * 60;
-    const remaining = target - elapsed;
-    
-    const variables = {
-      name: userData.userName || '나',
-      task: activeTask.text,
-      n: Math.floor(elapsed / 60),
-      r: Math.floor(remaining / 60),
-      m: Math.floor((elapsed - target) / 60)
-    };
-
-    // 2. 루틴 시작 알림
-    if (elapsed === 0 && settings.startEnabled) {
-      if (globalNaggingTimeoutRef.current) {
-        clearTimeout(globalNaggingTimeoutRef.current);
-      }
-      const trySpeak = (retry = 0) => {
-        if (soundService.isPlaying && retry < 15) {
-          globalNaggingTimeoutRef.current = setTimeout(() => {
-            globalNaggingTimeoutRef.current = null;
-            trySpeak(retry + 1);
-          }, 200);
-        } else {
-          voiceService.speakNagging(`start-${activeTask.id}`, settings.startMessage || 'task', variables);
-          globalNaggingTimeoutRef.current = null;
-        }
-      };
-      trySpeak();
-    }
-
-    // 3. 루틴 진행 중 알림
-    if (settings.ongoingEnabled && elapsed > 0 && elapsed < target) {
-      const intervalSeconds = settings.ongoingInterval * 60;
-      const isBeforeEndTriggered = settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60;
-      
-      if (elapsed % intervalSeconds === 0 && !isBeforeEndTriggered) {
-        voiceService.speakNagging(`ongoing-${activeTask.id}-${elapsed}`, settings.ongoingMessage, variables);
-      }
-    }
-
-    // 4. 루틴 종료 전 알림
-    if (settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60 && remaining > 0) {
-      voiceService.speakNagging(`beforeEnd-${activeTask.id}-${elapsed}`, settings.beforeEndMessage, {
-        ...variables,
-        r: settings.beforeEndTime
-      });
-    }
-
-    // 5. 루틴 종료 알림
-    if (settings.endEnabled && elapsed === target && target > 0) {
-      voiceService.speakNagging(`end-${activeTask.id}`, settings.endMessage, variables);
-    }
-
-    // 6. 루틴 종료 후 알림
-    const overTimeTargetTypes = settings.overTimeTargetTypes || [TaskType.TIME_LIMITED];
-    const isTargetType = activeTask.taskType && overTimeTargetTypes.includes(activeTask.taskType as TaskType);
-    if (settings.overTimeEnabled && isTargetType && elapsed > target && target > 0) {
-      const overtimeSeconds = elapsed - target;
-      const intervalSeconds = settings.overTimeInterval * 60;
-      if (overtimeSeconds > 0 && overtimeSeconds % intervalSeconds === 0) {
-        voiceService.speakNagging(`overtime-${activeTask.id}-${elapsed}`, settings.overTimeMessage, {
-          ...variables,
-          m: Math.floor(overtimeSeconds / 60)
-        });
-      }
-    }
-  }, [
-    globalActiveTask?.task?.id,
-    globalActiveTask?.task?.isPaused,
-    globalActiveTask?.task?.startTime,
-    globalActiveTask?.task ? calculateTaskDuration(globalActiveTask.task, currentTime) : 0,
-    userData.isVoiceEnabled,
-    userData.naggingSettings,
-    effectiveDate
-  ]);
+  }, [userData.routineChunks]);
 
   // Activity Logging Logic
   useEffect(() => {
