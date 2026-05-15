@@ -1163,12 +1163,12 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                                 }))
                               }));
                             }}
-                            className="w-full flex items-center gap-3 p-3.5 bg-white rounded-[10px] border border-slate-100 hover:border-indigo-200 transition-all group shadow-sm"
+                            className="w-full flex items-start gap-3 p-3.5 bg-white rounded-[10px] border border-slate-100 hover:border-indigo-200 transition-all group shadow-sm text-left"
                           >
-                            <div className={`w-6 h-6 rounded-[10px] border-2 flex items-center justify-center transition-all ${item.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-200 group-hover:border-indigo-300'}`}>
+                            <div className={`w-6 h-6 rounded-[10px] border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5 ${item.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-200 group-hover:border-indigo-300'}`}>
                               {item.completed && <Check className="w-3.5 h-3.5 text-white" />}
                             </div>
-                            <span className={`text-sm font-bold transition-all ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                            <span className={`text-sm font-bold transition-all break-words ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
                               {item.text}
                             </span>
                           </button>
@@ -1737,9 +1737,9 @@ const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 p-3 bg-slate-50 rounded-[10px] border border-slate-100 group transition-all ${isDragging ? 'shadow-lg ring-2 ring-indigo-500/20' : ''}`}
+      className={`flex items-start gap-3 p-3 bg-slate-50 rounded-[10px] border border-slate-100 group transition-all ${isDragging ? 'shadow-lg ring-2 ring-indigo-500/20' : ''}`}
     >
-      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-400 transition-colors">
+      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-400 transition-colors mt-0.5">
         <GripVertical className="w-4 h-4" />
       </div>
       
@@ -1754,7 +1754,7 @@ const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
           className="flex-grow bg-white border border-indigo-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
       ) : (
-        <span className="flex-grow text-sm font-bold text-slate-700 truncate">
+        <span className="flex-grow text-sm font-bold text-slate-700 whitespace-pre-wrap break-words">
           {item.text}
         </span>
       )}
@@ -2364,9 +2364,9 @@ const RoutineGroupFormView: React.FC<{
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState('');
   
-  const [triggerTask, setTriggerTask] = useState({ text: '', duration: 1, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6] });
-  const [routineList, setRoutineList] = useState<Array<{ id: string, text: string, duration: number, type: TaskType, scheduledDays: number[] }>>([]);
-  const [currentRoutineInput, setCurrentRoutineInput] = useState({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6] });
+  const [triggerTask, setTriggerTask] = useState({ text: '', duration: 1, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6], checklist: [] as any[] });
+  const [routineList, setRoutineList] = useState<Array<{ id: string, text: string, duration: number, type: TaskType, scheduledDays: number[], checklist: any[] }>>([]);
+  const [currentRoutineInput, setCurrentRoutineInput] = useState({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6], checklist: [] as any[] });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -2497,7 +2497,10 @@ const RoutineGroupFormView: React.FC<{
 
   useEffect(() => {
     if (mode === 'add') {
-      const isDirty = name.trim() !== '' || purpose.trim() !== '' || triggerTask.text.trim() !== '' || routineList.length > 0;
+      const hasTriggerChecklist = (triggerTask as any).checklist && (triggerTask as any).checklist.length > 0;
+      const hasRoutineChecklist = routineList.some(r => (r as any).checklist && (r as any).checklist.length > 0);
+      const hasCurrentInput = currentRoutineInput.text.trim() !== '' || (currentRoutineInput.checklist && (currentRoutineInput.checklist as any[]).length > 0);
+      const isDirty = name.trim() !== '' || purpose.trim() !== '' || triggerTask.text.trim() !== '' || routineList.length > 0 || hasTriggerChecklist || hasRoutineChecklist || hasCurrentInput;
       onDirtyChange?.(isDirty);
     } else if (mode === 'edit' && initialChunk) {
       // Comparison logic for edit mode
@@ -2514,7 +2517,8 @@ const RoutineGroupFormView: React.FC<{
       const isTriggerNew = initialTasks.length === 0 || 
         triggerTask.text !== initialTasks[0].text || 
         triggerTask.duration !== initialTasks[0].targetDuration || 
-        triggerTask.type !== initialTasks[0].taskType;
+        triggerTask.type !== initialTasks[0].taskType ||
+        JSON.stringify((triggerTask as any).checklist || []) !== JSON.stringify((initialTasks[0] as any).checklist || []);
       
       const currentRoutineListTasks = routineList;
       const initialRoutineListTasks = initialTasks.slice(1);
@@ -2524,14 +2528,16 @@ const RoutineGroupFormView: React.FC<{
         for (let i = 0; i < currentRoutineListTasks.length; i++) {
           if (currentRoutineListTasks[i].text !== initialRoutineListTasks[i].text || 
               currentRoutineListTasks[i].duration !== initialRoutineListTasks[i].targetDuration || 
-              currentRoutineListTasks[i].type !== initialRoutineListTasks[i].taskType) {
+              currentRoutineListTasks[i].type !== initialRoutineListTasks[i].taskType ||
+              JSON.stringify((currentRoutineListTasks[i] as any).checklist || []) !== JSON.stringify((initialRoutineListTasks[i] as any).checklist || [])) {
             isRoutineListNew = true;
             break;
           }
         }
       }
 
-      const isDirty = isNameNew || isPurposeNew || isDaysNew || isStartTimeNew || isStartTypeNew || isSituationNew || isAlarmNew || isTriggerNew || isRoutineListNew;
+      const hasCurrentInput = currentRoutineInput.text.trim() !== '' || (currentRoutineInput.checklist && (currentRoutineInput.checklist as any[]).length > 0);
+      const isDirty = isNameNew || isPurposeNew || isDaysNew || isStartTimeNew || isStartTypeNew || isSituationNew || isAlarmNew || isTriggerNew || isRoutineListNew || hasCurrentInput;
       onDirtyChange?.(isDirty);
     }
   }, [name, purpose, triggerTask, routineList, scheduledDays, startTime, startType, situation, isAlarmEnabled, mode, initialChunk, onDirtyChange]);
