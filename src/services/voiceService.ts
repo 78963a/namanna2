@@ -74,6 +74,33 @@ class VoiceService {
       utterance.voice = this.voice;
     }
 
+    // Media Session Support: Signals to the OS that audio is playing.
+    // This helps with "ducking" background music on some mobile browsers.
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: '루틴 안내',
+          artist: '내 루틴 앱',
+          album: '안내 음성'
+        });
+        navigator.mediaSession.playbackState = 'playing';
+      } catch (e) {
+        console.warn("MediaSession update failed", e);
+      }
+    }
+
+    utterance.onend = () => {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'none';
+      }
+    };
+
+    utterance.onerror = () => {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'none';
+      }
+    };
+
     this.isUnlocked = true;
     this.synth.speak(utterance);
   }
@@ -117,6 +144,9 @@ class VoiceService {
   stop() {
     if (this.synth) {
       this.synth.cancel();
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'none';
+      }
     }
   }
 }

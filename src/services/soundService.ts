@@ -88,10 +88,20 @@ class SoundService {
       const onEnd = () => {
         this.activeCount = Math.max(0, this.activeCount - 1);
         audio.removeEventListener('ended', onEnd);
+        if (this.activeCount === 0 && 'mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'none';
+        }
       };
       
       audio.addEventListener('ended', onEnd);
       this.activeCount++;
+
+      // Media Session Support
+      if ('mediaSession' in navigator) {
+        try {
+          navigator.mediaSession.playbackState = 'playing';
+        } catch (e) {}
+      }
 
       const playPromise = audio.play();
       
@@ -99,6 +109,9 @@ class SoundService {
         playPromise.catch(e => {
           this.activeCount = Math.max(0, this.activeCount - 1);
           audio.removeEventListener('ended', onEnd);
+          if (this.activeCount === 0 && 'mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = 'none';
+          }
           console.warn('Sound playback failed:', e, 'Path:', fullPath);
         });
       }
