@@ -126,6 +126,9 @@ export interface NaggingSettings {
   beforeEndMessage: string;
   endEnabled: boolean;
   endMessage: string;
+  ongoingTargetTypes?: TaskType[];
+  beforeEndTargetTypes?: TaskType[];
+  endTargetTypes?: TaskType[];
   overTimeEnabled: boolean;
   overTimeInterval: number; // minutes
   overTimeMessage: string;

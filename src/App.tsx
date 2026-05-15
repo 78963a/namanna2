@@ -221,7 +221,6 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   const activeTaskRef = useRef<HTMLDivElement>(null);
   const scrollBottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const naggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isAlreadyFinalized = useMemo(() => {
     if (!selectedChunkId) return false;
@@ -538,122 +537,6 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     setActiveTab('home');
     setAnimationStage('none');
   };
-
-  // 루틴 변경 시 음성 안내 즉시 중단 (Nagging voice stop on routine change)
-  useEffect(() => {
-    return () => {
-      if (naggingTimeoutRef.current) {
-        clearTimeout(naggingTimeoutRef.current);
-        naggingTimeoutRef.current = null;
-      }
-      voiceService.stop();
-    };
-  }, [activeTask?.id]);
-
-  // --- [잔소리 기능 (Nagging Function) 로직] ---
-  // 사용자가 설정한 문구와 시점에 맞춰 음성 안내를 실행합니다.
-  useEffect(() => {
-    if (!activeTask || activeTask.isPaused || !activeTask.startTime || !userData.isVoiceEnabled) return;
-
-    const elapsed = getElapsed(activeTask);
-    
-    // 1. 트리거 루틴(첫 루틴) 시작 시 효과음 재생
-    if (elapsed === 0) {
-      // 미실행 루틴 그룹인지 확인
-      const chunk = userData.routineChunks.find(c => c.tasks.some(t => t.id === activeTask.id));
-      if (chunk) {
-        const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
-        const isFirstScheduled = scheduledTasks[0]?.id === activeTask.id;
-        // 한 번도 실행된 적 없는 그룹인지 확인 (모든 오늘 루틴이 미완료이며 누적시간이 0)
-        const isGroupBrandNew = scheduledTasks.every(t => !t.completed && (!t.accumulatedDuration || t.accumulatedDuration === 0));
-        
-        if (isFirstScheduled && isGroupBrandNew) {
-          soundService.play('/driken5482-applause-cheer-236786.mp3', userData.isVoiceEnabled);
-        }
-      }
-    }
-
-    if (!userData.naggingSettings) return;
-
-    const settings = userData.naggingSettings;
-    const target = (activeTask.targetDuration || 0) * 60;
-    const remaining = target - elapsed;
-    
-    const variables = {
-      name: userData.userName || '나',
-      task: activeTask.text,
-      n: Math.floor(elapsed / 60),
-      r: Math.floor(remaining / 60),
-      m: Math.floor((elapsed - target) / 60)
-    };
-
-    // 2. 루틴 시작 알림 (0초 또는 재개 시점)
-    if (elapsed === 0 && settings.startEnabled) {
-      if (naggingTimeoutRef.current) {
-        clearTimeout(naggingTimeoutRef.current);
-      }
-      // 효과음이 끝날 때까지 기다렸다가 재생 (최대 3초)
-      const trySpeak = (retry = 0) => {
-        if (soundService.isPlaying && retry < 15) {
-          naggingTimeoutRef.current = setTimeout(() => {
-            naggingTimeoutRef.current = null;
-            trySpeak(retry + 1);
-          }, 200);
-        } else {
-          voiceService.speakNagging(`start-${activeTask.id}`, settings.startMessage || 'task', variables);
-          naggingTimeoutRef.current = null;
-        }
-      };
-      trySpeak();
-    }
-
-    // 3. 루틴 진행 중 알림 (정기 알림)
-    if (settings.ongoingEnabled && elapsed > 0 && elapsed < target) {
-      const intervalSeconds = settings.ongoingInterval * 60;
-      // 정각(분)에만 알림을 줄지 아니면 초 단위로 체크할지 고민. 
-      // 이전 로직들과 일관성을 위해 % intervalSeconds === 0 체크 사용.
-      // 단, '종료 전 알림'과 겹치는 경우 '종료 전 알림'만 내보냄.
-      const isBeforeEndTriggered = settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60;
-      
-      if (elapsed % intervalSeconds === 0 && !isBeforeEndTriggered) {
-        voiceService.speakNagging(`ongoing-${activeTask.id}-${elapsed}`, settings.ongoingMessage, variables);
-      }
-    }
-
-    // 4. 루틴 종료 전 알림
-    if (settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60 && remaining > 0) {
-      voiceService.speakNagging(`beforeEnd-${activeTask.id}-${elapsed}`, settings.beforeEndMessage, {
-        ...variables,
-        r: settings.beforeEndTime // 종료 전 알림의 r은 설정된 값이어야 함 (실제 남은 시간과 동일할 것임)
-      });
-    }
-
-    // 5. 루틴 종료 알림
-    if (settings.endEnabled && elapsed === target && target > 0) {
-      voiceService.speakNagging(`end-${activeTask.id}`, settings.endMessage, variables);
-    }
-
-    // 6. 루틴 종료 후 알림 (초과 시간 정기 안내)
-    const overTimeTargetTypes = settings.overTimeTargetTypes || [TaskType.TIME_LIMITED];
-    const isTargetType = activeTask.taskType && overTimeTargetTypes.includes(activeTask.taskType as TaskType);
-    if (settings.overTimeEnabled && isTargetType && elapsed > target && target > 0) {
-      const overtimeSeconds = elapsed - target;
-      const intervalSeconds = settings.overTimeInterval * 60;
-      if (overtimeSeconds > 0 && overtimeSeconds % intervalSeconds === 0) {
-        voiceService.speakNagging(`overtime-${activeTask.id}-${elapsed}`, settings.overTimeMessage, {
-          ...variables,
-          m: Math.floor(overtimeSeconds / 60)
-        });
-      }
-    }
-  }, [
-    activeTask?.id, 
-    activeTask?.isPaused, 
-    activeTask?.startTime, 
-    activeTask ? getElapsed(activeTask) : 0, 
-    userData.isVoiceEnabled,
-    userData.naggingSettings
-  ]);
 
   if (isCompleted && animationStage !== 'none') {
     // 루틴그룹완료화면 (Routine Group Completion Screen)
@@ -3215,7 +3098,7 @@ export default function App() {
         isWakeUpAlarmEnabled: false,
         naggingSettings: {
           startEnabled: false,
-          startMessage: 'task',
+          startMessage: 'task 시작합니다',
           ongoingEnabled: false,
           ongoingInterval: 1,
           ongoingMessage: 'task가 n분째 진행중입니다',
@@ -3224,10 +3107,13 @@ export default function App() {
           beforeEndMessage: 'task 종료 r분 전입니다.',
           endEnabled: false,
           endMessage: 'task 시간이 지났습니다.',
+          ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+          beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+          endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
           overTimeEnabled: false,
           overTimeInterval: 1,
           overTimeMessage: 'name님, task가 m분 지났어요.',
-          overTimeTargetTypes: [TaskType.TIME_LIMITED]
+          overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
         }
       };
     }
@@ -3295,21 +3181,39 @@ export default function App() {
     if (parsed.naggingSettings === undefined) {
       parsed.naggingSettings = {
         startEnabled: false,
-        startMessage: 'task',
+        startMessage: 'task 시작합니다',
+        ongoingEnabled: false,
+        ongoingInterval: 1,
+        ongoingMessage: 'task가 n분째 진행중입니다',
         beforeEndEnabled: false,
         beforeEndTime: 1,
-        beforeEndMessage: 'task 종료 n분 전입니다.',
+        beforeEndMessage: 'task 종료 r분 전입니다.',
         endEnabled: false,
         endMessage: 'task 시간이 지났습니다.',
+        ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+        beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+        endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
         overTimeEnabled: false,
         overTimeInterval: 1,
         overTimeMessage: 'name님, task가 m분 지났어요.',
-        overTimeTargetTypes: [TaskType.TIME_LIMITED]
+        overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
       };
     }
 
-    if (parsed.naggingSettings && parsed.naggingSettings.overTimeTargetTypes === undefined) {
-      parsed.naggingSettings.overTimeTargetTypes = [TaskType.TIME_LIMITED];
+    if (parsed.naggingSettings) {
+      const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
+      if (parsed.naggingSettings.overTimeTargetTypes === undefined) {
+        parsed.naggingSettings.overTimeTargetTypes = allTypes;
+      }
+      if (parsed.naggingSettings.ongoingTargetTypes === undefined) {
+        parsed.naggingSettings.ongoingTargetTypes = allTypes;
+      }
+      if (parsed.naggingSettings.beforeEndTargetTypes === undefined) {
+        parsed.naggingSettings.beforeEndTargetTypes = allTypes;
+      }
+      if (parsed.naggingSettings.endTargetTypes === undefined) {
+        parsed.naggingSettings.endTargetTypes = allTypes;
+      }
     }
     
     if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
@@ -3361,6 +3265,7 @@ export default function App() {
   });
 
   const [currentTime, setCurrentTime] = useState(new Date());
+  const naggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [addGroupStep, setAddGroupStep] = useState(1);
@@ -3745,6 +3650,127 @@ export default function App() {
     }
     return null;
   }, [userData.routineChunks]);
+
+  // 루틴 변경 시 음성 안내 즉시 중단 (Nagging voice stop on routine change)
+  useEffect(() => {
+    return () => {
+      if (naggingTimeoutRef.current) {
+        clearTimeout(naggingTimeoutRef.current);
+        naggingTimeoutRef.current = null;
+      }
+      voiceService.stop();
+    };
+  }, [globalActiveTask?.task?.id]);
+
+  // --- [잔소리 기능 (Nagging Function) 로직] ---
+  // 사용자가 설정한 문구와 시점에 맞춰 음성 안내를 실행합니다.
+  useEffect(() => {
+    if (!globalActiveTask || !globalActiveTask.task || globalActiveTask.task.isPaused || !globalActiveTask.task.startTime || !userData.isVoiceEnabled) return;
+
+    const activeTask = globalActiveTask.task;
+    const elapsed = calculateTaskDuration(activeTask, currentTime);
+    
+    // 1. 트리거 루틴(첫 루틴) 시작 시 효과음 재생
+    if (elapsed === 0) {
+      // 미실행 루틴 그룹인지 확인
+      const chunk = userData.routineChunks.find(c => c.tasks.some(t => t.id === activeTask.id));
+      if (chunk) {
+        const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
+        const isFirstScheduled = scheduledTasks[0]?.id === activeTask.id;
+        // 한 번도 실행된 적 없는 그룹인지 확인 (모든 오늘 루틴이 미완료이며 누적시간이 0)
+        const isGroupBrandNew = scheduledTasks.every(t => !t.completed && (!t.accumulatedDuration || t.accumulatedDuration === 0));
+        
+        if (isFirstScheduled && isGroupBrandNew) {
+          soundService.play('/driken5482-applause-cheer-236786.mp3', userData.isVoiceEnabled);
+        }
+      }
+    }
+
+    if (!userData.naggingSettings) return;
+
+    const settings = userData.naggingSettings;
+    const target = (activeTask.targetDuration || 0) * 60;
+    const remaining = target - elapsed;
+    
+    const variables = {
+      name: userData.userName || '나',
+      task: activeTask.text,
+      n: Math.floor(elapsed / 60),
+      r: Math.floor(remaining / 60),
+      m: Math.floor((elapsed - target) / 60)
+    };
+
+    // 2. 루틴 시작 알림 (0초 또는 재개 시점)
+    if (elapsed === 0 && settings.startEnabled) {
+      if (naggingTimeoutRef.current) {
+        clearTimeout(naggingTimeoutRef.current);
+      }
+      // 효과음이 끝날 때까지 기다렸다가 재생 (최대 3초)
+      const trySpeak = (retry = 0) => {
+        if (soundService.isPlaying && retry < 15) {
+          naggingTimeoutRef.current = setTimeout(() => {
+            naggingTimeoutRef.current = null;
+            trySpeak(retry + 1);
+          }, 200);
+        } else {
+          voiceService.speakNagging(`start-${activeTask.id}`, settings.startMessage || 'task 시작합니다', variables);
+          naggingTimeoutRef.current = null;
+        }
+      };
+      trySpeak();
+    }
+
+    // 3. 루틴 진행 중 알림 (정기 알림)
+    const allTaskTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
+    const ongoingTargetTypes = settings.ongoingTargetTypes || allTaskTypes;
+    const isOngoingTarget = activeTask.taskType && ongoingTargetTypes.includes(activeTask.taskType as TaskType);
+    if (settings.ongoingEnabled && isOngoingTarget && elapsed > 0 && elapsed < target) {
+      const intervalSeconds = settings.ongoingInterval * 60;
+      const isBeforeEndTriggered = settings.beforeEndEnabled && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60;
+      
+      if (elapsed % intervalSeconds === 0 && !isBeforeEndTriggered) {
+        voiceService.speakNagging(`ongoing-${activeTask.id}-${elapsed}`, settings.ongoingMessage, variables);
+      }
+    }
+
+    // 4. 루틴 종료 전 알림
+    const beforeEndTargetTypes = settings.beforeEndTargetTypes || allTaskTypes;
+    const isBeforeEndTarget = activeTask.taskType && beforeEndTargetTypes.includes(activeTask.taskType as TaskType);
+    if (settings.beforeEndEnabled && isBeforeEndTarget && remaining === settings.beforeEndTime * 60 && target > settings.beforeEndTime * 60 && remaining > 0) {
+      voiceService.speakNagging(`beforeEnd-${activeTask.id}-${elapsed}`, settings.beforeEndMessage, {
+        ...variables,
+        r: settings.beforeEndTime 
+      });
+    }
+
+    // 5. 루틴 종료 알림
+    const endTargetTypes = settings.endTargetTypes || allTaskTypes;
+    const isEndTarget = activeTask.taskType && endTargetTypes.includes(activeTask.taskType as TaskType);
+    if (settings.endEnabled && isEndTarget && elapsed === target && target > 0) {
+      voiceService.speakNagging(`end-${activeTask.id}`, settings.endMessage, variables);
+    }
+
+    // 6. 루틴 종료 후 알림 (초과 시간 정기 안내)
+    const overTimeTargetTypes = settings.overTimeTargetTypes || allTaskTypes;
+    const isTargetType = activeTask.taskType && overTimeTargetTypes.includes(activeTask.taskType as TaskType);
+    if (settings.overTimeEnabled && isTargetType && elapsed > target && target > 0) {
+      const overtimeSeconds = elapsed - target;
+      const intervalSeconds = settings.overTimeInterval * 60;
+      if (overtimeSeconds > 0 && overtimeSeconds % intervalSeconds === 0) {
+        voiceService.speakNagging(`overtime-${activeTask.id}-${elapsed}`, settings.overTimeMessage, {
+          ...variables,
+          m: Math.floor(overtimeSeconds / 60)
+        });
+      }
+    }
+  }, [
+    globalActiveTask?.task?.id, 
+    globalActiveTask?.task?.isPaused, 
+    globalActiveTask?.task?.startTime, 
+    globalActiveTask?.task ? calculateTaskDuration(globalActiveTask.task, currentTime) : 0, 
+    userData.isVoiceEnabled,
+    userData.naggingSettings
+  ]);
 
   // Activity Logging Logic
   useEffect(() => {
@@ -6273,6 +6299,35 @@ export default function App() {
               {settings.ongoingEnabled && (
                 <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
                   <div className="flex flex-col gap-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
+                    <div className="flex gap-2">
+                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
+                        const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
+                        const isSelected = (settings.ongoingTargetTypes || allTypes).includes(type);
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              const current = settings.ongoingTargetTypes || allTypes;
+                              const next = isSelected 
+                                ? current.filter(t => t !== type)
+                                : [...current, type];
+                              updateNagging('ongoingTargetTypes', next);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+                              isSelected 
+                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
+                                : 'bg-slate-100 text-slate-400'
+                            }`}
+                          >
+                            {type === TaskType.TIME_INDEPENDENT ? '시간무관' : 
+                             type === TaskType.TIME_LIMITED ? '시간제한' : '시간축적'}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
                     <label className="text-[11px] font-bold text-slate-500 ml-1">알림 간격 설정</label>
                     <div className="flex items-center gap-2">
                       <input 
@@ -6321,6 +6376,35 @@ export default function App() {
               {settings.beforeEndEnabled && (
                 <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
                   <div className="flex flex-col gap-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
+                    <div className="flex gap-2">
+                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
+                        const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
+                        const isSelected = (settings.beforeEndTargetTypes || allTypes).includes(type);
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              const current = settings.beforeEndTargetTypes || allTypes;
+                              const next = isSelected 
+                                ? current.filter(t => t !== type)
+                                : [...current, type];
+                              updateNagging('beforeEndTargetTypes', next);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+                              isSelected 
+                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
+                                : 'bg-slate-100 text-slate-400'
+                            }`}
+                          >
+                            {type === TaskType.TIME_INDEPENDENT ? '시간무관' : 
+                             type === TaskType.TIME_LIMITED ? '시간제한' : '시간축적'}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
                     <label className="text-[11px] font-bold text-slate-500 ml-1">알림 시점 설정</label>
                     <select 
                       value={settings.beforeEndTime}
@@ -6360,7 +6444,36 @@ export default function App() {
                 </button>
               </div>
               {settings.endEnabled && (
-                <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-top-2">
+                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
+                    <div className="flex gap-2">
+                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
+                        const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
+                        const isSelected = (settings.endTargetTypes || allTypes).includes(type);
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              const current = settings.endTargetTypes || allTypes;
+                              const next = isSelected 
+                                ? current.filter(t => t !== type)
+                                : [...current, type];
+                              updateNagging('endTargetTypes', next);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+                              isSelected 
+                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
+                                : 'bg-slate-100 text-slate-400'
+                            }`}
+                          >
+                            {type === TaskType.TIME_INDEPENDENT ? '시간무관' : 
+                             type === TaskType.TIME_LIMITED ? '시간제한' : '시간축적'}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
                     <input 
@@ -6394,12 +6507,13 @@ export default function App() {
                     <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
                     <div className="flex gap-2">
                       {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
-                        const isSelected = (settings.overTimeTargetTypes || [TaskType.TIME_LIMITED]).includes(type);
+                        const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
+                        const isSelected = (settings.overTimeTargetTypes || allTypes).includes(type);
                         return (
                           <button
                             key={type}
                             onClick={() => {
-                              const current = settings.overTimeTargetTypes || [TaskType.TIME_LIMITED];
+                              const current = settings.overTimeTargetTypes || allTypes;
                               const next = isSelected 
                                 ? current.filter(t => t !== type)
                                 : [...current, type];
