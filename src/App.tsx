@@ -5969,7 +5969,7 @@ export default function App() {
                 </div>
                 <h3 className="text-base font-black text-slate-900">잔소리 기능</h3>
               </div>
-              <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">사용자 설정에 맞춘 음성 안내를 통해 루틴 진행을 돕습니다.</p>
+              <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">사용자 설정에 맞춘 음성 안내를 통해 루틴 진행을 돕습니다. 화면 상단의 스피커 아이콘을 눌러 재생을 정지할 수 있습니다.  </p>
               <div className="pt-1">
                 <button 
                   onClick={() => setSettingsSubView({ type: 'nagging' })}
@@ -6244,10 +6244,8 @@ export default function App() {
                 </h3>
                 <div className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
                   <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">name</span>이나 <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">task</span> 뒤에 <span className="font-black text-indigo-800">'이/가'</span>와 같이 슬래시(/)로 구분된 조사를 사용하면 받침 유무에 따라 알맞게 교정됩니다. 
+                  예를들어 "task이/가 n분째 진행중입니다"를 입력하시면, "운동이 5분째 진행중입니다" 또는 "운동하기가 5분째 진행중입니다"와 같이 적절한 조사가 출력됩니다. 
                   <p className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">* 지원: 은/는, 이/가, 을/를, 으로/로, 이죠/죠, 이다/다</p>
-                  <ul className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
-                    <li>예를들어 "task이/가 n분째 진행중입니다"를 입력하시면, "운동이 5분째 진행중입니다" 또는 "운동하기가 5분째 진행중입니다"와 같이 적절한 조사가 출력됩니다. </li>
-                  </ul>
                 </div>
               </div>
             </div>
@@ -6304,6 +6302,7 @@ export default function App() {
                       {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                         const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
                         const isSelected = (settings.ongoingTargetTypes || allTypes).includes(type);
+                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
                         return (
                           <button
                             key={type}
@@ -6314,14 +6313,15 @@ export default function App() {
                                 : [...current, type];
                               updateNagging('ongoingTargetTypes', next);
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1.5 ${
                               isSelected 
                                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
                                 : 'bg-slate-100 text-slate-400'
                             }`}
                           >
-                            {type === TaskType.TIME_INDEPENDENT ? '시간무관' : 
-                             type === TaskType.TIME_LIMITED ? '시간제한' : '시간축적'}
+                            <Icon className="w-3 h-3" />
+                            {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
+                             type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
                           </button>
                         );
                       })}
@@ -6381,6 +6381,7 @@ export default function App() {
                       {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                         const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
                         const isSelected = (settings.beforeEndTargetTypes || allTypes).includes(type);
+                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
                         return (
                           <button
                             key={type}
@@ -6391,14 +6392,15 @@ export default function App() {
                                 : [...current, type];
                               updateNagging('beforeEndTargetTypes', next);
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1.5 ${
                               isSelected 
                                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
                                 : 'bg-slate-100 text-slate-400'
                             }`}
                           >
-                            {type === TaskType.TIME_INDEPENDENT ? '시간무관' : 
-                             type === TaskType.TIME_LIMITED ? '시간제한' : '시간축적'}
+                            <Icon className="w-3 h-3" />
+                            {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
+                             type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
                           </button>
                         );
                       })}
@@ -6451,6 +6453,7 @@ export default function App() {
                       {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                         const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
                         const isSelected = (settings.endTargetTypes || allTypes).includes(type);
+                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
                         return (
                           <button
                             key={type}
@@ -6461,14 +6464,15 @@ export default function App() {
                                 : [...current, type];
                               updateNagging('endTargetTypes', next);
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1.5 ${
                               isSelected 
                                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
                                 : 'bg-slate-100 text-slate-400'
                             }`}
                           >
-                            {type === TaskType.TIME_INDEPENDENT ? '시간무관' : 
-                             type === TaskType.TIME_LIMITED ? '시간제한' : '시간축적'}
+                            <Icon className="w-3 h-3" />
+                            {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
+                             type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
                           </button>
                         );
                       })}
@@ -6509,6 +6513,7 @@ export default function App() {
                       {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                         const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
                         const isSelected = (settings.overTimeTargetTypes || allTypes).includes(type);
+                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
                         return (
                           <button
                             key={type}
@@ -6519,14 +6524,15 @@ export default function App() {
                                 : [...current, type];
                               updateNagging('overTimeTargetTypes', next);
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1.5 ${
                               isSelected 
                                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
                                 : 'bg-slate-100 text-slate-400'
                             }`}
                           >
-                            {type === TaskType.TIME_INDEPENDENT ? '시간무관' : 
-                             type === TaskType.TIME_LIMITED ? '시간제한' : '시간축적'}
+                            <Icon className="w-3 h-3" />
+                            {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
+                             type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
                           </button>
                         );
                       })}
