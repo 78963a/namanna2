@@ -634,7 +634,9 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     }
 
     // 6. 루틴 종료 후 알림 (초과 시간 정기 안내)
-    if (settings.overTimeEnabled && activeTask.taskType === TaskType.TIME_LIMITED && elapsed > target) {
+    const overTimeTargetTypes = settings.overTimeTargetTypes || [TaskType.TIME_LIMITED];
+    const isTargetType = activeTask.taskType && overTimeTargetTypes.includes(activeTask.taskType as TaskType);
+    if (settings.overTimeEnabled && isTargetType && elapsed > target && target > 0) {
       const overtimeSeconds = elapsed - target;
       const intervalSeconds = settings.overTimeInterval * 60;
       if (overtimeSeconds > 0 && overtimeSeconds % intervalSeconds === 0) {
@@ -3218,7 +3220,8 @@ export default function App() {
           endMessage: 'task 시간이 지났습니다.',
           overTimeEnabled: false,
           overTimeInterval: 1,
-          overTimeMessage: 'name님, task가 m분 지났어요.'
+          overTimeMessage: 'name님, task가 m분 지났어요.',
+          overTimeTargetTypes: [TaskType.TIME_LIMITED]
         }
       };
     }
@@ -3294,8 +3297,13 @@ export default function App() {
         endMessage: 'task 시간이 지났습니다.',
         overTimeEnabled: false,
         overTimeInterval: 1,
-        overTimeMessage: 'name님, task가 m분 지났어요.'
+        overTimeMessage: 'name님, task가 m분 지났어요.',
+        overTimeTargetTypes: [TaskType.TIME_LIMITED]
       };
+    }
+
+    if (parsed.naggingSettings && parsed.naggingSettings.overTimeTargetTypes === undefined) {
+      parsed.naggingSettings.overTimeTargetTypes = [TaskType.TIME_LIMITED];
     }
     
     if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
@@ -6215,7 +6223,7 @@ export default function App() {
             {/* 3-1. 루틴 시작 시 알림 */}
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 pr-4">
                   <h3 className="text-base font-black text-slate-800">루틴 시작 시 알림</h3>
                   <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴을 시작할 때의 알림입니다.</p>
                 </div>
@@ -6227,15 +6235,17 @@ export default function App() {
                 </button>
               </div>
               {settings.startEnabled && (
-                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
-                  <input 
-                    type="text"
-                    value={settings.startMessage}
-                    onChange={(e) => updateNagging('startMessage', e.target.value)}
-                    placeholder="예: task 시작합니다"
-                    className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
+                <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                    <input 
+                      type="text"
+                      value={settings.startMessage}
+                      onChange={(e) => updateNagging('startMessage', e.target.value)}
+                      placeholder="예: task 시작합니다"
+                      className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -6243,13 +6253,22 @@ export default function App() {
             {/* 3-1-2. 루틴 진행 중 알림 */}
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 pr-4">
                   <h3 className="text-base font-black text-slate-800">루틴 진행 중 알림</h3>
                   <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴이 진행되는 동안 정기적으로 알림을 보냅니다. 단, '루틴 종료 전 알림'과 겹치는 경우 '루틴 종료 전 알림'만 내보냅니다.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  {settings.ongoingEnabled && (
-                    <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => updateNagging('ongoingEnabled', !settings.ongoingEnabled)}
+                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.ongoingEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.ongoingEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+              {settings.ongoingEnabled && (
+                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">알림 간격 설정</label>
+                    <div className="flex items-center gap-2">
                       <input 
                         type="number"
                         min="1"
@@ -6261,28 +6280,20 @@ export default function App() {
                             updateNagging('ongoingInterval', 1);
                           }
                         }}
-                        className="w-10 text-center text-xs font-black p-1 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
+                        className="w-16 text-center text-sm font-black p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       />
-                      <span className="text-[10px] font-black text-slate-400">분</span>
+                      <span className="text-xs font-black text-slate-400">분 마다</span>
                     </div>
-                  )}
-                  <button 
-                    onClick={() => updateNagging('ongoingEnabled', !settings.ongoingEnabled)}
-                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.ongoingEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.ongoingEnabled ? 'left-7' : 'left-1'}`} />
-                  </button>
-                </div>
-              </div>
-              {settings.ongoingEnabled && (
-                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
-                  <input 
-                    type="text"
-                    value={settings.ongoingMessage}
-                    onChange={(e) => updateNagging('ongoingMessage', e.target.value)}
-                    className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                    <input 
+                      type="text"
+                      value={settings.ongoingMessage}
+                      onChange={(e) => updateNagging('ongoingMessage', e.target.value)}
+                      className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -6290,39 +6301,40 @@ export default function App() {
             {/* 3-2. 루틴 종료 전 알림 */}
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 pr-4">
                   <h3 className="text-base font-black text-slate-800">루틴 종료 전 알림</h3>
                   <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴 시간이 종료되기 전의 알림입니다.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  {settings.beforeEndEnabled && (
+                <button 
+                  onClick={() => updateNagging('beforeEndEnabled', !settings.beforeEndEnabled)}
+                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.beforeEndEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.beforeEndEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+              {settings.beforeEndEnabled && (
+                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">알림 시점 설정</label>
                     <select 
                       value={settings.beforeEndTime}
                       onChange={(e) => updateNagging('beforeEndTime', parseInt(e.target.value))}
-                      className="text-xs font-black p-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
+                      className="w-32 text-sm font-black p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
                     >
                       {[1,2,3,4,5,6,7,8,9,10].map(m => (
                         <option key={m} value={m}>{m}분 전</option>
                       ))}
                     </select>
-                  )}
-                  <button 
-                    onClick={() => updateNagging('beforeEndEnabled', !settings.beforeEndEnabled)}
-                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.beforeEndEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.beforeEndEnabled ? 'left-7' : 'left-1'}`} />
-                  </button>
-                </div>
-              </div>
-              {settings.beforeEndEnabled && (
-                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
-                  <input 
-                    type="text"
-                    value={settings.beforeEndMessage}
-                    onChange={(e) => updateNagging('beforeEndMessage', e.target.value)}
-                    className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                    <input 
+                      type="text"
+                      value={settings.beforeEndMessage}
+                      onChange={(e) => updateNagging('beforeEndMessage', e.target.value)}
+                      className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -6330,7 +6342,7 @@ export default function App() {
             {/* 3-3. 루틴 종료 알림 */}
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 pr-4">
                   <h3 className="text-base font-black text-slate-800">루틴 종료 알림</h3>
                   <p className="text-[11px] font-bold text-slate-400 leading-tight">사용자가 설정한 시간이 종료되었을 때의 알림입니다.</p>
                 </div>
@@ -6342,14 +6354,16 @@ export default function App() {
                 </button>
               </div>
               {settings.endEnabled && (
-                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
-                  <input 
-                    type="text"
-                    value={settings.endMessage}
-                    onChange={(e) => updateNagging('endMessage', e.target.value)}
-                    className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
+                <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                    <input 
+                      type="text"
+                      value={settings.endMessage}
+                      onChange={(e) => updateNagging('endMessage', e.target.value)}
+                      className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -6357,13 +6371,50 @@ export default function App() {
             {/* 3-4. 루틴 종료 후 알림 */}
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 pr-4">
                   <h3 className="text-base font-black text-slate-800">루틴 종료 후 알림</h3>
-                  <p className="text-[11px] font-bold text-slate-400 leading-tight">시간제한루틴의 경우, 사용자가 지정한 시간이 경과할 때마다 지난 시간을 안내합니다.</p>
+                  <p className="text-[11px] font-bold text-slate-400 leading-tight">설정 시간이 경과한 후에도 지속적으로 안내합니다. </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  {settings.overTimeEnabled && (
-                    <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => updateNagging('overTimeEnabled', !settings.overTimeEnabled)}
+                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.overTimeEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.overTimeEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+              {settings.overTimeEnabled && (
+                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
+                    <div className="flex gap-2">
+                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
+                        const isSelected = (settings.overTimeTargetTypes || [TaskType.TIME_LIMITED]).includes(type);
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              const current = settings.overTimeTargetTypes || [TaskType.TIME_LIMITED];
+                              const next = isSelected 
+                                ? current.filter(t => t !== type)
+                                : [...current, type];
+                              updateNagging('overTimeTargetTypes', next);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+                              isSelected 
+                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
+                                : 'bg-slate-100 text-slate-400'
+                            }`}
+                          >
+                            {type === TaskType.TIME_INDEPENDENT ? '시간무관' : 
+                             type === TaskType.TIME_LIMITED ? '시간제한' : '시간축적'}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">알림 간격 설정</label>
+                    <div className="flex items-center gap-2">
                       <input 
                         type="number"
                         min="1"
@@ -6375,28 +6426,20 @@ export default function App() {
                             updateNagging('overTimeInterval', 1);
                           }
                         }}
-                        className="w-10 text-center text-xs font-black p-1 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
+                        className="w-16 text-center text-sm font-black p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       />
-                      <span className="text-[10px] font-black text-slate-400">분</span>
+                      <span className="text-xs font-black text-slate-400">분 마다</span>
                     </div>
-                  )}
-                  <button 
-                    onClick={() => updateNagging('overTimeEnabled', !settings.overTimeEnabled)}
-                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.overTimeEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.overTimeEnabled ? 'left-7' : 'left-1'}`} />
-                  </button>
-                </div>
-              </div>
-              {settings.overTimeEnabled && (
-                <div className="space-y-2 pt-1 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
-                  <input 
-                    type="text"
-                    value={settings.overTimeMessage}
-                    onChange={(e) => updateNagging('overTimeMessage', e.target.value)}
-                    className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                    <input 
+                      type="text"
+                      value={settings.overTimeMessage}
+                      onChange={(e) => updateNagging('overTimeMessage', e.target.value)}
+                      className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
                 </div>
               )}
             </div>
