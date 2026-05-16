@@ -127,6 +127,7 @@ import { StatsView } from './components/views/StatsView';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { CelebrationModal } from './components/common/CelebrationModal';
 import { RoutineTitleLine } from './components/routine/RoutineTitleLine';
+import { MonthlyHeatmap } from './components/routine/MonthlyHeatmap';
 import { RoutineTitle } from './components/routine/RoutineTitle';
 import { PerfectDayAnimation } from './PerfectDayAnimation';
 // import { TaskInputSection } from './components/routine/TaskInputSection';
@@ -785,6 +786,16 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -ml-12 -mb-12" />
         
+        {/* 월간 캘린더 히트맵 */}
+        <div className="relative z-20 px-2">
+          <MonthlyHeatmap 
+            chunk={chunk}
+            userData={userData}
+            currentTime={currentTime}
+            effectiveDate={effectiveDate}
+          />
+        </div>
+
         <div className="p-4 relative z-10">
           <div className="space-y-4">
             {/* 첫번째줄: {목적}이 되기 위한 {제목} <아이콘> */}
@@ -1048,7 +1059,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                             }}
                             className="w-full flex items-start gap-3 p-3.5 bg-white rounded-[10px] border border-slate-100 hover:border-indigo-200 transition-all group shadow-sm text-left"
                           >
-                            <div className={`w-6 h-6 rounded-[10px] border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5 ${item.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-200 group-hover:border-indigo-300'}`}>
+                            <div className={`w-6 h-6 min-w-[24px] min-h-[24px] rounded-[10px] border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5 ${item.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-200 group-hover:border-indigo-300'}`}>
                               {item.completed && <Check className="w-3.5 h-3.5 text-white" />}
                             </div>
                             <span className={`text-sm font-bold transition-all break-words ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
@@ -1627,14 +1638,18 @@ const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
       </div>
       
       {isEditing ? (
-        <input
+        <textarea
           autoFocus
-          type="text"
           value={editText}
           onChange={(e) => setEditText(e.target.value)}
           onBlur={handleEdit}
-          onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
-          className="flex-grow bg-white border border-indigo-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleEdit();
+            }
+          }}
+          className="flex-grow bg-white border border-indigo-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[40px] resize-none"
         />
       ) : (
         <span className="flex-grow text-sm font-bold text-slate-700 whitespace-pre-wrap break-words">
@@ -2924,6 +2939,10 @@ const RoutineGroupFormView: React.FC<{
         <div className="flex gap-3">
           <button 
             onClick={() => {
+              const hasTriggerChecklist = (triggerTask as any).checklist && (triggerTask as any).checklist.length > 0;
+              const hasRoutineChecklist = routineList.some(r => (r as any).checklist && (r as any).checklist.length > 0);
+              const hasCurrentInput = currentRoutineInput.text.trim() !== '' || (currentRoutineInput.checklist && (currentRoutineInput.checklist as any[]).length > 0);
+              
               if (mode === 'edit') {
                 const isNameNew = name !== initialChunk?.name;
                 const isPurposeNew = purpose !== (initialChunk?.purpose || '');
@@ -2940,7 +2959,8 @@ const RoutineGroupFormView: React.FC<{
                   for (let i = 0; i < currentTasks.length; i++) {
                     if (currentTasks[i].text !== initialTasks[i].text || 
                         currentTasks[i].duration !== initialTasks[i].targetDuration || 
-                        currentTasks[i].type !== initialTasks[i].taskType) {
+                        currentTasks[i].type !== initialTasks[i].taskType ||
+                        JSON.stringify((currentTasks[i] as any).checklist || []) !== JSON.stringify((initialTasks[i] as any).checklist || [])) {
                       isRoutineListNew = true;
                       break;
                     }
@@ -2950,9 +2970,10 @@ const RoutineGroupFormView: React.FC<{
                 const isTriggerNew = (initialChunk?.tasks?.length || 0) === 0 || 
                   triggerTask.text !== initialChunk?.tasks[0].text || 
                   triggerTask.duration !== initialChunk?.tasks[0].targetDuration || 
-                  triggerTask.type !== initialChunk?.tasks[0].taskType;
+                  triggerTask.type !== initialChunk?.tasks[0].taskType ||
+                  JSON.stringify((triggerTask as any).checklist || []) !== JSON.stringify((initialChunk?.tasks[0] as any).checklist || []);
 
-                const isDirty = isNameNew || isPurposeNew || isDaysNew || isStartTimeNew || isStartTypeNew || isSituationNew || isAlarmNew || isTriggerNew || isRoutineListNew;
+                const isDirty = isNameNew || isPurposeNew || isDaysNew || isStartTimeNew || isStartTypeNew || isSituationNew || isAlarmNew || isTriggerNew || isRoutineListNew || hasCurrentInput;
 
                 if (isDirty) {
                   setConfirmModal({
@@ -2974,8 +2995,26 @@ const RoutineGroupFormView: React.FC<{
                   if (setSettingsSubView) setSettingsSubView({ type: 'main' });
                 }
               } else {
-                onDirtyChange?.(false);
-                setActiveTab('home');
+                const isDirty = name.trim() !== '' || purpose.trim() !== '' || triggerTask.text.trim() !== '' || routineList.length > 0 || hasTriggerChecklist || hasRoutineChecklist || hasCurrentInput;
+                if (isDirty) {
+                  setConfirmModal({
+                    isOpen: true,
+                    title: '입력 취소 확인',
+                    message: '작성 중인 내용이 있습니다. 저장하지 않고 나가시겠습니까?',
+                    confirmLabel: '저장하지 않고 나가기',
+                    cancelLabel: '계속 작성하기',
+                    confirmColor: 'indigo',
+                    showCancel: true,
+                    onConfirm: () => {
+                      onDirtyChange?.(false);
+                      setActiveTab('home');
+                      setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    }
+                  });
+                } else {
+                  onDirtyChange?.(false);
+                  setActiveTab('home');
+                }
               }
             }}
             className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-[10px] font-black text-lg hover:bg-slate-200 transition-all"
@@ -3382,20 +3421,24 @@ export default function App() {
 
   useEffect(() => {
     if (settingsSubView.type === 'nagging') {
-      const defaultSettings = {
+      const defaultSettings: NaggingSettings = {
         startEnabled: false,
         startMessage: 'task',
         ongoingEnabled: false,
         ongoingInterval: 1,
         ongoingMessage: 'task가 n분째 진행중입니다',
+        ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
         beforeEndEnabled: false,
         beforeEndTime: 1,
         beforeEndMessage: 'task 종료 r분 전입니다.',
+        beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
         endEnabled: false,
         endMessage: 'task 시간이 지났습니다.',
+        endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
         overTimeEnabled: false,
         overTimeInterval: 1,
-        overTimeMessage: 'name님, task가 m분 지났어요.'
+        overTimeMessage: 'name님, task가 m분 지났어요.',
+        overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
       };
       setLocalNaggingSettings({
         ...defaultSettings,
@@ -3446,6 +3489,8 @@ export default function App() {
   };
 
   const handleTabTransition = (targetTab: 'home' | 'stats' | 'execution' | 'settings' | 'add', extraAction?: () => void) => {
+    voiceService.unlock();
+    soundService.unlock();
     // [코멘트] 탭 전환 시 포커스 해제하여 아이폰 '흔들어서 실행취소'Prompt 방지 시도
     if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
@@ -6147,20 +6192,24 @@ export default function App() {
     }
 
     if (settingsSubView.type === 'nagging') {
-      const defaultSettings = {
+      const defaultSettings: NaggingSettings = {
         startEnabled: false,
         startMessage: 'task',
         ongoingEnabled: false,
         ongoingInterval: 1,
         ongoingMessage: 'task가 n분째 진행중입니다',
+        ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
         beforeEndEnabled: false,
         beforeEndTime: 1,
         beforeEndMessage: 'task 종료 r분 전입니다.',
+        beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
         endEnabled: false,
         endMessage: 'task 시간이 지났습니다.',
+        endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
         overTimeEnabled: false,
         overTimeInterval: 1,
-        overTimeMessage: 'name님, task가 m분 지났어요.'
+        overTimeMessage: 'name님, task가 m분 지났어요.',
+        overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
       };
 
       const settings = localNaggingSettings || {
@@ -6946,6 +6995,8 @@ export default function App() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           onClick={() => {
+            voiceService.unlock();
+            soundService.unlock();
             handleTabTransition('execution', () => {
               setSelectedChunkId(globalActiveTask.chunkId);
             });
@@ -7077,6 +7128,8 @@ export default function App() {
                 <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => {
+                      voiceService.unlock();
+                      soundService.unlock();
                       if (globalActiveTask && globalActiveTask.task) {
                         onRestart(globalActiveTask.task.id, false);
                       }

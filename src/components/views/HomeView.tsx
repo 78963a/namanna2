@@ -16,6 +16,7 @@ import { timeToMinutes, isTaskScheduledToday } from '../../utils';
 import phrases from '../../phrases.json';
 import { RoutineTitle } from '../routine/RoutineTitle';
 import { RoutineTitleLine } from '../routine/RoutineTitleLine';
+import { MonthlyHeatmap } from '../routine/MonthlyHeatmap';
 
 import { voiceService } from '../../services/voiceService';
 
@@ -227,6 +228,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
               }}
               className={`${boxBgColor} rounded-[10px] border border-slate-100 shadow-sm overflow-hidden transition-all group ${isInactive ? 'opacity-60 grayscale cursor-default' : 'cursor-pointer active:scale-[0.99]'}`}
             >
+              {/* 월간 캘린더 히트맵 */}
+              <div className="relative z-10 px-2">
+                <MonthlyHeatmap 
+                  chunk={chunk}
+                  userData={userData}
+                  currentTime={currentTime}
+                  effectiveDate={effectiveDate}
+                />
+              </div>
+
               <div className="p-[15px] relative">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
