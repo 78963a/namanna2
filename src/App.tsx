@@ -7077,6 +7077,9 @@ export default function App() {
                 <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => {
+                      if (globalActiveTask && globalActiveTask.task) {
+                        onRestart(globalActiveTask.task.id, false);
+                      }
                       setSelectedChunkId(activeAlarmChunk.id);
                       setActiveTab('execution');
                       setActiveAlarmChunk(null);
