@@ -95,12 +95,10 @@ export const MonthlyHeatmap: React.FC<MonthlyHeatmapProps> = ({
             className += " bg-white/10 border border-white/5";
             break;
           case 'weekly_inactive':
-            className += " bg-black/5 text-slate-400/50";
-            content = "X";
+            className += " bg-slate-400";
             break;
           case 'manually_skipped':
-            className += " bg-black/5 text-slate-400/50";
-            content = "-";
+            className += " bg-slate-400";
             break;
           case 'record':
             className += ` ${getColorClass(day.rate)}`;
