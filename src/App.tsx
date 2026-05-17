@@ -358,6 +358,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   useEffect(() => {
     if (isCompleted && animationStage === 'none' && !isAlreadyFinalized) {
+      soundService.unlock();
       const timer = setTimeout(() => {
         setAnimationStage('whiteout');
       }, 300);
@@ -3075,6 +3076,9 @@ export default function App() {
     soundService.preload('/tithuh-level-up-523624.mp3');
     soundService.preload('/freesound_community-success-fanfare-trumpets-6185.mp3');
     soundService.preload('/freesound_community-piglevelwin2mp3-14800.mp3');
+    soundService.preload('/dragon-studio-fireworks-02-419019.mp3');
+    soundService.preload('/driken5482-applause-cheer-236786.mp3');
+    soundService.preload('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     
     // Auto-request permission on mount if first time
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -3336,6 +3340,7 @@ export default function App() {
   const [perfectDayGroups, setPerfectDayGroups] = useState<{ name: string, status: string }[]>([]);
   const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
+  const [resetPauseModal, setResetPauseModal] = useState<{ isOpen: boolean, taskTitle: string | null }>({ isOpen: false, taskTitle: null });
 
   useEffect(() => {
     if (deletionMessage) {
@@ -3638,7 +3643,6 @@ export default function App() {
         // [수정] 1.5초 여유를 둔 후에 애니메이션 작동
         const timer = setTimeout(() => {
           setShowPerfectDay(true);
-          soundService.play('/freesound_community-piglevelwin2mp3-14800.mp3', userData.isVoiceEnabled);
           // 표시한 날짜를 기록
           setUserData(prev => ({
             ...prev,
@@ -3922,12 +3926,47 @@ export default function App() {
   // Reset tasks when todayStr changes
   useEffect(() => {
     if (userData.lastResetDate !== todayStr) {
+      // [수정] 하루 리셋 시점에 진행 중인 루틴이 있다면 제목을 캡처하여 모달로 안내함
+      let runningTaskName: string | null = null;
+      userData.routineChunks.forEach(chunk => {
+        const running = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed);
+        if (running) runningTaskName = running.text;
+      });
+
+      if (runningTaskName) {
+        setResetPauseModal({ isOpen: true, taskTitle: runningTaskName });
+      }
+
       setUserData(prev => {
         const lastDate = prev.lastResetDate;
-        const newGroupHistory = [...(prev.routineGroupHistory || [])];
+
+        // [수정] 진행 중인 루틴은 일시정지 상태로 변경하고 현재까지의 시간을 기록함 (히트맵 반영용)
+        let intermediateState = { ...prev };
+        intermediateState.routineChunks = intermediateState.routineChunks.map(chunk => ({
+          ...chunk,
+          tasks: chunk.tasks.map(task => {
+            if (task.startTime && !task.isPaused && !task.completed) {
+              return {
+                ...task,
+                isPaused: true,
+                accumulatedDuration: calculateTaskDuration(task, currentTime),
+                startTime: undefined,
+                status: TaskStatus.IN_PROGRESS
+              };
+            }
+            return task;
+          })
+        }));
+
+        // 리셋 전 어제의 최종 상태를 바탕으로 히스토리 동기화
+        if (lastDate) {
+          intermediateState = syncHistory(intermediateState, lastDate);
+        }
+
+        const newGroupHistory = [...(intermediateState.routineGroupHistory || [])];
         
         // Finalize yesterday's history according to Rule 89, 94, 95
-        prev.routineChunks.forEach(chunk => {
+        intermediateState.routineChunks.forEach(chunk => {
           // Determine status for the day that just ended (lastDate)
           const lastDateObj = new Date(lastDate);
           const isScheduled = chunk.scheduledDays.includes(lastDateObj.getDay());
@@ -3956,7 +3995,7 @@ export default function App() {
         });
 
         return {
-          ...prev,
+          ...intermediateState,
           lastResetDate: todayStr,
           routineGroupHistory: newGroupHistory,
           routineChunks: prev.routineChunks.map(chunk => ({
@@ -3991,8 +4030,7 @@ export default function App() {
       if (chunk.isAlarmEnabled && chunk.startTime === nowTimeStr && chunk.lastAlarmTriggeredDate !== todayStr && !activeAlarmChunk) {
         if (isChunkScheduledToday(chunk, effectiveDate, userData)) {
           setActiveAlarmChunk(chunk);
-          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-          audio.play().catch(e => console.log('Audio play failed:', e));
+          soundService.play('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3', userData.isVoiceEnabled);
           
           setUserData(prev => ({
             ...prev,
@@ -4694,6 +4732,7 @@ export default function App() {
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
+      const autoStart = prev.nextRoutineAutoStart;
       const next = {
         ...prev,
         routineChunks: prev.routineChunks.map(chunk => {
@@ -4705,8 +4744,8 @@ export default function App() {
                 completed: false,
                 status: TaskStatus.IN_PROGRESS,
                 laterTimestamp: undefined,
-                isPaused: false,
-                startTime: nowStr,
+                isPaused: !autoStart,
+                startTime: autoStart ? nowStr : undefined,
                 endTime: undefined,
                 duration: undefined,
                 accumulatedDuration: resetTimer ? 0 : (task.accumulatedDuration || 0)
@@ -4744,6 +4783,7 @@ export default function App() {
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     
     setUserData(prev => {
+      const autoStart = prev.nextRoutineAutoStart;
       // If there's a different active task, pause it
       let activeTaskId: string | null = null;
       for (const chunk of prev.routineChunks) {
@@ -4765,8 +4805,8 @@ export default function App() {
                 completed: false,
                 status: TaskStatus.IN_PROGRESS,
                 laterTimestamp: undefined,
-                isPaused: false,
-                startTime: nowStr,
+                isPaused: !autoStart,
+                startTime: autoStart ? nowStr : undefined,
                 endTime: undefined,
                 duration: undefined,
                 accumulatedDuration: resetTimer ? 0 : (task.accumulatedDuration || 0)
@@ -4815,8 +4855,7 @@ export default function App() {
               if (task.isPaused || !task.startTime || task.completed || task.status === TaskStatus.SKIP) {
                 // Resuming, Starting, or Reviving from SKIP: set new startTime and status
                 const autoStart = prev.nextRoutineAutoStart;
-                const isAlreadyPaused = task.isPaused || (!task.startTime && (task.accumulatedDuration || 0) > 0);
-                const shouldStartNow = isAlreadyPaused || autoStart || forceStart;
+                const shouldStartNow = autoStart || forceStart;
 
                 return { 
                   ...task, 
@@ -7158,6 +7197,7 @@ export default function App() {
         isOpen={showPerfectDay}
         onClose={() => setShowPerfectDay(false)}
         completedGroups={perfectDayGroups}
+        isSoundEnabled={userData.isVoiceEnabled}
       />
 
       {/* 알림 권한 안내 모달 */}
@@ -7299,6 +7339,44 @@ export default function App() {
               </button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 하루 리셋 안내 모달 */}
+      <AnimatePresence>
+        {resetPauseModal.isOpen && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setResetPauseModal({ isOpen: false, taskTitle: null })}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-[25px] overflow-hidden shadow-2xl z-10"
+            >
+              <div className="p-6 text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-2">
+                  <Clock className="w-8 h-8 text-amber-500" />
+                </div>
+                <h3 className="text-xl font-black text-slate-800">새로운 하루가 시작되었습니다</h3>
+                <div className="text-sm font-bold text-slate-500 leading-relaxed text-center bg-slate-50 p-4 rounded-2xl">
+                  하루 리셋 시각({userData.resetTime})에 도달해<br/>
+                  <span className="text-indigo-600">[{resetPauseModal.taskTitle}]</span>을(를) 중단하고 기록했습니다.
+                </div>
+                <button 
+                  onClick={() => setResetPauseModal({ isOpen: false, taskTitle: null })}
+                  className="w-full bg-indigo-600 text-white font-black py-4 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                >
+                  확인
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

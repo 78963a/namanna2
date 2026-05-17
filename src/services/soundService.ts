@@ -47,13 +47,27 @@ class SoundService {
   unlock() {
     if (this.isUnlocked) return;
     
-    // Create a silent dummy sound to unlock audio context on mobile/safari
-    const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
-    silentAudio.play().then(() => {
-      this.isUnlocked = true;
-    }).catch(e => {
-      console.log('Sound unlock failed:', e);
-    });
+    // Some browsers require the audio context to be resumed
+    const resumeContext = () => {
+      // Try to "touch" all cached audios
+      Object.values(this.audioCache).forEach(audio => {
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        }).catch(() => {});
+      });
+
+      // Create a silent dummy sound to unlock audio context on mobile/safari
+      const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
+      silentAudio.play().then(() => {
+        this.isUnlocked = true;
+        console.log('Sound Service: Audio context unlocked successfully');
+      }).catch(e => {
+        console.warn('Sound Service: Initial unlock failed, will retry on next play', e);
+      });
+    };
+
+    resumeContext();
   }
 
   /**
@@ -61,8 +75,12 @@ class SoundService {
    */
   stop() {
     Object.values(this.audioCache).forEach(audio => {
-      audio.pause();
-      audio.currentTime = 0;
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch (e) {
+        // Ignore errors if audio was already stopped or not loaded
+      }
     });
     this.activeCount = 0;
   }
@@ -83,17 +101,24 @@ class SoundService {
         this.audioCache[fullPath] = audio;
       }
       
-      audio.currentTime = 0;
-      
       const onEnd = () => {
         this.activeCount = Math.max(0, this.activeCount - 1);
         audio.removeEventListener('ended', onEnd);
+        audio.removeEventListener('error', onErr);
         if (this.activeCount === 0 && 'mediaSession' in navigator) {
           navigator.mediaSession.playbackState = 'none';
         }
       };
+
+      const onErr = (e: any) => {
+        console.error('Sound Service: Audio error event:', e, 'Path:', fullPath);
+        onEnd();
+      };
       
       audio.addEventListener('ended', onEnd);
+      audio.addEventListener('error', onErr);
+      
+      audio.currentTime = 0;
       this.activeCount++;
 
       // Media Session Support
@@ -107,16 +132,18 @@ class SoundService {
       
       if (playPromise !== undefined) {
         playPromise.catch(e => {
-          this.activeCount = Math.max(0, this.activeCount - 1);
-          audio.removeEventListener('ended', onEnd);
-          if (this.activeCount === 0 && 'mediaSession' in navigator) {
-            navigator.mediaSession.playbackState = 'none';
+          onEnd();
+          console.warn('Sound Service: Playback failed (likely auto-play policy):', e, 'Path:', fullPath);
+          
+          // Re-attempt unlock if failed
+          if (!this.isUnlocked) {
+            this.unlock();
           }
-          console.warn('Sound playback failed:', e, 'Path:', fullPath);
         });
       }
     } catch (e) {
-      console.error('Error playing sound:', e);
+      console.error('Sound Service: Exception during play:', e);
+      this.activeCount = Math.max(0, this.activeCount - 1);
     }
   }
 }

@@ -117,7 +117,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   const isSkip = task.status === TaskStatus.SKIP;
   const isDone = isActuallyCompleted || isSkip;
   
-  const showRestart = onRestart && isActuallyCompleted;
+  const showRestart = onRestart && (isActuallyCompleted || task.isPaused);
   
   // "Start/Resume" button logic
   const showStartResume = onDoFirst && 

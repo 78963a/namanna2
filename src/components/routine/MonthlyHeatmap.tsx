@@ -85,7 +85,7 @@ export const MonthlyHeatmap: React.FC<MonthlyHeatmapProps> = ({
     <div className="flex items-center justify-between gap-[2px] w-full px-1 py-1.5">
       {days.map((day, idx) => {
         let content = null;
-        let className = "flex-grow aspect-square rounded-[1.5px] flex items-center justify-center text-[7px] font-black underline-offset-1 leading-none transition-all";
+        let className = "flex-grow aspect-square max-h-[8px] rounded-[1.5px] flex items-center justify-center text-[7px] font-black underline-offset-1 leading-none transition-all";
         
         switch (day.type) {
           case 'none':

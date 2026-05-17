@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { Sparkles, Flower, Star } from 'lucide-react';
+import { soundService } from './services/soundService';
 
 interface PerfectDayAnimationProps {
   isOpen: boolean;
   onClose: () => void;
   completedGroups: { name: string, status: string }[];
+  isSoundEnabled?: boolean;
 }
 
 const FLOWER_COLORS = [
@@ -21,7 +23,8 @@ const FLOWER_COLORS = [
 export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
   isOpen,
   onClose,
-  completedGroups
+  completedGroups,
+  isSoundEnabled
 }) => {
   const [stage, setStage] = useState<'boxes' | 'flowers' | 'explosion' | 'text' | 'none'>('none');
 
@@ -29,12 +32,18 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
     if (isOpen) {
       setStage('boxes');
       
+      // Play initial celebration sound
+      soundService.unlock();
+      soundService.play('/freesound_community-piglevelwin2mp3-14800.mp3', isSoundEnabled);
+
       // Stage timer for flowers (Slower transition)
       const flowerTimer = setTimeout(() => setStage('flowers'), 2000);
       
       // Explosion timer (Slower transition)
       const explosionTimer = setTimeout(() => {
         setStage('explosion');
+        // Play fireworks sound for the giant confetti
+        soundService.play('/dragon-studio-fireworks-02-419019.mp3', isSoundEnabled);
         triggerGiantConfetti();
       }, 4000);
 
@@ -97,7 +106,10 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
   return (
     <div 
       className="fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden bg-slate-900/80 backdrop-blur-md cursor-pointer touch-none"
-      onClick={onClose}
+      onClick={() => {
+        soundService.unlock();
+        onClose();
+      }}
     >
       <AnimatePresence>
         {/* Step 1: Boxes flying in and piling up */}
