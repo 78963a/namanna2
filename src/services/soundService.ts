@@ -49,16 +49,9 @@ class SoundService {
     
     // Some browsers require the audio context to be resumed
     const resumeContext = () => {
-      // Try to "touch" all cached audios
-      Object.values(this.audioCache).forEach(audio => {
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-        }).catch(() => {});
-      });
-
-      // Create a silent dummy sound to unlock audio context on mobile/safari
       const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
+      silentAudio.volume = 0; // Ensure it's silent
+      
       silentAudio.play().then(() => {
         this.isUnlocked = true;
         console.log('Sound Service: Audio context unlocked successfully');
