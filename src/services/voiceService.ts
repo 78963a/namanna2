@@ -7,6 +7,7 @@ class VoiceService {
   private synth: SpeechSynthesis | null = typeof window !== 'undefined' ? window.speechSynthesis : null;
   private lastTriggeredId: string | null = null;
   private isUnlocked: boolean = false;
+  private isUnlocking: boolean = false;
   private voice: SpeechSynthesisVoice | null = null;
 
   constructor() {
@@ -35,16 +36,24 @@ class VoiceService {
    * MUST be called from a user interaction (click/tap) event for iOS compatibility.
    */
   unlock() {
-    if (!this.synth || this.isUnlocked) return;
+    if (!this.synth || this.isUnlocked || this.isUnlocking) return;
     
+    this.isUnlocking = true;
     try {
       this.synth.cancel();
       const utterance = new SpeechSynthesisUtterance('');
       utterance.volume = 0;
+      utterance.onend = () => {
+        this.isUnlocked = true;
+        this.isUnlocking = false;
+        console.log("Voice audio session unlocked for iOS");
+      };
+      utterance.onerror = () => {
+        this.isUnlocking = false;
+      };
       this.synth.speak(utterance);
-      this.isUnlocked = true;
-      console.log("Voice audio session unlocked for iOS");
     } catch (e) {
+      this.isUnlocking = false;
       console.error("Failed to unlock voice session", e);
     }
   }

@@ -32,6 +32,10 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
     if (isOpen) {
       setStage('boxes');
       
+      // Refresh sounds to ensure they are ready after long period of inactivity
+      soundService.refresh('/freesound_community-piglevelwin2mp3-14800.mp3');
+      soundService.refresh('/dragon-studio-fireworks-02-419019.mp3');
+      
       // Play initial celebration sound
       soundService.unlock();
       soundService.play('/freesound_community-piglevelwin2mp3-14800.mp3', isSoundEnabled);

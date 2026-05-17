@@ -359,6 +359,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   useEffect(() => {
     if (isCompleted && animationStage === 'none' && !isAlreadyFinalized) {
       soundService.unlock();
+      soundService.refresh('/dragon-studio-fireworks-02-419019.mp3');
       const timer = setTimeout(() => {
         setAnimationStage('whiteout');
       }, 300);
@@ -3730,6 +3731,7 @@ export default function App() {
         const isGroupBrandNew = scheduledTasks.every(t => !t.completed && (!t.accumulatedDuration || t.accumulatedDuration === 0));
         
         if (isFirstScheduled && isGroupBrandNew) {
+          soundService.refresh('/driken5482-applause-cheer-236786.mp3');
           soundService.play('/driken5482-applause-cheer-236786.mp3', userData.isVoiceEnabled);
         }
       }
@@ -4518,6 +4520,7 @@ export default function App() {
 
     // Show celebration
     setShowCheckInCelebration(true);
+    soundService.refresh('/freesound_community-success-fanfare-trumpets-6185.mp3');
     soundService.play('/freesound_community-success-fanfare-trumpets-6185.mp3', userData.isVoiceEnabled);
     setTimeout(() => setShowCheckInCelebration(false), 3000);
 
@@ -5046,6 +5049,7 @@ export default function App() {
                   updated.closingNote = closingData.note;
                   updated.satisfaction = closingData.satisfaction;
                 }
+                soundService.refresh('/tithuh-level-up-523624.mp3');
                 soundService.play('/tithuh-level-up-523624.mp3', userData.isVoiceEnabled);
                 if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
                   window.navigator.vibrate([200, 100, 200]);

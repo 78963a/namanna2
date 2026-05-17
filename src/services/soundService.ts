@@ -6,6 +6,7 @@
  */
 class SoundService {
   private isUnlocked: boolean = false;
+  private isUnlocking: boolean = false;
   private audioCache: { [path: string]: HTMLAudioElement } = {};
   private activeCount: number = 0;
 
@@ -15,12 +16,10 @@ class SoundService {
   private getFullPath(path: string): string {
     if (path.startsWith('http') || path.startsWith('data:')) return path;
     
-    // In Vite, import.meta.env.BASE_URL is usually available
     const baseUrl = (import.meta.env && import.meta.env.BASE_URL) || '/';
     const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
     
-    const result = baseUrl.endsWith('/') ? `${baseUrl}${normalizedPath}` : `${baseUrl}/${normalizedPath}`;
-    return result;
+    return baseUrl.endsWith('/') ? `${baseUrl}${normalizedPath}` : `${baseUrl}/${normalizedPath}`;
   }
 
   /**
@@ -37,6 +36,7 @@ class SoundService {
     const fullPath = this.getFullPath(path);
     if (this.audioCache[fullPath]) return;
     const audio = new Audio(fullPath);
+    audio.preload = 'auto';
     audio.load();
     this.audioCache[fullPath] = audio;
   }
@@ -45,22 +45,37 @@ class SoundService {
    * Unlocks the audio context. Should be called on user interaction.
    */
   unlock() {
-    if (this.isUnlocked) return;
+    if (this.isUnlocked || this.isUnlocking) return;
     
-    // Some browsers require the audio context to be resumed
-    const resumeContext = () => {
-      const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
-      silentAudio.volume = 0; // Ensure it's silent
-      
-      silentAudio.play().then(() => {
-        this.isUnlocked = true;
-        console.log('Sound Service: Audio context unlocked successfully');
-      }).catch(e => {
-        console.warn('Sound Service: Initial unlock failed, will retry on next play', e);
-      });
-    };
+    this.isUnlocking = true;
 
-    resumeContext();
+    // Use a truly silent, minimal base64 wav
+    // This one is known to be stable silence
+    const silentAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+    silentAudio.volume = 0;
+    silentAudio.muted = true;
+    
+    silentAudio.play().then(() => {
+      this.isUnlocked = true;
+      this.isUnlocking = false;
+      console.log('Sound Service: Audio context unlocked successfully');
+    }).catch(e => {
+      this.isUnlocking = false;
+      console.warn('Sound Service: Initial unlock failed, will retry on next play', e);
+    });
+  }
+
+  /**
+   * Re-loads an audio file to ensure it's ready.
+   */
+  refresh(path: string) {
+    const fullPath = this.getFullPath(path);
+    const audio = this.audioCache[fullPath];
+    if (audio) {
+      audio.load();
+    } else {
+      this.preload(path);
+    }
   }
 
   /**
@@ -71,9 +86,7 @@ class SoundService {
       try {
         audio.pause();
         audio.currentTime = 0;
-      } catch (e) {
-        // Ignore errors if audio was already stopped or not loaded
-      }
+      } catch (e) {}
     });
     this.activeCount = 0;
   }
@@ -94,6 +107,11 @@ class SoundService {
         this.audioCache[fullPath] = audio;
       }
       
+      // If the audio was preloaded a long time ago or hasn't loaded enough data, re-load it
+      if (audio.readyState < 2) { // HAVE_CURRENT_DATA
+        audio.load();
+      }
+
       const onEnd = () => {
         this.activeCount = Math.max(0, this.activeCount - 1);
         audio.removeEventListener('ended', onEnd);
@@ -114,7 +132,6 @@ class SoundService {
       audio.currentTime = 0;
       this.activeCount++;
 
-      // Media Session Support
       if ('mediaSession' in navigator) {
         try {
           navigator.mediaSession.playbackState = 'playing';
@@ -127,8 +144,6 @@ class SoundService {
         playPromise.catch(e => {
           onEnd();
           console.warn('Sound Service: Playback failed (likely auto-play policy):', e, 'Path:', fullPath);
-          
-          // Re-attempt unlock if failed
           if (!this.isUnlocked) {
             this.unlock();
           }
