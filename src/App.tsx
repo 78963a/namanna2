@@ -1168,6 +1168,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
               {[...chunk.tasks]
                 .filter(t => activeTask ? t.id !== activeTask.id : true)
                 .sort((a, b) => {
+                  // 이미 완료된 루틴그룹인 경우 사용자가 설정한 원래 순서(index)대로 표시
+                  if (allTasksDone || isAlreadyFinalized) {
+                    return chunk.tasks.indexOf(a) - chunk.tasks.indexOf(b);
+                  }
+                  
                   const isScheduledA = isTaskScheduledToday(a, chunk, effectiveDate, userData);
                   const isScheduledB = isTaskScheduledToday(b, chunk, effectiveDate, userData);
                   if (isScheduledA && !isScheduledB) return -1;
