@@ -996,7 +996,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
   const usageStatsGroups = useMemo(() => {
     const logs = userData.dailyActivityLog || {};
     const dates = Object.keys(logs).sort((a, b) => b.localeCompare(a));
-    const colorList = ['#e2e8f0', '#1e293b', '#fbbf24', '#f97316', '#ef4444'];
+    const colorList = ['#E5E7EB', '#000000', '#FACC15', '#F97316', '#EF4444']; // 0:Gray, 1:Black, 2:Yellow, 3:Orange, 4:Red
     
     const groups: { [year: string]: any[] } = {};
     

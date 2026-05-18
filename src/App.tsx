@@ -2258,9 +2258,10 @@ const RoutineGroupFormView: React.FC<{
   setSettingsSubView: (view: any) => void;
   setIsSettingsOpen: (open: boolean) => void;
   userData: UserData;
+  activeTab?: string;
   mode?: 'add' | 'edit';
-  onDirtyChange?: (isDirty: boolean) => void;
-}> = ({ addChunk, updateChunk, initialChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData, mode = 'add', onDirtyChange }) => {
+  onDirtyChange?: (isDirty) => void;
+}> = ({ addChunk, updateChunk, initialChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData, activeTab, mode = 'add', onDirtyChange }) => {
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState('');
   
@@ -2373,6 +2374,7 @@ const RoutineGroupFormView: React.FC<{
   const [activeChecklistTarget, setActiveChecklistTarget] = useState<'trigger' | 'current' | null>(null);
   const [routineAddedMessage, setRoutineAddedMessage] = useState<string | null>(null);
   const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (routineAddedMessage) {
@@ -2586,8 +2588,16 @@ const RoutineGroupFormView: React.FC<{
         startType,
         situation
       });
-      setSettingsSubView({ type: 'main' });
-      setIsSettingsOpen(false);
+      
+      setSaveSuccessMessage('변경사항이 저장되었습니다');
+      setTimeout(() => {
+        setSaveSuccessMessage(null);
+        // Only go back if it was opened from execution screen
+        if (activeTab === 'execution') {
+          setSettingsSubView({ type: 'main' });
+          setIsSettingsOpen(false);
+        }
+      }, 2000);
     } else {
       addChunk(name, purpose, finalTasks, 'days', scheduledDays, startType === 'time' ? startTime : '', isAlarmEnabled, startType, situation);
       setActiveTab('home');
@@ -2601,17 +2611,17 @@ const RoutineGroupFormView: React.FC<{
 
   return (
     <div className="space-y-5 pb-20">
-      {/* 루틴 추가/삭제 알림 팝업 */}
+      {/* 루틴 추가/삭제/수정 알림 팝업 */}
       <AnimatePresence>
-        {(routineAddedMessage || deletionMessage) && (
+        {(routineAddedMessage || deletionMessage || saveSuccessMessage) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 10 }}
             className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[300] pointer-events-none"
           >
-            <div className={`bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-[20px] shadow-2xl flex flex-col items-center gap-2 border border-white/10 min-w-[200px] ${deletionMessage ? 'border-rose-500/30' : 'border-emerald-500/30'}`}>
-              <div className={`w-10 h-10 ${deletionMessage ? 'bg-rose-500/20' : 'bg-emerald-500/20'} rounded-full flex items-center justify-center mb-1`}>
+            <div className={`bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-[20px] shadow-2xl flex flex-col items-center gap-2 border border-white/10 min-w-[200px] ${deletionMessage ? 'border-rose-500/30' : (saveSuccessMessage ? 'border-indigo-500/30' : 'border-emerald-500/30')}`}>
+              <div className={`w-10 h-10 ${deletionMessage ? 'bg-rose-500/20' : (saveSuccessMessage ? 'bg-indigo-500/20' : 'bg-emerald-500/20')} rounded-full flex items-center justify-center mb-1`}>
                 {deletionMessage ? (
                   <Trash2 className="w-6 h-6 text-rose-400" />
                 ) : (
@@ -2619,7 +2629,7 @@ const RoutineGroupFormView: React.FC<{
                 )}
               </div>
               <span className="text-sm font-black tracking-tight text-center">
-                {deletionMessage || routineAddedMessage}
+                {deletionMessage || routineAddedMessage || saveSuccessMessage}
               </span>
             </div>
           </motion.div>
@@ -3847,13 +3857,13 @@ export default function App() {
       setActivityLog(prev => {
         const currentDayLog = [...(prev[dateStr] || new Array(1440).fill(0))];
         
-        // Determine status
-        // 0: future, 1: past, 2: foreground, 3: background+timer, 4: foreground+timer
+        // Determin status for color rendering in StatsView
+        // 0: Gray (Future), 1: Black (Offline/Background), 2: Yellow (Foreground), 3: Orange (Background+Timer), 4: Red (Foreground+Timer)
         const hasTimer = !!globalActiveTask;
-        let status = 1; // Default to past (active app but maybe inactive view)
-        if (isForeground && hasTimer) status = 4;
-        else if (!isForeground && hasTimer) status = 3;
-        else if (isForeground && !hasTimer) status = 2;
+        let status = 1; // Default to 1 (Black: Background / App Closed)
+        if (isForeground && hasTimer) status = 4; // Red
+        else if (!isForeground && hasTimer) status = 3; // Orange
+        else if (isForeground && !hasTimer) status = 2; // Yellow
         
         // Update with priority: 가장 높은 상태값의 색상을 출력
         if (currentDayLog[diffMinutes] < status) {
@@ -3898,8 +3908,7 @@ export default function App() {
             let diff = sweepTotalMinutes - resetTotalMinutes;
             if (diff < 0) diff += 1440;
             
-            // Background assume state 3 if timer was running, or 1
-            // Use current globalActiveTask as a heuristic for what happened during background
+            // Background/Closed catch-up: assume 3 (Orange) if timer was running, or 1 (Black)
             const status = globalActiveTask ? 3 : 1;
             
             setActivityLog(prev => {
@@ -4477,7 +4486,7 @@ export default function App() {
     const isGroupUnstarted = !isAnyTaskEngaged;
     
     if (userData.firstRoutineAutoStart && isGroupUnstarted && targetTask && !targetTask.startTime && !targetTask.laterTimestamp && !targetTask.isPaused) {
-      startTask(targetTask.id, true);
+      startTask(targetTask.id, true, true);
     }
   };
 
@@ -4728,14 +4737,14 @@ export default function App() {
     });
   };
 
-  const startTask = (taskId: string, resetTimer: boolean = true) => {
+  const startTask = (taskId: string, resetTimer: boolean = true, forceStart: boolean = false) => {
     soundService.unlock();
     voiceService.unlock();
     voiceService.stop();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
-      const autoStart = prev.nextRoutineAutoStart;
+      const autoStart = forceStart || prev.nextRoutineAutoStart;
       const next = {
         ...prev,
         routineChunks: prev.routineChunks.map(chunk => {
@@ -6694,6 +6703,7 @@ export default function App() {
             setSettingsSubView={setSettingsSubView}
             setIsSettingsOpen={setIsSettingsOpen}
             userData={userData}
+            activeTab={activeTab}
             mode="edit"
             onDirtyChange={(isDirty) => setIsEditRoutineDirty(isDirty)}
           />
@@ -7011,6 +7021,7 @@ export default function App() {
                 setSettingsSubView={setSettingsSubView}
                 setIsSettingsOpen={setIsSettingsOpen}
                 userData={userData}
+                activeTab={activeTab}
                 mode="add"
                 onDirtyChange={(isDirty) => setIsAddRoutineDirty(isDirty)}
               />

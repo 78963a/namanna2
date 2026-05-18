@@ -234,7 +234,7 @@ export interface ExecutionViewProps {
   togglePauseTask: (taskId: string) => void;
   laterTask: (taskId: string) => void;
   skipTask: (taskId: string) => void;
-  startTask: (taskId: string, resetTimer?: boolean) => void;
+  startTask: (taskId: string, resetTimer?: boolean, forceStart?: boolean) => void;
   onRestart: (taskId: string, resetTimer?: boolean) => void;
   resetChunk: (chunkId: string) => void;
   setSettingsSubView: (view: SettingsSubView) => void;
