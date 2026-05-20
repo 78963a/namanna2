@@ -72,9 +72,9 @@
     "COMPLETION_SELECTION_TEMPLATES": [
       "내가 {{title}} 해냄.",
       "나는 {{purpose}}야/이야.",
-      "내 이름은 {{userName}}, {{title}}을/를 완료한 {{purpose}}이죠/죠.",
-      "{{title}}을/를 {{duration}}만에 완료하고 {{purpose}}이/가 된 {{userName}}",
-      "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
+      "내 이름은 {{userName}}, {{duration}}만에 {{title}}을/를 완료한 {{purpose}}이죠/죠.",
+      "{{title}}을/를 {{startTime}}에 시작하고 {{endTime}}에 완료하여 {{purpose}}이/가 된 {{userName}}",
+      "{{userName}}님께서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하는데 성공하신 것을 보니 {{userName}}님께서는  {{purpose}}임이 분명합니다."
     ],
     "INACTIVE": [
       "{{title}} 땡땡이치기"
@@ -91,7 +91,7 @@
       "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}}, {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다"
     ],
     "IN_PROGRESS": [
-      "{{purpose}}이/가 되기 위해 {{title}}을/를 수행하는 중 ({{duration}})"
+      "{{purpose}}이/가 되기 위해 {{title}}을/를 수행하는 중 ({{duration}}째)"
     ],
     "COMPLETED": [
       "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
