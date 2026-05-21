@@ -4,11 +4,14 @@ import confetti from 'canvas-confetti';
 import { Sparkles, Flower, Star } from 'lucide-react';
 import { soundService } from './services/soundService';
 
+import { SoundEffectSettings } from './types';
+
 interface PerfectDayAnimationProps {
   isOpen: boolean;
   onClose: () => void;
   completedGroups: { name: string, status: string }[];
   isSoundEnabled?: boolean;
+  soundSettings?: SoundEffectSettings;
 }
 
 const FLOWER_COLORS = [
@@ -24,7 +27,8 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
   isOpen,
   onClose,
   completedGroups,
-  isSoundEnabled
+  isSoundEnabled,
+  soundSettings
 }) => {
   const [stage, setStage] = useState<'boxes' | 'flowers' | 'explosion' | 'text' | 'none'>('none');
 
@@ -32,13 +36,21 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
     if (isOpen) {
       setStage('boxes');
       
+      const groupCompleteConfig = soundSettings?.routineGroupComplete;
+      const groupCompleteEnabled = groupCompleteConfig ? groupCompleteConfig.enabled : true;
+      const groupCompleteFile = groupCompleteConfig?.file || '/freesound_community-piglevelwin2mp3-14800.mp3';
+
+      const allGroupsCompleteConfig = soundSettings?.allGroupsComplete;
+      const allGroupsCompleteEnabled = allGroupsCompleteConfig ? allGroupsCompleteConfig.enabled : true;
+      const allGroupsCompleteFile = allGroupsCompleteConfig?.file || '/dragon-studio-fireworks-02-419019.mp3';
+
       // Refresh sounds to ensure they are ready after long period of inactivity
-      soundService.refresh('/freesound_community-piglevelwin2mp3-14800.mp3');
-      soundService.refresh('/dragon-studio-fireworks-02-419019.mp3');
+      soundService.refresh(groupCompleteFile);
+      soundService.refresh(allGroupsCompleteFile);
       
       // Play initial celebration sound
       soundService.unlock();
-      soundService.play('/freesound_community-piglevelwin2mp3-14800.mp3', isSoundEnabled);
+      soundService.play(groupCompleteFile, isSoundEnabled && groupCompleteEnabled);
 
       // Stage timer for flowers (Slower transition)
       const flowerTimer = setTimeout(() => setStage('flowers'), 2000);
@@ -47,7 +59,7 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
       const explosionTimer = setTimeout(() => {
         setStage('explosion');
         // Play fireworks sound for the giant confetti
-        soundService.play('/dragon-studio-fireworks-02-419019.mp3', isSoundEnabled);
+        soundService.play(allGroupsCompleteFile, isSoundEnabled && allGroupsCompleteEnabled);
         triggerGiantConfetti();
       }, 4000);
 

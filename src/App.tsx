@@ -94,7 +94,8 @@ import {
   HomeViewProps,
   StatsViewProps,
   ExecutionViewProps,
-  NaggingSettings
+  NaggingSettings,
+  SoundEffectSettings
 } from './types';
 import phrases from './phrases.json';
 import { 
@@ -399,7 +400,10 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   useEffect(() => {
     if (animationStage === 'title') {
-      soundService.play('/dragon-studio-fireworks-02-419019.mp3', userData.isVoiceEnabled);
+      const allGroupsCompleteConfig = userData.soundSettings?.allGroupsComplete;
+      const allGroupsCompleteEnabled = allGroupsCompleteConfig ? allGroupsCompleteConfig.enabled : true;
+      const allGroupsCompleteFile = allGroupsCompleteConfig?.file || '/dragon-studio-fireworks-02-419019.mp3';
+      soundService.play(allGroupsCompleteFile, userData.isVoiceEnabled && allGroupsCompleteEnabled);
       const timer = setTimeout(() => {
         setAnimationStage('fireworks');
         
@@ -3176,6 +3180,13 @@ export default function App() {
           overTimeInterval: 1,
           overTimeMessage: 'name님, task가 m분 지났어요.',
           overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
+        },
+        soundSettings: {
+          wakeUpCheckIn: { enabled: true, file: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
+          triggerRoutineStart: { enabled: true, file: '/driken5482-applause-cheer-236786.mp3' },
+          individualRoutineComplete: { enabled: true, file: '/tithuh-level-up-523624.mp3' },
+          routineGroupComplete: { enabled: true, file: '/dragon-studio-fireworks-02-419019.mp3' },
+          allGroupsComplete: { enabled: true, file: '/freesound_community-piglevelwin2mp3-14800.mp3' }
         }
       };
     }
@@ -3279,6 +3290,32 @@ export default function App() {
       }
       if (parsed.naggingSettings.endTargetTypes === undefined) {
         parsed.naggingSettings.endTargetTypes = allTypes;
+      }
+    }
+
+    if (parsed.soundSettings === undefined) {
+      parsed.soundSettings = {
+        wakeUpCheckIn: { enabled: true, file: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        triggerRoutineStart: { enabled: true, file: '/driken5482-applause-cheer-236786.mp3' },
+        individualRoutineComplete: { enabled: true, file: '/tithuh-level-up-523624.mp3' },
+        routineGroupComplete: { enabled: true, file: '/dragon-studio-fireworks-02-419019.mp3' },
+        allGroupsComplete: { enabled: true, file: '/freesound_community-piglevelwin2mp3-14800.mp3' }
+      };
+    } else {
+      if (parsed.soundSettings.wakeUpCheckIn === undefined) {
+        parsed.soundSettings.wakeUpCheckIn = { enabled: true, file: '/freesound_community-success-fanfare-trumpets-6185.mp3' };
+      }
+      if (parsed.soundSettings.triggerRoutineStart === undefined) {
+        parsed.soundSettings.triggerRoutineStart = { enabled: true, file: '/driken5482-applause-cheer-236786.mp3' };
+      }
+      if (parsed.soundSettings.individualRoutineComplete === undefined) {
+        parsed.soundSettings.individualRoutineComplete = { enabled: true, file: '/tithuh-level-up-523624.mp3' };
+      }
+      if (parsed.soundSettings.routineGroupComplete === undefined) {
+        parsed.soundSettings.routineGroupComplete = { enabled: true, file: '/dragon-studio-fireworks-02-419019.mp3' };
+      }
+      if (parsed.soundSettings.allGroupsComplete === undefined) {
+        parsed.soundSettings.allGroupsComplete = { enabled: true, file: '/freesound_community-piglevelwin2mp3-14800.mp3' };
       }
     }
     
@@ -3441,12 +3478,23 @@ export default function App() {
   const [localNaggingSettings, setLocalNaggingSettings] = useState<NaggingSettings | null>(null);
   const [naggingSuccessMessage, setNaggingSuccessMessage] = useState<string | null>(null);
 
+  const [isSoundSettingsDirty, setIsSoundSettingsDirty] = useState(false);
+  const [localSoundSettings, setLocalSoundSettings] = useState<SoundEffectSettings | null>(null);
+  const [soundSuccessMessage, setSoundSuccessMessage] = useState<string | null>(null);
+
   useEffect(() => {
     if (naggingSuccessMessage) {
       const timer = setTimeout(() => setNaggingSuccessMessage(null), 2000);
       return () => clearTimeout(timer);
     }
   }, [naggingSuccessMessage]);
+
+  useEffect(() => {
+    if (soundSuccessMessage) {
+      const timer = setTimeout(() => setSoundSuccessMessage(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [soundSuccessMessage]);
 
   useEffect(() => {
     if (settingsSubView.type === 'nagging') {
@@ -3478,6 +3526,23 @@ export default function App() {
     }
   }, [settingsSubView.type, userData.naggingSettings]);
 
+  useEffect(() => {
+    if (settingsSubView.type === 'sound') {
+      const defaultSettings: SoundEffectSettings = {
+        wakeUpCheckIn: { enabled: true, file: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        triggerRoutineStart: { enabled: true, file: '/driken5482-applause-cheer-236786.mp3' },
+        individualRoutineComplete: { enabled: true, file: '/tithuh-level-up-523624.mp3' },
+        routineGroupComplete: { enabled: true, file: '/dragon-studio-fireworks-02-419019.mp3' },
+        allGroupsComplete: { enabled: true, file: '/freesound_community-piglevelwin2mp3-14800.mp3' }
+      };
+      setLocalSoundSettings({
+        ...defaultSettings,
+        ...(userData.soundSettings || {})
+      });
+      setIsSoundSettingsDirty(false);
+    }
+  }, [settingsSubView.type, userData.soundSettings]);
+
   const handleSettingsClose = () => {
     if (settingsSubView.type === 'nagging' && isNaggingDirty) {
       setConfirmModal({
@@ -3490,6 +3555,24 @@ export default function App() {
         showCancel: true,
         onConfirm: () => {
           setIsNaggingDirty(false);
+          setIsSettingsOpen(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        },
+        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+      });
+      return;
+    }
+    if (settingsSubView.type === 'sound' && isSoundSettingsDirty) {
+      setConfirmModal({
+        isOpen: true,
+        title: '변경 취소 확인',
+        message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+        confirmLabel: '취소하고 나가기',
+        cancelLabel: '계속 수정하기',
+        confirmColor: 'indigo',
+        showCancel: true,
+        onConfirm: () => {
+          setIsSoundSettingsDirty(false);
           setIsSettingsOpen(false);
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
         },
@@ -3544,7 +3627,7 @@ export default function App() {
       });
       return;
     }
-    if (activeTab === 'settings' && targetTab !== 'settings' && (isNaggingDirty || isEditRoutineDirty)) {
+    if (activeTab === 'settings' && targetTab !== 'settings' && (isNaggingDirty || isEditRoutineDirty || isSoundSettingsDirty)) {
       setConfirmModal({
         isOpen: true,
         title: '변경 취소 확인',
@@ -3556,6 +3639,7 @@ export default function App() {
         onConfirm: () => {
           setIsNaggingDirty(false);
           setIsEditRoutineDirty(false);
+          setIsSoundSettingsDirty(false);
           setActiveTab(targetTab);
           if (extraAction) extraAction();
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -3755,8 +3839,11 @@ export default function App() {
         const isGroupBrandNew = scheduledTasks.every(t => !t.completed && (!t.accumulatedDuration || t.accumulatedDuration === 0));
         
         if (isFirstScheduled && isGroupBrandNew) {
-          soundService.refresh('/driken5482-applause-cheer-236786.mp3');
-          soundService.play('/driken5482-applause-cheer-236786.mp3', userData.isVoiceEnabled);
+          const triggerConfig = userData.soundSettings?.triggerRoutineStart;
+          const triggerEnabled = triggerConfig ? triggerConfig.enabled : true;
+          const triggerFile = triggerConfig?.file || '/driken5482-applause-cheer-236786.mp3';
+          soundService.refresh(triggerFile);
+          soundService.play(triggerFile, userData.isVoiceEnabled && triggerEnabled);
         }
       }
     }
@@ -4561,8 +4648,11 @@ export default function App() {
 
     // Show celebration
     setShowCheckInCelebration(true);
-    soundService.refresh('/freesound_community-success-fanfare-trumpets-6185.mp3');
-    soundService.play('/freesound_community-success-fanfare-trumpets-6185.mp3', userData.isVoiceEnabled);
+    const checkInConfig = userData.soundSettings?.wakeUpCheckIn;
+    const checkInEnabled = checkInConfig ? checkInConfig.enabled : true;
+    const checkInFile = checkInConfig?.file || '/freesound_community-success-fanfare-trumpets-6185.mp3';
+    soundService.refresh(checkInFile);
+    soundService.play(checkInFile, userData.isVoiceEnabled && checkInEnabled);
     setTimeout(() => setShowCheckInCelebration(false), 3000);
 
     // Special confetti for check-in
@@ -5039,6 +5129,7 @@ export default function App() {
     voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+    let newlyCompletedGroup = false;
 
     setUserData(prev => {
       let foundTask: Task | null = null;
@@ -5090,8 +5181,11 @@ export default function App() {
                   updated.closingNote = closingData.note;
                   updated.satisfaction = closingData.satisfaction;
                 }
-                soundService.refresh('/tithuh-level-up-523624.mp3');
-                soundService.play('/tithuh-level-up-523624.mp3', userData.isVoiceEnabled);
+                const routineConfig = userData.soundSettings?.individualRoutineComplete;
+                const routineEnabled = routineConfig ? routineConfig.enabled : true;
+                const routineFile = routineConfig?.file || '/tithuh-level-up-523624.mp3';
+                soundService.refresh(routineFile);
+                soundService.play(routineFile, userData.isVoiceEnabled && routineEnabled);
                 if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
                   window.navigator.vibrate([200, 100, 200]);
                 }
@@ -5141,6 +5235,7 @@ export default function App() {
             let newCompletionDates = chunk.completionDates || [];
             if (allCompleted && !newCompletionDates.includes(todayStr)) {
               newCompletionDates = [...newCompletionDates, todayStr];
+              newlyCompletedGroup = true;
             } else if (!allCompleted && newCompletionDates.includes(todayStr)) {
               newCompletionDates = newCompletionDates.filter(d => d !== todayStr);
             }
@@ -5214,6 +5309,14 @@ export default function App() {
       };
       return syncHistory(next, todayStr);
     });
+
+    if (newlyCompletedGroup) {
+      const groupCompleteConfig = userData.soundSettings?.routineGroupComplete;
+      const groupCompleteEnabled = groupCompleteConfig ? groupCompleteConfig.enabled : true;
+      const groupCompleteFile = groupCompleteConfig?.file || '/freesound_community-piglevelwin2mp3-14800.mp3';
+      soundService.refresh(groupCompleteFile);
+      soundService.play(groupCompleteFile, userData.isVoiceEnabled && groupCompleteEnabled);
+    }
   };
 
   const addTask = (chunkId: string, scheduledDays: number[] = [0,1,2,3,4,5,6]) => {
@@ -6094,6 +6197,25 @@ export default function App() {
             <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Bell className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h3 className="text-base font-black text-slate-900">효과음 설정</h3>
+              </div>
+              <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">특정 루틴 상태나 기상 완료 시 재생되는 효과음을 설정하고 기호에 맞는 사운드를 선택합니다.</p>
+              <div className="pt-1">
+                <button 
+                  onClick={() => setSettingsSubView({ type: 'sound' })}
+                  className="w-full flex items-center justify-between p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-300 transition-all text-left active:translate-y-[2px] active:border-b-[2px] group"
+                >
+                  <span className="text-sm font-black text-slate-700">효과음 설정하기</span>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Volume2 className="w-5 h-5 text-indigo-600" />
                 </div>
                 <h3 className="text-base font-black text-slate-900">잔소리 기능</h3>
@@ -6271,6 +6393,181 @@ export default function App() {
               저장하고 닫기
             </button>
           )}
+        </div>
+      );
+    }
+
+    if (settingsSubView.type === 'sound') {
+      const defaultSettings: SoundEffectSettings = {
+        wakeUpCheckIn: { enabled: true, file: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        triggerRoutineStart: { enabled: true, file: '/driken5482-applause-cheer-236786.mp3' },
+        individualRoutineComplete: { enabled: true, file: '/tithuh-level-up-523624.mp3' },
+        routineGroupComplete: { enabled: true, file: '/dragon-studio-fireworks-02-419019.mp3' },
+        allGroupsComplete: { enabled: true, file: '/freesound_community-piglevelwin2mp3-14800.mp3' }
+      };
+
+      const settings = localSoundSettings || {
+        ...defaultSettings,
+        ...(userData.soundSettings || {})
+      };
+
+      const updateSound = (key: keyof SoundEffectSettings, field: 'enabled' | 'file', value: any) => {
+        const item = settings[key] || { enabled: true, file: '' };
+        const updatedItem = { ...item, [field]: value };
+        setLocalSoundSettings(prev => ({
+          ...(prev || settings),
+          [key]: updatedItem
+        }));
+        setIsSoundSettingsDirty(true);
+      };
+
+      const handleSoundPlayTest = (filePath: string) => {
+        soundService.stop();
+        if (filePath) {
+          soundService.refresh(filePath);
+          soundService.play(filePath, true);
+        }
+      };
+
+      const handleSoundBack = () => {
+        if (isSoundSettingsDirty) {
+          setConfirmModal({
+            isOpen: true,
+            title: '변경 취소 확인',
+            message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+            confirmLabel: '취소하고 나가기',
+            cancelLabel: '계속 수정하기',
+            confirmColor: 'indigo',
+            showCancel: true,
+            onConfirm: () => {
+              setIsSoundSettingsDirty(false);
+              setSettingsSubView({ type: 'main' });
+              setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            },
+            onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+          });
+        } else {
+          setSettingsSubView({ type: 'main' });
+        }
+      };
+
+      const handleSoundSave = () => {
+        if (localSoundSettings) {
+          setUserData(prev => ({
+            ...prev,
+            soundSettings: localSoundSettings
+          }));
+          setIsSoundSettingsDirty(false);
+          setSoundSuccessMessage('효과음 설정이 저장되었습니다');
+        }
+      };
+
+      const AVAILABLE_SOUNDS = [
+        { name: 'Level Up (레벨업)', file: '/tithuh-level-up-523624.mp3' },
+        { name: 'Trumpets Fanfare (트럼펫 팡파르)', file: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        { name: 'Level Win (성공 축하음)', file: '/freesound_community-piglevelwin2mp3-14800.mp3' },
+        { name: 'Fireworks (불꽃놀이 효과음)', file: '/dragon-studio-fireworks-02-419019.mp3' },
+        { name: 'Applause Cheer (환호와 박수)', file: '/driken5482-applause-cheer-236786.mp3' },
+        { name: 'Beep (비프 안내음)', file: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' }
+      ];
+
+      const soundItemsDetail: { key: keyof SoundEffectSettings; label: string; desc: string; defaultFile: string }[] = [
+        { key: 'wakeUpCheckIn', label: '1. 기상 체크인', desc: '아침 기상체크 완료 및 성공 시 재생되는 효과음입니다.', defaultFile: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        { key: 'triggerRoutineStart', label: '2. 트리거 루틴 시작', desc: '하루의 첫 번째 예정된 루틴(트리거 루틴)을 시작할 시 재생됩니다.', defaultFile: '/driken5482-applause-cheer-236786.mp3' },
+        { key: 'individualRoutineComplete', label: '3. 개별 루틴 완료', desc: '각각의 개별 루틴을 완료하거나 완벽히 완료했을 때 재생됩니다.', defaultFile: '/tithuh-level-up-523624.mp3' },
+        { key: 'routineGroupComplete', label: '4. 루틴 그룹 완료', desc: '루틴 그룹(모든 하위 루틴)의 마지막 항목을 마쳐 그룹 전체를 끝냈을 때 재생됩니다.', defaultFile: '/dragon-studio-fireworks-02-419019.mp3' },
+        { key: 'allGroupsComplete', label: '5. 완벽한 하루 완료', desc: '오늘 예정된 모든 최고 난이도의 완벽한 루틴 그룹들을 완료했을 때 재생됩니다.', defaultFile: '/freesound_community-piglevelwin2mp3-14800.mp3' }
+      ];
+
+      return (
+        <div className="flex flex-col h-full overflow-hidden">
+          {soundSuccessMessage && (
+            <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 p-3 rounded-xl text-center text-sm font-black mb-4 animate-in fade-in slide-in-from-top-2">
+              {soundSuccessMessage}
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 mb-4 flex-shrink-0">
+            <button 
+              onClick={handleSoundBack}
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5 text-slate-600" />
+            </button>
+            <h2 className="text-xl font-black text-slate-800">효과음 설정</h2>
+          </div>
+
+          <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-4">
+            {soundItemsDetail.map(({ key, label, desc, defaultFile }) => {
+              const item = settings[key] || { enabled: true, file: defaultFile };
+              const currentFile = item.file || defaultFile;
+
+              return (
+                <div key={key} className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-1 pr-4">
+                      <h3 className="text-base font-black text-slate-800">{label}</h3>
+                      <p className="text-[11px] font-bold text-slate-400 leading-tight">{desc}</p>
+                    </div>
+                    <button 
+                      onClick={() => updateSound(key, 'enabled', !item.enabled)}
+                      className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${item.enabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${item.enabled ? 'left-7' : 'left-1'}`} />
+                    </button>
+                  </div>
+
+                  {item.enabled && (
+                    <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-top-2">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[11px] font-bold text-slate-500 ml-1">사운드 선택</label>
+                        <div className="flex gap-2">
+                          <select 
+                            value={currentFile}
+                            onChange={(e) => {
+                              const newFile = e.target.value;
+                              updateSound(key, 'file', newFile);
+                              handleSoundPlayTest(newFile);
+                            }}
+                            className="flex-grow text-sm font-black p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer animate-in fade-in list-none select-none appearance-none"
+                          >
+                            {AVAILABLE_SOUNDS.map(sound => (
+                              <option key={sound.file} value={sound.file}>
+                                {sound.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button 
+                            onClick={() => handleSoundPlayTest(currentFile)}
+                            className="bg-indigo-50 text-indigo-600 p-3 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors flex items-center gap-1"
+                            title="재생 테스트"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                            <span>테스트</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button 
+              onClick={handleSoundBack}
+              className="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-[15px] hover:bg-slate-200 transition-all"
+            >
+              취소
+            </button>
+            <button 
+              onClick={handleSoundSave}
+              className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+            >
+              저장
+            </button>
+          </div>
         </div>
       );
     }
@@ -7258,6 +7555,7 @@ export default function App() {
         onClose={() => setShowPerfectDay(false)}
         completedGroups={perfectDayGroups}
         isSoundEnabled={userData.isVoiceEnabled}
+        soundSettings={userData.soundSettings}
       />
 
       {/* 알림 권한 안내 모달 */}

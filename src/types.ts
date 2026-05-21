@@ -137,6 +137,22 @@ export interface NaggingSettings {
 }
 
 /**
+ * Settings for the individual sound effects.
+ */
+export interface SoundEffectItem {
+  enabled: boolean;
+  file: string;
+}
+
+export interface SoundEffectSettings {
+  wakeUpCheckIn: SoundEffectItem;
+  triggerRoutineStart: SoundEffectItem;
+  individualRoutineComplete: SoundEffectItem;
+  routineGroupComplete: SoundEffectItem;
+  allGroupsComplete: SoundEffectItem;
+}
+
+/**
  * Represents the entire state of the user's data.
  */
 export interface UserData {
@@ -172,13 +188,14 @@ export interface UserData {
   isVoiceEnabled?: boolean;
   isWakeUpAlarmEnabled?: boolean;
   naggingSettings?: NaggingSettings;
+  soundSettings?: SoundEffectSettings;
 }
 
 /**
  * Represents the sub-view state within the settings screen.
  */
 export interface SettingsSubView {
-  type: 'main' | 'detail' | 'nagging';
+  type: 'main' | 'detail' | 'nagging' | 'sound';
   chunkId?: string;
 }
 
