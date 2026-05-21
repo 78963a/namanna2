@@ -38,11 +38,11 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
       
       const groupCompleteConfig = soundSettings?.routineGroupComplete;
       const groupCompleteEnabled = groupCompleteConfig ? groupCompleteConfig.enabled : true;
-      const groupCompleteFile = groupCompleteConfig?.file || '/freesound_community-piglevelwin2mp3-14800.mp3';
+      const groupCompleteFile = groupCompleteConfig?.file || '/sounds/dragon-studio-fireworks-02-419019.mp3';
 
       const allGroupsCompleteConfig = soundSettings?.allGroupsComplete;
       const allGroupsCompleteEnabled = allGroupsCompleteConfig ? allGroupsCompleteConfig.enabled : true;
-      const allGroupsCompleteFile = allGroupsCompleteConfig?.file || '/dragon-studio-fireworks-02-419019.mp3';
+      const allGroupsCompleteFile = allGroupsCompleteConfig?.file || '/sounds/freesound_community-piglevelwin2mp3-14800.mp3';
 
       // Refresh sounds to ensure they are ready after long period of inactivity
       soundService.refresh(groupCompleteFile);

@@ -3095,11 +3095,13 @@ export default function App() {
 
   // Preload sounds and check notification permission
   useEffect(() => {
-    soundService.preload('/tithuh-level-up-523624.mp3');
-    soundService.preload('/freesound_community-success-fanfare-trumpets-6185.mp3');
-    soundService.preload('/freesound_community-piglevelwin2mp3-14800.mp3');
-    soundService.preload('/dragon-studio-fireworks-02-419019.mp3');
-    soundService.preload('/driken5482-applause-cheer-236786.mp3');
+    soundService.preload('/sounds/tithuh-level-up-523624.mp3');
+    soundService.preload('/sounds/freesound_community-success-fanfare-trumpets-6185.mp3');
+    soundService.preload('/sounds/freesound_community-piglevelwin2mp3-14800.mp3');
+    soundService.preload('/sounds/dragon-studio-fireworks-02-419019.mp3');
+    soundService.preload('/sounds/driken5482-applause-cheer-236786.mp3');
+    soundService.preload('/sounds/freesound_community-075176_duck-quack-40345.mp3');
+    soundService.preload('/sounds/dragon-studio-dog-bark-382732.mp3');
     soundService.preload('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     
     // Auto-request permission on mount if first time
@@ -3182,11 +3184,11 @@ export default function App() {
           overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
         },
         soundSettings: {
-          wakeUpCheckIn: { enabled: true, file: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
-          triggerRoutineStart: { enabled: true, file: '/driken5482-applause-cheer-236786.mp3' },
-          individualRoutineComplete: { enabled: true, file: '/tithuh-level-up-523624.mp3' },
-          routineGroupComplete: { enabled: true, file: '/dragon-studio-fireworks-02-419019.mp3' },
-          allGroupsComplete: { enabled: true, file: '/freesound_community-piglevelwin2mp3-14800.mp3' }
+          wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+          triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
+          individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
+          routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+          allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
         }
       };
     }
@@ -3295,27 +3297,27 @@ export default function App() {
 
     if (parsed.soundSettings === undefined) {
       parsed.soundSettings = {
-        wakeUpCheckIn: { enabled: true, file: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
-        triggerRoutineStart: { enabled: true, file: '/driken5482-applause-cheer-236786.mp3' },
-        individualRoutineComplete: { enabled: true, file: '/tithuh-level-up-523624.mp3' },
-        routineGroupComplete: { enabled: true, file: '/dragon-studio-fireworks-02-419019.mp3' },
-        allGroupsComplete: { enabled: true, file: '/freesound_community-piglevelwin2mp3-14800.mp3' }
+        wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
+        individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
+        routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+        allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
       };
     } else {
       if (parsed.soundSettings.wakeUpCheckIn === undefined) {
-        parsed.soundSettings.wakeUpCheckIn = { enabled: true, file: '/freesound_community-success-fanfare-trumpets-6185.mp3' };
+        parsed.soundSettings.wakeUpCheckIn = { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' };
       }
       if (parsed.soundSettings.triggerRoutineStart === undefined) {
-        parsed.soundSettings.triggerRoutineStart = { enabled: true, file: '/driken5482-applause-cheer-236786.mp3' };
+        parsed.soundSettings.triggerRoutineStart = { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' };
       }
       if (parsed.soundSettings.individualRoutineComplete === undefined) {
-        parsed.soundSettings.individualRoutineComplete = { enabled: true, file: '/tithuh-level-up-523624.mp3' };
+        parsed.soundSettings.individualRoutineComplete = { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' };
       }
       if (parsed.soundSettings.routineGroupComplete === undefined) {
-        parsed.soundSettings.routineGroupComplete = { enabled: true, file: '/dragon-studio-fireworks-02-419019.mp3' };
+        parsed.soundSettings.routineGroupComplete = { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' };
       }
       if (parsed.soundSettings.allGroupsComplete === undefined) {
-        parsed.soundSettings.allGroupsComplete = { enabled: true, file: '/freesound_community-piglevelwin2mp3-14800.mp3' };
+        parsed.soundSettings.allGroupsComplete = { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' };
       }
     }
     
@@ -3529,11 +3531,11 @@ export default function App() {
   useEffect(() => {
     if (settingsSubView.type === 'sound') {
       const defaultSettings: SoundEffectSettings = {
-        wakeUpCheckIn: { enabled: true, file: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
-        triggerRoutineStart: { enabled: true, file: '/driken5482-applause-cheer-236786.mp3' },
-        individualRoutineComplete: { enabled: true, file: '/tithuh-level-up-523624.mp3' },
-        routineGroupComplete: { enabled: true, file: '/dragon-studio-fireworks-02-419019.mp3' },
-        allGroupsComplete: { enabled: true, file: '/freesound_community-piglevelwin2mp3-14800.mp3' }
+        wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
+        individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
+        routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+        allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
       };
       setLocalSoundSettings({
         ...defaultSettings,
@@ -6399,11 +6401,11 @@ export default function App() {
 
     if (settingsSubView.type === 'sound') {
       const defaultSettings: SoundEffectSettings = {
-        wakeUpCheckIn: { enabled: true, file: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
-        triggerRoutineStart: { enabled: true, file: '/driken5482-applause-cheer-236786.mp3' },
-        individualRoutineComplete: { enabled: true, file: '/tithuh-level-up-523624.mp3' },
-        routineGroupComplete: { enabled: true, file: '/dragon-studio-fireworks-02-419019.mp3' },
-        allGroupsComplete: { enabled: true, file: '/freesound_community-piglevelwin2mp3-14800.mp3' }
+        wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
+        individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
+        routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+        allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
       };
 
       const settings = localSoundSettings || {
@@ -6458,34 +6460,31 @@ export default function App() {
             soundSettings: localSoundSettings
           }));
           setIsSoundSettingsDirty(false);
-          setSoundSuccessMessage('효과음 설정이 저장되었습니다');
+          setSoundSuccessMessage('변경사항이 저장되었습니다');
         }
       };
 
       const AVAILABLE_SOUNDS = [
-        { name: 'Level Up (레벨업)', file: '/tithuh-level-up-523624.mp3' },
-        { name: 'Trumpets Fanfare (트럼펫 팡파르)', file: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
-        { name: 'Level Win (성공 축하음)', file: '/freesound_community-piglevelwin2mp3-14800.mp3' },
-        { name: 'Fireworks (불꽃놀이 효과음)', file: '/dragon-studio-fireworks-02-419019.mp3' },
-        { name: 'Applause Cheer (환호와 박수)', file: '/driken5482-applause-cheer-236786.mp3' },
+        { name: 'Level Up (레벨업)', file: '/sounds/tithuh-level-up-523624.mp3' },
+        { name: 'Trumpets Fanfare (트럼펫 팡파르)', file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        { name: 'Level Win (성공 축하음)', file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+        { name: 'Fireworks (불꽃놀이 효과음)', file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+        { name: 'Applause Cheer (환호와 박수)', file: '/sounds/driken5482-applause-cheer-236786.mp3' },
+        { name: 'Duck Quack (오리 꽥꽥)', file: '/sounds/freesound_community-075176_duck-quack-40345.mp3' },
+        { name: 'Dog Bark (강아지 멍멍)', file: '/sounds/dragon-studio-dog-bark-382732.mp3' },
         { name: 'Beep (비프 안내음)', file: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' }
       ];
 
       const soundItemsDetail: { key: keyof SoundEffectSettings; label: string; desc: string; defaultFile: string }[] = [
-        { key: 'wakeUpCheckIn', label: '1. 기상 체크인', desc: '아침 기상체크 완료 및 성공 시 재생되는 효과음입니다.', defaultFile: '/freesound_community-success-fanfare-trumpets-6185.mp3' },
-        { key: 'triggerRoutineStart', label: '2. 트리거 루틴 시작', desc: '하루의 첫 번째 예정된 루틴(트리거 루틴)을 시작할 시 재생됩니다.', defaultFile: '/driken5482-applause-cheer-236786.mp3' },
-        { key: 'individualRoutineComplete', label: '3. 개별 루틴 완료', desc: '각각의 개별 루틴을 완료하거나 완벽히 완료했을 때 재생됩니다.', defaultFile: '/tithuh-level-up-523624.mp3' },
-        { key: 'routineGroupComplete', label: '4. 루틴 그룹 완료', desc: '루틴 그룹(모든 하위 루틴)의 마지막 항목을 마쳐 그룹 전체를 끝냈을 때 재생됩니다.', defaultFile: '/dragon-studio-fireworks-02-419019.mp3' },
-        { key: 'allGroupsComplete', label: '5. 완벽한 하루 완료', desc: '오늘 예정된 모든 최고 난이도의 완벽한 루틴 그룹들을 완료했을 때 재생됩니다.', defaultFile: '/freesound_community-piglevelwin2mp3-14800.mp3' }
+        { key: 'wakeUpCheckIn', label: '1. 기상 체크인', desc: '아침 기상체크 완료 및 성공 시 재생되는 효과음입니다.', defaultFile: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        { key: 'triggerRoutineStart', label: '2. 트리거 루틴 시작', desc: '하루의 첫 번째 예정된 루틴(트리거 루틴)을 시작할 시 재생됩니다.', defaultFile: '/sounds/driken5482-applause-cheer-236786.mp3' },
+        { key: 'individualRoutineComplete', label: '3. 개별 루틴 완료', desc: '각각의 개별 루틴을 완료하거나 완벽히 완료했을 때 재생됩니다.', defaultFile: '/sounds/tithuh-level-up-523624.mp3' },
+        { key: 'routineGroupComplete', label: '4. 루틴 그룹 완료', desc: '루틴 그룹(모든 하위 루틴)의 마지막 항목을 마쳐 그룹 전체를 끝냈을 때 재생됩니다.', defaultFile: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+        { key: 'allGroupsComplete', label: '5. 완벽한 하루 완료', desc: '오늘 예정된 모든 최고 난이도의 완벽한 루틴 그룹들을 완료했을 때 재생됩니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
       ];
 
       return (
         <div className="flex flex-col h-full overflow-hidden">
-          {soundSuccessMessage && (
-            <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 p-3 rounded-xl text-center text-sm font-black mb-4 animate-in fade-in slide-in-from-top-2">
-              {soundSuccessMessage}
-            </div>
-          )}
 
           <div className="flex items-center gap-3 mb-4 flex-shrink-0">
             <button 
@@ -7651,7 +7650,7 @@ export default function App() {
             </div>
           </motion.div>
         )}
-        {(deletionMessage || naggingSuccessMessage) && (
+        {(deletionMessage || naggingSuccessMessage || soundSuccessMessage) && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -7664,7 +7663,7 @@ export default function App() {
               ) : (
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               )}
-              <span className="text-sm font-black tracking-tight">{deletionMessage || naggingSuccessMessage}</span>
+              <span className="text-sm font-black tracking-tight">{deletionMessage || naggingSuccessMessage || soundSuccessMessage}</span>
             </div>
           </motion.div>
         )}

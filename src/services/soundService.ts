@@ -16,8 +16,26 @@ class SoundService {
   private getFullPath(path: string): string {
     if (path.startsWith('http') || path.startsWith('data:')) return path;
     
+    // Auto-migrate legacy path to /sounds/ subfolder
+    let adjustedPath = path;
+    if (path.startsWith('/') && !path.startsWith('/sounds/')) {
+      const filename = path.slice(1);
+      const isSoundFile = [
+        'tithuh-level-up-523624.mp3',
+        'freesound_community-success-fanfare-trumpets-6185.mp3',
+        'freesound_community-piglevelwin2mp3-14800.mp3',
+        'dragon-studio-fireworks-02-419019.mp3',
+        'driken5482-applause-cheer-236786.mp3',
+        'freesound_community-075176_duck-quack-40345.mp3',
+        'dragon-studio-dog-bark-382732.mp3'
+      ].includes(filename);
+      if (isSoundFile) {
+        adjustedPath = `/sounds/${filename}`;
+      }
+    }
+    
     const baseUrl = (import.meta.env && import.meta.env.BASE_URL) || '/';
-    const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+    const normalizedPath = adjustedPath.startsWith('/') ? adjustedPath.slice(1) : adjustedPath;
     
     return baseUrl.endsWith('/') ? `${baseUrl}${normalizedPath}` : `${baseUrl}/${normalizedPath}`;
   }
