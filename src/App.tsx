@@ -404,7 +404,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
       const groupCompleteConfig = userData.soundSettings?.routineGroupComplete;
       const groupCompleteEnabled = groupCompleteConfig ? groupCompleteConfig.enabled : true;
       const groupCompleteFile = groupCompleteConfig?.file || '/sounds/dragon-studio-fireworks-02-419019.mp3';
-      soundService.play(groupCompleteFile, userData.isVoiceEnabled && groupCompleteEnabled);
+      soundService.play(groupCompleteFile, groupCompleteEnabled);
       const timer = setTimeout(() => {
         setAnimationStage('fireworks');
         
@@ -3735,19 +3735,22 @@ export default function App() {
     
     // 완벽한 하루 애니메이션 체크
     if (activeTab === 'home') {
-      const scheduledChunks = userData.routineChunks.filter(chunk => 
-        isChunkScheduledToday(chunk, effectiveDate, userData)
-      );
+      // 오늘이 실행요일이 아니거나 비활성 상태인 그룹(status === '비활성')은 제외하고 
+      // 실제 오늘 진행해야 하는 루틴 그룹만 필터링합니다.
+      const activeChunks = userData.routineChunks.filter(chunk => {
+        const status = getChunkStatus(chunk);
+        return status !== '비활성';
+      });
 
-      // 모든 오늘 예정된 그룹이 '완벽' 또는 '완료' 상태여야 함 (비활성일 포함하여 실패로 간주)
-      const isPerfect = scheduledChunks.length > 0 && scheduledChunks.every(chunk => {
+      // 오늘 완수해야 할 실제 루틴 그룹들이 있고, 모두 '완벽' 또는 '완료' 상태여야 함
+      const isPerfect = activeChunks.length > 0 && activeChunks.every(chunk => {
         const status = getChunkStatus(chunk);
         return status === '완벽' || status === '완료';
       });
 
       // 하루에 한 번만 실행되도록 체크
       if (isPerfect && userData.lastPerfectDayAnimationDate !== todayStr) {
-        const groups = scheduledChunks.map(c => ({
+        const groups = activeChunks.map(c => ({
           name: c.name,
           status: getChunkStatus(c)
         }));
@@ -3764,7 +3767,7 @@ export default function App() {
         return () => clearTimeout(timer);
       }
     }
-  }, [activeTab, settingsSubView.type, todayStr, userData.lastPerfectDayAnimationDate]);
+  }, [activeTab, settingsSubView.type, todayStr, userData.lastPerfectDayAnimationDate, userData.routineChunks, effectiveDate]);
 
   useEffect(() => {
     if (settingsSubView.type === 'detail') {
@@ -3826,7 +3829,7 @@ export default function App() {
   // --- [잔소리 기능 (Nagging Function) 로직] ---
   // 사용자가 설정한 문구와 시점에 맞춰 음성 안내를 실행합니다.
   useEffect(() => {
-    if (!globalActiveTask || !globalActiveTask.task || globalActiveTask.task.isPaused || !globalActiveTask.task.startTime || !userData.isVoiceEnabled) return;
+    if (!globalActiveTask || !globalActiveTask.task || globalActiveTask.task.isPaused || !globalActiveTask.task.startTime) return;
 
     const activeTask = globalActiveTask.task;
     const elapsed = calculateTaskDuration(activeTask, currentTime);
@@ -3846,10 +3849,13 @@ export default function App() {
           const triggerEnabled = triggerConfig ? triggerConfig.enabled : true;
           const triggerFile = triggerConfig?.file || '/driken5482-applause-cheer-236786.mp3';
           soundService.refresh(triggerFile);
-          soundService.play(triggerFile, userData.isVoiceEnabled && triggerEnabled);
+          soundService.play(triggerFile, triggerEnabled);
         }
       }
     }
+
+    // 잔소리(음성 안내)는 스피커 아이콘이 켜져 있을 때만(isVoiceEnabled === true) 재생됩니다.
+    if (!userData.isVoiceEnabled) return;
 
     if (!userData.naggingSettings) return;
 
@@ -4163,7 +4169,7 @@ export default function App() {
       if (chunk.isAlarmEnabled && chunk.startTime === nowTimeStr && chunk.lastAlarmTriggeredDate !== todayStr && !activeAlarmChunk) {
         if (isChunkScheduledToday(chunk, effectiveDate, userData)) {
           setActiveAlarmChunk(chunk);
-          soundService.play('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3', userData.isVoiceEnabled);
+          soundService.play('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
           
           setUserData(prev => ({
             ...prev,
@@ -4655,7 +4661,7 @@ export default function App() {
     const checkInEnabled = checkInConfig ? checkInConfig.enabled : true;
     const checkInFile = checkInConfig?.file || '/freesound_community-success-fanfare-trumpets-6185.mp3';
     soundService.refresh(checkInFile);
-    soundService.play(checkInFile, userData.isVoiceEnabled && checkInEnabled);
+    soundService.play(checkInFile, checkInEnabled);
     setTimeout(() => setShowCheckInCelebration(false), 3000);
 
     // Special confetti for check-in
@@ -5188,7 +5194,7 @@ export default function App() {
                 const routineEnabled = routineConfig ? routineConfig.enabled : true;
                 const routineFile = routineConfig?.file || '/tithuh-level-up-523624.mp3';
                 soundService.refresh(routineFile);
-                soundService.play(routineFile, userData.isVoiceEnabled && routineEnabled);
+                soundService.play(routineFile, routineEnabled);
                 if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
                   window.navigator.vibrate([200, 100, 200]);
                 }
@@ -5318,7 +5324,7 @@ export default function App() {
       const groupCompleteEnabled = groupCompleteConfig ? groupCompleteConfig.enabled : true;
       const groupCompleteFile = groupCompleteConfig?.file || '/sounds/dragon-studio-fireworks-02-419019.mp3';
       soundService.refresh(groupCompleteFile);
-      soundService.play(groupCompleteFile, userData.isVoiceEnabled && groupCompleteEnabled);
+      soundService.play(groupCompleteFile, groupCompleteEnabled);
     }
   };
 
@@ -7554,7 +7560,7 @@ export default function App() {
         isOpen={showPerfectDay}
         onClose={() => setShowPerfectDay(false)}
         completedGroups={perfectDayGroups}
-        isSoundEnabled={userData.isVoiceEnabled}
+        isSoundEnabled={true}
         soundSettings={userData.soundSettings}
       />
 
