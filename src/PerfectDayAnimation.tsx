@@ -50,7 +50,7 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
       
       // Play initial celebration sound
       soundService.unlock();
-      soundService.play(groupCompleteFile, isSoundEnabled && groupCompleteEnabled);
+      soundService.play(allGroupsCompleteFile, isSoundEnabled && allGroupsCompleteEnabled);
 
       // Stage timer for flowers (Slower transition)
       const flowerTimer = setTimeout(() => setStage('flowers'), 2000);

@@ -362,13 +362,14 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   useEffect(() => {
     if (isCompleted && animationStage === 'none' && !isAlreadyFinalized) {
       soundService.unlock();
-      soundService.refresh('/dragon-studio-fireworks-02-419019.mp3');
+      const groupCompleteFile = userData.soundSettings?.routineGroupComplete?.file || '/sounds/dragon-studio-fireworks-02-419019.mp3';
+      soundService.refresh(groupCompleteFile);
       const timer = setTimeout(() => {
         setAnimationStage('whiteout');
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [isCompleted, animationStage, isAlreadyFinalized]);
+  }, [isCompleted, animationStage, isAlreadyFinalized, userData.soundSettings?.routineGroupComplete]);
 
   useEffect(() => {
     if (animationStage === 'whiteout') {
@@ -400,10 +401,10 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   useEffect(() => {
     if (animationStage === 'title') {
-      const allGroupsCompleteConfig = userData.soundSettings?.allGroupsComplete;
-      const allGroupsCompleteEnabled = allGroupsCompleteConfig ? allGroupsCompleteConfig.enabled : true;
-      const allGroupsCompleteFile = allGroupsCompleteConfig?.file || '/dragon-studio-fireworks-02-419019.mp3';
-      soundService.play(allGroupsCompleteFile, userData.isVoiceEnabled && allGroupsCompleteEnabled);
+      const groupCompleteConfig = userData.soundSettings?.routineGroupComplete;
+      const groupCompleteEnabled = groupCompleteConfig ? groupCompleteConfig.enabled : true;
+      const groupCompleteFile = groupCompleteConfig?.file || '/sounds/dragon-studio-fireworks-02-419019.mp3';
+      soundService.play(groupCompleteFile, userData.isVoiceEnabled && groupCompleteEnabled);
       const timer = setTimeout(() => {
         setAnimationStage('fireworks');
         
@@ -3089,35 +3090,35 @@ export default function App() {
   const [selectedChunkId, setSelectedChunkId] = useState<string | null>(null);
   const [showCheckInCelebration, setShowCheckInCelebration] = useState(false);
   const [isForeground, setIsForeground] = useState(true);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
-    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
+    (typeof window !== 'undefined' && 'Notification' in window && window.Notification) ? window.Notification.permission : 'default'
   );
-
-  // Preload sounds and check notification permission
-  useEffect(() => {
-    soundService.preload('/sounds/tithuh-level-up-523624.mp3');
-    soundService.preload('/sounds/freesound_community-success-fanfare-trumpets-6185.mp3');
-    soundService.preload('/sounds/freesound_community-piglevelwin2mp3-14800.mp3');
-    soundService.preload('/sounds/dragon-studio-fireworks-02-419019.mp3');
-    soundService.preload('/sounds/driken5482-applause-cheer-236786.mp3');
-    soundService.preload('/sounds/freesound_community-075176_duck-quack-40345.mp3');
-    soundService.preload('/sounds/dragon-studio-dog-bark-382732.mp3');
-    soundService.preload('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-    
-    // Auto-request permission on mount if first time
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      notificationService.requestPermission().then(setNotificationPermission);
-    }
-  }, []);
-
-  // Update notification permission state if changed externally
-  useEffect(() => {
-    if (typeof Notification === 'undefined') return;
-    const checkPermission = () => {
-      if (Notification.permission !== notificationPermission) {
-        setNotificationPermission(Notification.permission);
-      }
-    };
+ 
+   // Preload sounds and check notification permission
+   useEffect(() => {
+     soundService.preload('/sounds/tithuh-level-up-523624.mp3');
+     soundService.preload('/sounds/freesound_community-success-fanfare-trumpets-6185.mp3');
+     soundService.preload('/sounds/freesound_community-piglevelwin2mp3-14800.mp3');
+     soundService.preload('/sounds/dragon-studio-fireworks-02-419019.mp3');
+     soundService.preload('/sounds/driken5482-applause-cheer-236786.mp3');
+     soundService.preload('/sounds/freesound_community-075176_duck-quack-40345.mp3');
+     soundService.preload('/sounds/dragon-studio-dog-bark-382732.mp3');
+     soundService.preload('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+     
+     // Auto-request permission on mount if first time
+     if (typeof window !== 'undefined' && 'Notification' in window && window.Notification && window.Notification.permission === 'default') {
+       notificationService.requestPermission().then(setNotificationPermission);
+     }
+   }, []);
+ 
+   // Update notification permission state if changed externally
+   useEffect(() => {
+     if (typeof window === 'undefined' || !('Notification' in window) || !window.Notification) return;
+     const checkPermission = () => {
+       if (window.Notification && window.Notification.permission !== notificationPermission) {
+         setNotificationPermission(window.Notification.permission);
+       }
+     };
     window.addEventListener('focus', checkPermission);
     return () => window.removeEventListener('focus', checkPermission);
   }, [notificationPermission]);
@@ -3693,7 +3694,7 @@ export default function App() {
   useEffect(() => {
     const checkAlarmsOnStart = async () => {
       const anyAlarmEnabled = userData.isWakeUpAlarmEnabled || userData.routineChunks.some(c => c.isAlarmEnabled);
-      if (anyAlarmEnabled && Notification.permission !== 'granted') {
+      if (anyAlarmEnabled && typeof window !== 'undefined' && 'Notification' in window && window.Notification && window.Notification.permission !== 'granted') {
         setShowPermissionGuide(true);
       }
     };
@@ -3702,7 +3703,7 @@ export default function App() {
 
   useEffect(() => {
     const handlePermissionChange = () => {
-      if (Notification.permission === 'denied') {
+      if (typeof window !== 'undefined' && 'Notification' in window && window.Notification && window.Notification.permission === 'denied') {
         const anyWakeUpAlarmEnabled = userData.isWakeUpAlarmEnabled;
         const anyChunkAlarmEnabled = userData.routineChunks.some(c => c.isAlarmEnabled);
         
@@ -5315,7 +5316,7 @@ export default function App() {
     if (newlyCompletedGroup) {
       const groupCompleteConfig = userData.soundSettings?.routineGroupComplete;
       const groupCompleteEnabled = groupCompleteConfig ? groupCompleteConfig.enabled : true;
-      const groupCompleteFile = groupCompleteConfig?.file || '/freesound_community-piglevelwin2mp3-14800.mp3';
+      const groupCompleteFile = groupCompleteConfig?.file || '/sounds/dragon-studio-fireworks-02-419019.mp3';
       soundService.refresh(groupCompleteFile);
       soundService.play(groupCompleteFile, userData.isVoiceEnabled && groupCompleteEnabled);
     }

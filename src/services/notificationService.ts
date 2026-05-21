@@ -10,12 +10,12 @@ class NotificationService {
    * Requests permission to show notifications.
    */
   async requestPermission(): Promise<NotificationPermission> {
-    if (!('Notification' in window)) {
+    if (typeof window === 'undefined' || !('Notification' in window) || !window.Notification) {
       console.warn('This browser does not support notifications.');
       return 'denied';
     }
 
-    const permission = await Notification.requestPermission();
+    const permission = await window.Notification.requestPermission();
     if (permission === 'granted') {
       console.log('Notification permission granted.');
       // Optional: Show a test notification
@@ -28,7 +28,8 @@ class NotificationService {
    * Shows a notification using the service worker (better for background).
    */
   async showNotification(title: string, options: NotificationOptions = {}) {
-    if (Notification.permission !== 'granted') return;
+    if (typeof window === 'undefined' || !('Notification' in window) || !window.Notification) return;
+    if (window.Notification.permission !== 'granted') return;
 
     // Use service worker to show notification if available
     const registration = await navigator.serviceWorker.ready;
@@ -40,7 +41,7 @@ class NotificationService {
       });
     } else {
       // Fallback to pure web notification
-      new Notification(title, options);
+      new window.Notification(title, options);
     }
   }
 
@@ -49,7 +50,8 @@ class NotificationService {
    * This should be called regularly (e.g., every minute).
    */
   checkAndTrigger(userData: UserData, currentTime: Date, todayStr: string) {
-    if (Notification.permission !== 'granted') return;
+    if (typeof window === 'undefined' || !('Notification' in window) || !window.Notification) return;
+    if (window.Notification.permission !== 'granted') return;
 
     const currentHM = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}`;
     const dayOfWeek = currentTime.getDay();
