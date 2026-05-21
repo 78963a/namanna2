@@ -117,6 +117,7 @@ export interface TaskHistoryEntry {
  */
 export interface NaggingSettings {
   startEnabled: boolean;
+  restartEnabled: boolean;
   startMessage: string;
   ongoingEnabled: boolean;
   ongoingInterval: number; // minutes

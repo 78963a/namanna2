@@ -46,7 +46,6 @@ import {
   Upload,
   Save,
   ArrowUpDown,
-  Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -3160,6 +3159,7 @@ export default function App() {
         isWakeUpAlarmEnabled: false,
         naggingSettings: {
           startEnabled: false,
+          restartEnabled: false,
           startMessage: 'task 시작합니다',
           ongoingEnabled: false,
           ongoingInterval: 1,
@@ -3243,6 +3243,7 @@ export default function App() {
     if (parsed.naggingSettings === undefined) {
       parsed.naggingSettings = {
         startEnabled: false,
+        restartEnabled: false,
         startMessage: 'task 시작합니다',
         ongoingEnabled: false,
         ongoingInterval: 1,
@@ -3264,6 +3265,9 @@ export default function App() {
 
     if (parsed.naggingSettings) {
       const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
+      if (parsed.naggingSettings.restartEnabled === undefined) {
+        parsed.naggingSettings.restartEnabled = false;
+      }
       if (parsed.naggingSettings.overTimeTargetTypes === undefined) {
         parsed.naggingSettings.overTimeTargetTypes = allTypes;
       }
@@ -3328,6 +3332,7 @@ export default function App() {
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const naggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastProcessedStartTimeRef = useRef<{ taskId: string; startTime: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [addGroupStep, setAddGroupStep] = useState(1);
@@ -3447,6 +3452,7 @@ export default function App() {
     if (settingsSubView.type === 'nagging') {
       const defaultSettings: NaggingSettings = {
         startEnabled: false,
+        restartEnabled: false,
         startMessage: 'task',
         ongoingEnabled: false,
         ongoingInterval: 1,
@@ -3770,23 +3776,41 @@ export default function App() {
     };
 
     // 2. 루틴 시작 알림 (0초 또는 재개 시점)
-    if (elapsed === 0 && settings.startEnabled) {
-      if (naggingTimeoutRef.current) {
-        clearTimeout(naggingTimeoutRef.current);
-      }
-      // 효과음이 끝날 때까지 기다렸다가 재생 (최대 3초)
-      const trySpeak = (retry = 0) => {
-        if (soundService.isPlaying && retry < 15) {
-          naggingTimeoutRef.current = setTimeout(() => {
-            naggingTimeoutRef.current = null;
-            trySpeak(retry + 1);
-          }, 200);
-        } else {
-          voiceService.speakNagging(`start-${activeTask.id}`, settings.startMessage || 'task 시작합니다', variables);
-          naggingTimeoutRef.current = null;
+    if (settings.startEnabled) {
+      const isNewSession = activeTask.startTime && (
+        !lastProcessedStartTimeRef.current || 
+        lastProcessedStartTimeRef.current.taskId !== activeTask.id || 
+        lastProcessedStartTimeRef.current.startTime !== activeTask.startTime
+      );
+
+      if (isNewSession) {
+        const isFreshStart = !activeTask.accumulatedDuration || activeTask.accumulatedDuration === 0;
+        const shouldAnnounce = isFreshStart || settings.restartEnabled;
+
+        if (shouldAnnounce) {
+          if (naggingTimeoutRef.current) {
+            clearTimeout(naggingTimeoutRef.current);
+          }
+          // 효과음이 끝날 때까지 기다렸다가 재생 (최대 3초)
+          const trySpeak = (retry = 0) => {
+            if (soundService.isPlaying && retry < 15) {
+              naggingTimeoutRef.current = setTimeout(() => {
+                naggingTimeoutRef.current = null;
+                trySpeak(retry + 1);
+              }, 200);
+            } else {
+              voiceService.speakNagging(`start-${activeTask.id}-${activeTask.startTime}`, settings.startMessage || 'task 시작합니다', variables);
+              naggingTimeoutRef.current = null;
+            }
+          };
+          trySpeak();
         }
-      };
-      trySpeak();
+
+        lastProcessedStartTimeRef.current = {
+          taskId: activeTask.id,
+          startTime: activeTask.startTime
+        };
+      }
     }
 
     // 3. 루틴 진행 중 알림 (정기 알림)
@@ -6254,6 +6278,7 @@ export default function App() {
     if (settingsSubView.type === 'nagging') {
       const defaultSettings: NaggingSettings = {
         startEnabled: false,
+        restartEnabled: false,
         startMessage: 'task',
         ongoingEnabled: false,
         ongoingInterval: 1,
@@ -6359,11 +6384,11 @@ export default function App() {
               </div>
             </div>
 
-            {/* 3-1. 루틴 시작 시 알림 */}
+            {/* 3-1. 루틴 시작시 알림 */}
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-1 pr-4">
-                  <h3 className="text-base font-black text-slate-800">루틴 시작 시 알림</h3>
+                  <h3 className="text-base font-black text-slate-800">루틴 시작시 알림</h3>
                   <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴을 시작할 때의 알림입니다.</p>
                 </div>
                 <button 
@@ -6374,7 +6399,19 @@ export default function App() {
                 </button>
               </div>
               {settings.startEnabled && (
-                <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-top-2">
+                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                    <div className="flex flex-col gap-1 pr-4">
+                      <h3 className="text-base font-black text-slate-800">루틴 재시작시 알림</h3>
+                      <p className="text-[11px] font-bold text-slate-400 leading-tight">일시정지 또는 완료한 루틴을 재시작할 때에도 같은 알림을 보냅니다.</p>
+                    </div>
+                    <button 
+                      onClick={() => updateNagging('restartEnabled', !settings.restartEnabled)}
+                      className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.restartEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.restartEnabled ? 'left-7' : 'left-1'}`} />
+                    </button>
+                  </div>
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
                     <input 
