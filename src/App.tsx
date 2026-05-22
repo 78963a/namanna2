@@ -489,12 +489,12 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     let isFinished = elapsed >= target;
 
     if (task.taskType === TaskType.TIME_ACCUMULATED) {
-      color = isFinished ? "bg-indigo-500" : "bg-rose-400";
+      color = isFinished ? "bg-sky-400" : "bg-violet-400";
     } else if (task.taskType === TaskType.TIME_LIMITED) {
-      color = isFinished ? "bg-rose-500" : "bg-sky-400";
+      color = isFinished ? "bg-violet-400" : "bg-sky-400";
     } else {
       // TIME_INDEPENDENT
-      color = isFinished ? "bg-indigo-500" : "bg-sky-400";
+      color = isFinished ? "bg-sky-400" : "bg-sky-400";
     }
     
     return { progress, color, isFinished };
@@ -1003,10 +1003,10 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                       
     {/* [디자인 수정 구역 10: 타이머 숫자 (00:00)] 
         - 진행중 색상: text-slate-900
-        - 일시정지 색상: text-slate-300
+        - 일시정지 색상: text-slate-400
         - 분 표시 색상: text-slate-400
     */}
-    <div className={`text-6xl font-black tabular-nums tracking-tighter ${(!activeTask.startTime || activeTask.isPaused) ? 'text-slate-300' : 'text-slate-900'}`}>
+    <div className={`text-6xl font-black tabular-nums tracking-tighter ${(!activeTask.startTime || activeTask.isPaused) ? 'text-slate-400' : 'text-slate-900'}`}>
       {formatDuration(getElapsed(activeTask))}
       <span className="text-xl text-slate-400 ml-2">/ {activeTask.targetDuration}분</span>
     </div>
@@ -1135,7 +1135,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     if (activeTask.taskType === TaskType.TIME_LIMITED) {
                       if (isFinished) {
                         btnText = "완료";
-                        btnColor = "bg-rose-500";
+                        btnColor = "bg-violet-600";
                       } else {
                         btnText = "완벽";
                         btnColor = "bg-indigo-600";
@@ -1146,7 +1146,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                         btnColor = "bg-indigo-600";
                       } else {
                         btnText = "완료";
-                        btnColor = "bg-rose-500";
+                        btnColor = "bg-violet-600";
                       }
                     } else {
                       // TIME_INDEPENDENT
@@ -6207,7 +6207,7 @@ export default function App() {
                 </div>
                 <h3 className="text-base font-black text-slate-900">효과음 설정</h3>
               </div>
-              <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">특정 루틴 상태나 기상 완료 시 재생되는 효과음을 설정하고 기호에 맞는 사운드를 선택합니다.</p>
+              <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">사용자의 활동에 따른 효과음을 선택할 수 있습니다. .</p>
               <div className="pt-1">
                 <button 
                   onClick={() => setSettingsSubView({ type: 'sound' })}
@@ -6480,11 +6480,11 @@ export default function App() {
       ];
 
       const soundItemsDetail: { key: keyof SoundEffectSettings; label: string; desc: string; defaultFile: string }[] = [
-        { key: 'wakeUpCheckIn', label: '1. 기상 체크인', desc: '아침 기상체크 완료 및 성공 시 재생되는 효과음입니다.', defaultFile: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
-        { key: 'triggerRoutineStart', label: '2. 트리거 루틴 시작', desc: '하루의 첫 번째 예정된 루틴(트리거 루틴)을 시작할 시 재생됩니다.', defaultFile: '/sounds/driken5482-applause-cheer-236786.mp3' },
-        { key: 'individualRoutineComplete', label: '3. 개별 루틴 완료', desc: '각각의 개별 루틴을 완료하거나 완벽히 완료했을 때 재생됩니다.', defaultFile: '/sounds/tithuh-level-up-523624.mp3' },
-        { key: 'routineGroupComplete', label: '4. 루틴 그룹 완료', desc: '루틴 그룹(모든 하위 루틴)의 마지막 항목을 마쳐 그룹 전체를 끝냈을 때 재생됩니다.', defaultFile: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-        { key: 'allGroupsComplete', label: '5. 완벽한 하루 완료', desc: '오늘 예정된 모든 최고 난이도의 완벽한 루틴 그룹들을 완료했을 때 재생됩니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
+        { key: 'wakeUpCheckIn', label: '1. 기상 체크인', desc: '아침 기상 체크인에 성공하면 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+        { key: 'triggerRoutineStart', label: '2. 트리거 루틴 시작', desc: '루틴 그룹을 처음 시작할 때 나오는 효과음입니다.', defaultFile: '/sounds/driken5482-applause-cheer-236786.mp3' },
+        { key: 'individualRoutineComplete', label: '3. 개별 루틴 완료', desc: '개별 루틴을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/tithuh-level-up-523624.mp3' },
+        { key: 'routineGroupComplete', label: '4. 루틴 그룹 완료', desc: '루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+        { key: 'allGroupsComplete', label: '5. 완벽한 하루 완료', desc: '오늘 예정된 모든 루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
       ];
 
       return (
@@ -6546,7 +6546,6 @@ export default function App() {
                             title="재생 테스트"
                           >
                             <Volume2 className="w-4 h-4" />
-                            <span>테스트</span>
                           </button>
                         </div>
                       </div>
