@@ -133,6 +133,7 @@ import { RoutineTitleLine } from './components/routine/RoutineTitleLine';
 import { MonthlyHeatmap } from './components/routine/MonthlyHeatmap';
 import { RoutineTitle } from './components/routine/RoutineTitle';
 import { PerfectDayAnimation } from './PerfectDayAnimation';
+import { TodayEndAnimation } from './TodayEndAnimation';
 // import { TaskInputSection } from './components/routine/TaskInputSection';
 // import { SortableTaskItem } from './components/routine/SortableTaskItem';
 // import { SortableChunkItem } from './components/routine/SortableChunkItem';
@@ -274,16 +275,16 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   };
   
   // 체크체크박스 아이콘 결정 로직
-  // 사용자의 모든 날짜별 캐릭터 누적 클릭 수를 합산하여 진화 단계를 결정합니다.
+  // 사용자가 설정한 리셋 시각에 하루 분량으로 리셋되도록 오늘 누른 횟수만을 기준으로 결정합니다.
   const checkCheckIconId = (() => {
-    // 모든 날짜의 캐릭터 클릭 횟수(dailyCheckCheckCounts)의 총합을 구합니다.
-    const totalCount = Object.values(userData.dailyCheckCheckCounts || {}).reduce((sum: number, val: any) => sum + (Number(val) || 0), 0) as number;
+    // 오늘의 캐릭터 클릭 횟수를 구합니다.
+    const totalCount = (userData.dailyCheckCheckCounts?.[todayStr]) || 0;
     const stages = phrases.checkCheckSettings.evolutionStages;
     
-    // 캐릭터가 다음 단계로 진화하기 위해 필요한 누적 누름 횟수 간격입니다. (현재 20회로 설정됨, 수정 가능)
+    // 캐릭터가 다음 단계로 진화하기 위해 필요한 누름 횟수 간격입니다. (현재 20회로 설정됨, 수정 가능)
     const clicksPerEvolution = 20;
     
-    // 누계 누름 횟수를 간격(20회)으로 나누어 현재 진화 단계의 인덱스를 계산합니다.
+    // 누름 횟수를 간격(20회)으로 나누어 현재 진화 단계의 인덱스를 계산합니다.
     const stageIndex = Math.floor(totalCount / clicksPerEvolution);
     
     // 단계 배열 인덱스를 벗어나지 않도록 하고, 최종 진화 단계를 구합니다.
@@ -3485,6 +3486,7 @@ export default function App() {
   const [isResetTimeDropdownOpen, setIsResetTimeDropdownOpen] = useState(false);
   const [swUpdateRegistration, setSwUpdateRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [showPerfectDay, setShowPerfectDay] = useState(false);
+  const [showTodayEnd, setShowTodayEnd] = useState(false);
   const [perfectDayGroups, setPerfectDayGroups] = useState<{ name: string, status: string }[]>([]);
   const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
@@ -3561,7 +3563,7 @@ export default function App() {
 
   // Prevent background scrolling when modals are open
   useEffect(() => {
-    const isModalOpen = isSettingsOpen || isAddGroupModalOpen || confirmModal.isOpen || !!activeAlarmChunk || showPerfectDay;
+    const isModalOpen = isSettingsOpen || isAddGroupModalOpen || confirmModal.isOpen || !!activeAlarmChunk || showPerfectDay || showTodayEnd;
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
       // Use overscroll-behavior to prevent pull-to-refresh and background scroll on touch devices
@@ -3574,7 +3576,7 @@ export default function App() {
       document.body.style.overflow = '';
       document.body.style.overscrollBehavior = '';
     };
-  }, [isSettingsOpen, isAddGroupModalOpen, confirmModal.isOpen, activeAlarmChunk, showPerfectDay]);
+  }, [isSettingsOpen, isAddGroupModalOpen, confirmModal.isOpen, activeAlarmChunk, showPerfectDay, showTodayEnd]);
 
   const [isAddRoutineDirty, setIsAddRoutineDirty] = useState(false);
   const [isEditRoutineDirty, setIsEditRoutineDirty] = useState(false);
@@ -3823,32 +3825,52 @@ export default function App() {
     return () => window.removeEventListener('focus', handlePermissionChange);
   }, [userData.isWakeUpAlarmEnabled, userData.routineChunks]);
 
+  const todayStr = useMemo(() => {
+    const [resetH] = userData.resetTime.split(':').map(Number);
+    const effDate = getEffectiveDateObject(currentTime, resetH);
+    return formatDate(effDate);
+  }, [currentTime, userData.resetTime]);
+
   const effectiveDate = useMemo(() => {
     const [resetH] = userData.resetTime.split(':').map(Number);
     return getEffectiveDateObject(currentTime, resetH);
-  }, [currentTime, userData.resetTime]);
+  }, [todayStr, userData.resetTime]);
 
-  const todayStr = useMemo(() => formatDate(effectiveDate), [effectiveDate]);
-
-  // [수정] 탭 변경 시 항상 최상단으로 스크롤 이동 및 완벽한 하루 체크
+  // [수정] 탭 변경이나 설정 하위 뷰 변경 시에만 최상단으로 스크롤 이동
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
-    
-    // 완벽한 하루 애니메이션 체크
+  }, [activeTab, settingsSubView.type]);
+
+  // 완벽한 하루 및 오늘 하루 마감(오늘 끝) 애니메이션 체크
+  useEffect(() => {
     if (activeTab === 'home') {
-      const scheduledChunks = userData.routineChunks.filter(chunk => 
-        isChunkScheduledToday(chunk, effectiveDate, userData)
+      const day = effectiveDate.getDay();
+      
+      // [1] 오늘이 실제 원래 수행요일인 루틴 그룹 목록들 구함 (오늘 수행요일이 아닌 그룹은 완료하지 않아도 무방)
+      const normallyScheduledChunks = userData.routineChunks.filter(chunk => 
+        chunk.scheduledDays.includes(day)
       );
 
-      // 모든 오늘 예정된 그룹이 '완벽' 또는 '완료' 상태여야 함 (비활성일 포함하여 실패로 간주)
-      const isPerfect = scheduledChunks.length > 0 && scheduledChunks.every(chunk => {
-        const status = getChunkStatus(chunk);
-        return status === '완벽' || status === '완료';
-      });
+      // [2] 오늘이 수행요일이든 아니든, 특정 루틴 그룹을 '오늘은 건너뛰기'(inactiveDates) 하면 완벽한 하루 대상에서 완전히 탈락합니다.
+      const anySkipped = userData.routineChunks.some(chunk => 
+        chunk.inactiveDates?.includes(todayStr)
+      );
+
+      // [3] 완벽한 하루가 발현되기 위한 최종 만족 조건 체크:
+      // - 오늘 원래 수행하기로 약속된 루틴 그룹이 최소 1개 이상 존재해야 하며,
+      // - 어떠한 루틴 그룹도 '오늘은 건너뛰기'를 하지 않은 깔끔한 활성 상태여야 하고,
+      // - 오늘 수행요일로 예정된 모든 그룹들의 최종 상태가 '완벽' 또는 '완료'이어야 함.
+      const isPerfect = 
+        normallyScheduledChunks.length > 0 && 
+        !anySkipped && 
+        normallyScheduledChunks.every(chunk => {
+          const status = getChunkStatus(chunk);
+          return status === '완벽' || status === '완료';
+        });
 
       // 하루에 한 번만 실행되도록 체크
       if (isPerfect && userData.lastPerfectDayAnimationDate !== todayStr) {
-        const groups = scheduledChunks.map(c => ({
+        const groups = normallyScheduledChunks.map(c => ({
           name: c.name,
           status: getChunkStatus(c)
         }));
@@ -3864,8 +3886,45 @@ export default function App() {
         }, 1500);
         return () => clearTimeout(timer);
       }
+
+      // [4] 오늘 끝 애니메이션 체크
+      // - 오늘 수행요일인 그룹이 최소한 1개 이상 있을 것 (normallyScheduledChunks.length > 0)
+      // - '오늘 수행요일이 아닌 그룹'의 존부나 수행여부는 무관함
+      // - 단 '오늘 수행요일이 아닌 그룹'을 활성화한 경우 이 그룹도 다른 그룹과 똑같이 완료하거나 다시 '오늘은 건너뛰기'를 눌러야 함
+      // - 오늘 활성화된 모든 그룹(isChunkScheduledToday가 true인 그룹)을 '완료/완벽' 처리하고, 비활성 그룹들은 '건너뛰기' 상태일 때 발현함.
+      // - '완벽한 하루' 조건이 참인 경우 완벽한 하루 애니메이션이 우선적으로 실행되므로 '오늘 끝'은 완벽한 하루가 아닐 때만 발현되도록 예외 처리함.
+      const isScheduledTodayExist = normallyScheduledChunks.length > 0;
+      
+      const activeChunks = userData.routineChunks.filter(chunk => 
+        isChunkScheduledToday(chunk, effectiveDate, userData)
+      );
+      
+      const allActiveCompleted = activeChunks.every(chunk => {
+        const status = getChunkStatus(chunk);
+        return status === '완벽' || status === '완료';
+      });
+
+      const isTodayEnd = isScheduledTodayExist && allActiveCompleted && !isPerfect;
+
+      // [하루에 한 번만 발현되기 위한 조건]
+      // 단, 현재는 실시간 화면 테스트 편의를 위해 충족 시 홈화면으로 돌아올 때마다(devTestMode = true 일 때) 작동하게 특별 구성합니다.
+      // 테스트 종료 시 devTestMode 용 변수를 false로 변경하면 완벽하게 하루에 딱 한 번만 발현됩니다!
+      const isTodayEndAlreadyShown = userData.lastTodayEndAnimationDate === todayStr;
+      const devTestModeForTodayEnd = true; // true = 무제한 테스트, false = 하루 한 번 실제 서비스 규칙 적용
+
+      if (isTodayEnd && (devTestModeForTodayEnd || !isTodayEndAlreadyShown)) {
+        const timer = setTimeout(() => {
+          setShowTodayEnd(true);
+          // 표시한 날짜를 기록 (하루 한 번 분기용 데이터 누적)
+          setUserData(prev => ({
+            ...prev,
+            lastTodayEndAnimationDate: todayStr
+          }));
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [activeTab, settingsSubView.type, todayStr, userData.lastPerfectDayAnimationDate]);
+  }, [activeTab, todayStr, userData.lastPerfectDayAnimationDate, userData.lastTodayEndAnimationDate, userData.routineChunks, effectiveDate]);
 
   useEffect(() => {
     if (settingsSubView.type === 'detail') {
@@ -4235,6 +4294,7 @@ export default function App() {
           ...intermediateState,
           lastResetDate: todayStr,
           routineGroupHistory: newGroupHistory,
+          availableCheckCheckCount: 5,
           routineChunks: prev.routineChunks.map(chunk => ({
             ...chunk,
             tasks: chunk.tasks.map(t => ({ 
@@ -6086,23 +6146,23 @@ export default function App() {
   };
 
   // 체크체크박스 아이콘 결정 로직 (클릭 횟수에 따라 진화)
-  // 사용자의 모든 날짜별 캐릭터 누적 클릭 수를 합산하여 진화 단계를 결정합니다.
+  // 사용자가 설정한 리셋 시각에 하루 분량으로 리셋되도록 오늘 누른 횟수만을 기준으로 결정합니다.
   const checkCheckIconId = useMemo(() => {
-    // 모든 날짜의 캐릭터 클릭 횟수(dailyCheckCheckCounts)의 총합을 구합니다.
-    const totalCount = Object.values(userData.dailyCheckCheckCounts || {}).reduce((sum: number, val: any) => sum + (Number(val) || 0), 0) as number;
+    // 오늘의 캐릭터 클릭 횟수를 구합니다.
+    const totalCount = (userData.dailyCheckCheckCounts?.[todayStr]) || 0;
     const stages = phrases.checkCheckSettings.evolutionStages;
     
-    // 캐릭터가 다음 단계로 진화하기 위해 필요한 누적 누름 횟수 간격입니다. (현재 20회로 설정됨, 수정 가능)
+    // 캐릭터가 다음 단계로 진화하기 위해 필요한 누점 누름 횟수 간격입니다. (현재 20회로 설정됨, 수정 가능)
     const clicksPerEvolution = 20;
     
-    // 누계 누름 횟수를 간격(20회)으로 나누어 현재 진화 단계의 인덱스를 계산합니다.
+    // 누름 횟수를 간격(20회)으로 나누어 현재 진화 단계의 인덱스를 계산합니다.
     const stageIndex = Math.floor(totalCount / clicksPerEvolution);
     
     // 단계 배열 인덱스를 벗어나지 않도록 하고, 최종 진화 단계를 구합니다.
     const currentStage = stages[Math.min(stageIndex, stages.length - 1)] || stages[0];
     
     return currentStage.iconId;
-  }, [userData.dailyCheckCheckCounts]);
+  }, [userData.dailyCheckCheckCounts, todayStr]);
 
   const challengeDays = useMemo(() => {
     const dates = Object.keys(userData.dailyCompletionRate || {}).filter(d => !!d);
@@ -7716,6 +7776,13 @@ export default function App() {
         isOpen={showPerfectDay}
         onClose={() => setShowPerfectDay(false)}
         completedGroups={perfectDayGroups}
+        isSoundEnabled={true}
+        soundSettings={userData.soundSettings}
+      />
+
+      <TodayEndAnimation
+        isOpen={showTodayEnd}
+        onClose={() => setShowTodayEnd(false)}
         isSoundEnabled={true}
         soundSettings={userData.soundSettings}
       />
