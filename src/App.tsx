@@ -274,17 +274,21 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   };
   
   // 체크체크박스 아이콘 결정 로직
+  // 사용자의 모든 날짜별 캐릭터 누적 클릭 수를 합산하여 진화 단계를 결정합니다.
   const checkCheckIconId = (() => {
-    const count = (userData.dailyCheckCheckCounts?.[todayStr]) || 0;
+    // 모든 날짜의 캐릭터 클릭 횟수(dailyCheckCheckCounts)의 총합을 구합니다.
+    const totalCount = Object.values(userData.dailyCheckCheckCounts || {}).reduce((sum: number, val: any) => sum + (Number(val) || 0), 0) as number;
     const stages = phrases.checkCheckSettings.evolutionStages;
-    let currentStage = stages[0];
-    for (const stage of stages) {
-      if (count >= stage.minClicks) {
-        currentStage = stage;
-      } else {
-        break;
-      }
-    }
+    
+    // 캐릭터가 다음 단계로 진화하기 위해 필요한 누적 누름 횟수 간격입니다. (현재 20회로 설정됨, 수정 가능)
+    const clicksPerEvolution = 20;
+    
+    // 누계 누름 횟수를 간격(20회)으로 나누어 현재 진화 단계의 인덱스를 계산합니다.
+    const stageIndex = Math.floor(totalCount / clicksPerEvolution);
+    
+    // 단계 배열 인덱스를 벗어나지 않도록 하고, 최종 진화 단계를 구합니다.
+    const currentStage = stages[Math.min(stageIndex, stages.length - 1)] || stages[0];
+    
     return currentStage.iconId;
   })();
 
@@ -623,14 +627,18 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     isCheckCheckAvailable 
                       ? 'bg-white border-indigo-200 cursor-pointer hover:border-indigo-400' 
                       : 'bg-white border-slate-100 cursor-default'
-                  }`}
+                   }`}
                 >
-                  <div className="flex-shrink-0 flex items-center justify-center w-9">
+                  <motion.div 
+                    whileTap={{ scaleX: 1.2, scaleY: 0.7 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                    className="flex-shrink-0 flex items-center justify-center w-9"
+                  >
                     <CheckCheckIcon iconId={checkCheckIconId} size={32} />
-                  </div>
+                  </motion.div>
                   <div className="flex-grow flex flex-col items-center justify-center ml-0.5 relative">
-                    <span className="text-[10px] font-black text-slate-500 leading-none">
-                      {(userData.dailyCheckCheckCounts?.[todayStr]) || 0}
+                    <span className="text-[10px] font-black text-slate-500 leading-none" title="누를 수 있는 횟수">
+                      {(userData.availableCheckCheckCount !== undefined ? userData.availableCheckCheckCount : 5)}
                     </span>
                     {isCheckCheckAvailable && (
                       <div className="mt-1">
@@ -2387,6 +2395,7 @@ const RoutineGroupFormView: React.FC<{
   const [routineAddedMessage, setRoutineAddedMessage] = useState<string | null>(null);
   const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
+  const [groupAddedMessage, setGroupAddedMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (routineAddedMessage) {
@@ -2401,6 +2410,13 @@ const RoutineGroupFormView: React.FC<{
       return () => clearTimeout(timer);
     }
   }, [deletionMessage]);
+
+  useEffect(() => {
+    if (groupAddedMessage) {
+      const timer = setTimeout(() => setGroupAddedMessage(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [groupAddedMessage]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -2625,7 +2641,7 @@ const RoutineGroupFormView: React.FC<{
     <div className="space-y-5 pb-20">
       {/* 루틴 추가/삭제/수정 알림 팝업 */}
       <AnimatePresence>
-        {(routineAddedMessage || deletionMessage || saveSuccessMessage) && (
+        {(routineAddedMessage || deletionMessage || saveSuccessMessage || groupAddedMessage) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2641,7 +2657,7 @@ const RoutineGroupFormView: React.FC<{
                 )}
               </div>
               <span className="text-sm font-black tracking-tight text-center">
-                {deletionMessage || routineAddedMessage || saveSuccessMessage}
+                {deletionMessage || routineAddedMessage || saveSuccessMessage || groupAddedMessage}
               </span>
             </div>
           </motion.div>
@@ -3104,10 +3120,12 @@ export default function App() {
      soundService.preload('/sounds/freesound_community-075176_duck-quack-40345.mp3');
      soundService.preload('/sounds/dragon-studio-dog-bark-382732.mp3');
      soundService.preload('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      soundService.preload('public/sounds/nikin-short-chick-sound-171389.mp3');
      
      // Auto-request permission on mount if first time
      if (typeof window !== 'undefined' && 'Notification' in window && window.Notification && window.Notification.permission === 'default') {
        notificationService.requestPermission().then(setNotificationPermission);
+       addAvailableCheckCheckPoints(1, '앱 켜기(마운트)');
      }
    }, []);
  
@@ -3156,6 +3174,7 @@ export default function App() {
         lastCheckCheckTime: Date.now(),
         lastResetDate: null,
         dailyCheckCheckCounts: {},
+        availableCheckCheckCount: 5,
         autoReorderInactiveGroups: true,
         autoReorderCompletedGroups: true,
         autoReorderInProgressGroups: true,
@@ -3247,6 +3266,7 @@ export default function App() {
     if (parsed.lastCheckCheckTime === undefined) parsed.lastCheckCheckTime = Date.now();
     if (parsed.lastResetDate === undefined) parsed.lastResetDate = null;
     if (parsed.dailyCheckCheckCounts === undefined) parsed.dailyCheckCheckCounts = {};
+    if (parsed.availableCheckCheckCount === undefined) parsed.availableCheckCheckCount = 5;
     if (parsed.dailyCheckIn === undefined) parsed.dailyCheckIn = {};
     
     if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
@@ -3371,6 +3391,23 @@ export default function App() {
   });
 
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // --- 캐릭터를 누를 수 있는 횟수를 가산해주는 함수 (Check-Check Opportunity Addition Engine) ---
+  // 사용자가 앱에 대해서 긍정적인 행동(앱 실행, 루틴 시작, 완벽/완료, 편집, 통계 확인 등)을 할 때마다
+  // 이 함수가 실행되어 'availableCheckCheckCount'를 올려줍니다.
+  // 상황별 가산량(points)을 원하시는 대로 직접 수정하실 수 있습니다. (예: +1을 +3 등으로 변경 가능)
+  const addAvailableCheckCheckPoints = (points: number = 1, actionName: string = "") => {
+    setUserData(prev => {
+      // 기기에 저장된 잔여 횟수가 없을 때는 기본값 5로 채색 후 누적 시작합니다.
+      const currentAvailable = prev.availableCheckCheckCount !== undefined ? prev.availableCheckCheckCount : 5;
+      console.log(`[체크체크 가산 엔진] 행동: "${actionName}", 가산포인트: +${points}, 기존 잔여: ${currentAvailable}, 새로운 잔여: ${currentAvailable + points}`);
+      return {
+        ...prev,
+        availableCheckCheckCount: currentAvailable + points
+      };
+    });
+  };
+
   const naggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastProcessedStartTimeRef = useRef<{ taskId: string; startTime: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -3405,6 +3442,14 @@ export default function App() {
   const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
   const [resetPauseModal, setResetPauseModal] = useState<{ isOpen: boolean, taskTitle: string | null }>({ isOpen: false, taskTitle: null });
+  const [groupAddedMessage, setGroupAddedMessage] = useState<string | null>(null);
+
+  // [가산 엔진 트리거]: 사용자가 통계 탭(페이지)을 확인할 때마다 기회 횟수 가산 (+1점)
+  useEffect(() => {
+    if (activeTab === 'stats') {
+      addAvailableCheckCheckPoints(1, '통계 확인(stats 탭)');
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (deletionMessage) {
@@ -3423,6 +3468,15 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [backupMessage]);
+
+  useEffect(() => {
+    if (groupAddedMessage) {
+      const timer = setTimeout(() => {
+        setGroupAddedMessage(null);
+      }, 2000); // 2 seconds for group added message
+      return () => clearTimeout(timer);
+    }
+  }, [groupAddedMessage]);
 
   // Initialize/Sync chunk time inputs when settings open or routineChunks change
   useEffect(() => {
@@ -4522,6 +4576,8 @@ export default function App() {
           ),
         };
       });
+      // [가산 엔진 트리거]: 루틴(태스크) 드래그앤드롭 재정렬 시 기회 횟수 가산 (+1점)
+      addAvailableCheckCheckPoints(1, '루틴(태스크) 재정렬');
     }
   };
 
@@ -4536,6 +4592,8 @@ export default function App() {
           routineChunks: arrayMove(prev.routineChunks, oldIndex, newIndex),
         };
       });
+      // [가산 엔진 트리거]: 루틴 그룹 드래그앤드롭 재정렬 시 기회 횟수 가산 (+1점)
+      addAvailableCheckCheckPoints(1, '루틴 그룹 재정렬');
     }
   };
 
@@ -4708,6 +4766,8 @@ export default function App() {
     voiceService.unlock();
     voiceService.stop();
     const now = new Date();
+    // [가산 엔진 트리거]: 루틴의 스킵 버튼 클릭 시 기회 횟수 가산 (+1점)
+    addAvailableCheckCheckPoints(1, '루틴(태스크) 스킵');
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
     setUserData(prev => {
@@ -4870,6 +4930,8 @@ export default function App() {
     voiceService.unlock();
     voiceService.stop();
     const now = new Date();
+    // [가산 엔진 트리거]: 루틴을 시작할 때마다 기회 횟수 가산 (+2점)
+    addAvailableCheckCheckPoints(2, '루틴(태스크) 시작');
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
       const autoStart = forceStart || prev.nextRoutineAutoStart;
@@ -5156,6 +5218,8 @@ export default function App() {
       if (isBecomingCompleted) {
         soundService.stop();
         voiceService.stop();
+        // [가산 엔진 트리거]: 루틴의 완료/완벽 마크 활성화 시 기회 횟수 가산 (+3점)
+        addAvailableCheckCheckPoints(3, '루틴(태스크) 완료/완벽');
       }
       
       const newChunks = prev.routineChunks.map(chunk => {
@@ -5343,6 +5407,8 @@ export default function App() {
           : chunk
       )
     }));
+    // [가산 엔진 트리거]: 루틴(태스크) 추가 시 기회 횟수 가산 (+1점)
+    addAvailableCheckCheckPoints(1, '루틴(태스크) 추가');
     setNewTaskText('');
     setNewTaskDuration(10);
     setNewTaskType(TaskType.TIME_LIMITED);
@@ -5361,6 +5427,8 @@ export default function App() {
             tasks: chunk.tasks.filter(t => t.id !== id)
           }))
         }));
+        // [가산 엔진 트리거]: 루틴(태스크) 삭제 시 기회 횟수 가산 (+1점)
+        addAvailableCheckCheckPoints(1, '루틴(태스크) 삭제');
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
     });
@@ -5379,6 +5447,8 @@ export default function App() {
         )
       }))
     }));
+    // [가산 엔진 트리거]: 루틴(태스크) 수정 시 기회 횟수 가산 (+1점)
+    addAvailableCheckCheckPoints(1, '루틴(태스크) 수정');
     setEditingTaskId(null);
   };
 
@@ -5430,6 +5500,9 @@ export default function App() {
       ...prev,
       routineChunks: [...prev.routineChunks, newChunk]
     }));
+    // [가산 엔진 트리거]: 루틴 그룹(청크) 새로 생성/추가 시 기회 횟수 가산 (+1점)
+    addAvailableCheckCheckPoints(1, '루틴 그룹 추가');
+    setGroupAddedMessage(`'${name}' 루틴 그룹이 추가되었습니다`);
     setNewChunkName('');
     setNewGroupPurpose('');
     setIsAddRoutineDirty(false);
@@ -5448,6 +5521,8 @@ export default function App() {
           ...prev,
           routineChunks: prev.routineChunks.filter(c => c.id !== id)
         }));
+        // [가산 엔진 트리거]: 루틴 그룹 삭제 시 기회 횟수 가산 (+1점)
+        addAvailableCheckCheckPoints(1, '루틴 그룹 삭제');
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setDeletionMessage(`'${chunk?.name}' 그룹이 삭제되었습니다`);
         if (onSuccess) onSuccess();
@@ -5536,6 +5611,8 @@ export default function App() {
       ...prev,
       routineChunks: prev.routineChunks.map(c => c.id === id ? { ...c, ...updatedData } : c)
     }));
+    // [가산 엔진 트리거]: 루틴 그룹(청크) 정보 전체 업데이트 시 기회 횟수 가산 (+1점)
+    addAvailableCheckCheckPoints(1, '루틴 그룹 전체 저장');
     setIsEditRoutineDirty(false);
   };
 
@@ -5552,6 +5629,8 @@ export default function App() {
             chunk.id === id ? { ...chunk, name: newName, purpose: newPurpose } : chunk
           )
         }));
+        // [가산 엔진 트리거]: 루틴 그룹 기본 정보 저장 시 기회 횟수 가산 (+1점)
+        addAvailableCheckCheckPoints(1, '루틴 그룹 정보 변경');
         setEditingChunkId(null);
         setEditingChunkName('');
         setEditingChunkPurpose('');
@@ -5567,6 +5646,8 @@ export default function App() {
         c.id === chunkId ? { ...c, scheduleType: type, scheduledDays: days, frequency: freq } : c
       )
     }));
+    // [가산 엔진 트리거]: 루틴 그룹 스케줄/주기 요일 수정 시 기회 횟수 가산 (+1점)
+    addAvailableCheckCheckPoints(1, '루틴 그룹 스케줄 수정');
   };
 
   const applyChunkTimes = (chunkId: string, s: string, d: number, e: string, alarm?: boolean) => {
@@ -5613,6 +5694,8 @@ export default function App() {
         )
       };
     });
+    // [가산 엔진 트리거]: 루틴 그룹 시간 설정 적용 시 기회 횟수 가산 (+1점)
+    addAvailableCheckCheckPoints(1, '그룹 목표시간 설정');
   };
 
   const updateUserName = (name: string) => {
@@ -5694,21 +5777,33 @@ export default function App() {
   };
 
   // --- 체크체크박스 (Check-Check Box) 로직 ---
-  // 이 부분에서 체크체크박스의 클릭 가능 간격과 상태를 관리합니다.
+  // 이 부분에서 캐릭터(체크체크)를 누를 수 있는 조건과 기회 횟수를 차감하고 관리합니다.
   const checkCheckDiff = currentTime.getTime() - userData.lastCheckCheckTime;
-  
-  // 클릭 가능 시간 간격 설정 (기본 30분). phrases.json의 intervalMinutes 값을 변경하여 조절할 수 있습니다.
-  // 예: 1초로 바꾸려면 phrases.json에서 intervalMinutes를 1/60으로 하거나, 아래 식을 직접 수정하세요.
   const checkCheckIntervalMs = phrases.checkCheckSettings.intervalMinutes * 60 * 1000;
-  const isCheckCheckAvailable = checkCheckDiff >= checkCheckIntervalMs;
+  
+  // [기존 설정]: 일정한 시간이 지나야 작동하도록 하는 클릭 제한 로직은 주석 처리합니다.
+  // const isCheckCheckAvailable = checkCheckDiff >= checkCheckIntervalMs;
+
+  // [수정 설정]: 캐릭터를 누를 수 있는 기회(availableCheckCheckCount)가 0보다 클 때만 한정하여 누르기가 작동합니다.
+  const isCheckCheckAvailable = (userData.availableCheckCheckCount !== undefined ? userData.availableCheckCheckCount : 5) > 0;
 
   const handleCheckCheckClick = () => {
     soundService.unlock();
+    
+    // 캐릭터를 누를 수 있을 때(잔여 기회 횟수가 1 이상일 때)만 작동을 허용합니다.
     if (isCheckCheckAvailable) {
+      // 지정해주신 효과음('public/sounds/nikin-short-chick-sound-171389.mp3')을 재생합니다.
+      soundService.play('public/sounds/nikin-short-chick-sound-171389.mp3');
+      
       setUserData(prev => {
         const currentCheckCount = (prev.dailyCheckCheckCounts?.[todayStr]) || 0;
+        const currentAvailable = prev.availableCheckCheckCount !== undefined ? prev.availableCheckCheckCount : 5;
+        
         return {
           ...prev,
+          // 실시간으로 누를 수 있는 기회 횟수를 1 차감합니다 (0 미만으로 내려가지 않도록 유도).
+          availableCheckCheckCount: Math.max(0, currentAvailable - 1),
+          // 기존 기능(캐릭터 누적 성장용 데일리 카운트)은 그대로 유지하여 캐릭터 애니메이션과의 호환성을 해치지 않습니다.
           dailyCheckCheckCounts: {
             ...prev.dailyCheckCheckCounts,
             [todayStr]: currentCheckCount + 1
@@ -5934,19 +6029,23 @@ export default function App() {
   };
 
   // 체크체크박스 아이콘 결정 로직 (클릭 횟수에 따라 진화)
+  // 사용자의 모든 날짜별 캐릭터 누적 클릭 수를 합산하여 진화 단계를 결정합니다.
   const checkCheckIconId = useMemo(() => {
-    const count = (userData.dailyCheckCheckCounts?.[todayStr]) || 0;
+    // 모든 날짜의 캐릭터 클릭 횟수(dailyCheckCheckCounts)의 총합을 구합니다.
+    const totalCount = Object.values(userData.dailyCheckCheckCounts || {}).reduce((sum: number, val: any) => sum + (Number(val) || 0), 0) as number;
     const stages = phrases.checkCheckSettings.evolutionStages;
-    let currentStage = stages[0];
-    for (const stage of stages) {
-      if (count >= stage.minClicks) {
-        currentStage = stage;
-      } else {
-        break;
-      }
-    }
+    
+    // 캐릭터가 다음 단계로 진화하기 위해 필요한 누적 누름 횟수 간격입니다. (현재 20회로 설정됨, 수정 가능)
+    const clicksPerEvolution = 20;
+    
+    // 누계 누름 횟수를 간격(20회)으로 나누어 현재 진화 단계의 인덱스를 계산합니다.
+    const stageIndex = Math.floor(totalCount / clicksPerEvolution);
+    
+    // 단계 배열 인덱스를 벗어나지 않도록 하고, 최종 진화 단계를 구합니다.
+    const currentStage = stages[Math.min(stageIndex, stages.length - 1)] || stages[0];
+    
     return currentStage.iconId;
-  }, [userData.dailyCheckCheckCounts, todayStr]);
+  }, [userData.dailyCheckCheckCounts]);
 
   const challengeDays = useMemo(() => {
     const dates = Object.keys(userData.dailyCompletionRate || {}).filter(d => !!d);
@@ -7243,12 +7342,16 @@ export default function App() {
                   : 'bg-white border-slate-100 cursor-default'
               }`}
             >
-              <div className="flex-shrink-0 flex items-center justify-center w-9">
+              <motion.div 
+                whileTap={{ scaleX: 1.2, scaleY: 0.7 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                className="flex-shrink-0 flex items-center justify-center w-9"
+              >
                 <CheckCheckIcon iconId={checkCheckIconId} size={32} />
-              </div>
+              </motion.div>
               <div className="flex-grow flex flex-col items-center justify-center ml-0.5 relative">
-                <span className="text-[10px] font-black text-slate-500 leading-none">
-                  {(userData.dailyCheckCheckCounts?.[todayStr]) || 0}
+                <span className="text-[10px] font-black text-slate-500 leading-none" title="누를 수 있는 횟수">
+                  {(userData.availableCheckCheckCount !== undefined ? userData.availableCheckCheckCount : 5)}
                 </span>
                 {isCheckCheckAvailable && (
                   <div className="mt-1">
@@ -7667,6 +7770,23 @@ export default function App() {
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               )}
               <span className="text-sm font-black tracking-tight">{deletionMessage || naggingSuccessMessage || soundSuccessMessage}</span>
+            </div>
+          </motion.div>
+        )}
+        {groupAddedMessage && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 10 }}
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10000] pointer-events-none"
+          >
+            <div className="bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-[20px] shadow-2xl flex flex-col items-center gap-2 border border-white/10 min-w-[200px] border-emerald-500/30 animate-in fade-in zoom-in-95 duration-200">
+              <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center mb-1">
+                <Check className="w-6 h-6 text-emerald-400" />
+              </div>
+              <span className="text-sm font-black tracking-tight text-center">
+                {groupAddedMessage}
+              </span>
             </div>
           </motion.div>
         )}

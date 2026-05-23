@@ -171,6 +171,7 @@ export interface UserData {
   lastCheckCheckTime: number; // timestamp
   lastResetDate: string | null;
   dailyCheckCheckCounts: { [date: string]: number };
+  availableCheckCheckCount?: number; // 캐릭터를 누를 수 있는 잔여 횟수
   dailyCheckIn?: { [date: string]: string }; // date -> time
   dailyTargetWakeUpTime?: { [date: string]: string }; // date -> target time (HH:mm)
   inactiveChunks?: { [date: string]: string[] }; // date -> chunkId[]

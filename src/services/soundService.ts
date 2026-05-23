@@ -16,10 +16,20 @@ class SoundService {
   private getFullPath(path: string): string {
     if (path.startsWith('http') || path.startsWith('data:')) return path;
     
-    // Auto-migrate legacy path to /sounds/ subfolder
+    // Convert public/... paths to standard root-relative absolute paths
     let adjustedPath = path;
-    if (path.startsWith('/') && !path.startsWith('/sounds/')) {
-      const filename = path.slice(1);
+    if (path.startsWith('public/')) {
+      adjustedPath = '/' + path.slice(7);
+    }
+
+    // Fallback bbo-yong.mp3 to high-quality online bubble-pop sound
+    if (adjustedPath.includes('bbo-yong.mp3')) {
+      return 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
+    }
+    
+    // Auto-migrate legacy path to /sounds/ subfolder
+    if (adjustedPath.startsWith('/') && !adjustedPath.startsWith('/sounds/')) {
+      const filename = adjustedPath.slice(1);
       const isSoundFile = [
         'tithuh-level-up-523624.mp3',
         'freesound_community-success-fanfare-trumpets-6185.mp3',
@@ -27,7 +37,8 @@ class SoundService {
         'dragon-studio-fireworks-02-419019.mp3',
         'driken5482-applause-cheer-236786.mp3',
         'freesound_community-075176_duck-quack-40345.mp3',
-        'dragon-studio-dog-bark-382732.mp3'
+        'dragon-studio-dog-bark-382732.mp3',
+        'bbo-yong.mp3'
       ].includes(filename);
       if (isSoundFile) {
         adjustedPath = `/sounds/${filename}`;
@@ -142,6 +153,13 @@ class SoundService {
       const onErr = (e: any) => {
         console.error('Sound Service: Audio error event:', e, 'Path:', fullPath);
         onEnd();
+        
+        // Handle fallback for nikin-short-chick-sound if it fails to load/play (e.g. if 0 bytes)
+        if (fullPath.includes('nikin-short-chick-sound')) {
+          console.log('Sound Service: Playing fallback high-quality chick-like sound');
+          const fallbackAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+          fallbackAudio.play().catch(() => {});
+        }
       };
       
       audio.addEventListener('ended', onEnd);
