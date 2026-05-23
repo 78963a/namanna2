@@ -172,6 +172,7 @@ export interface UserData {
   lastResetDate: string | null;
   dailyCheckCheckCounts: { [date: string]: number };
   availableCheckCheckCount?: number; // 캐릭터를 누를 수 있는 잔여 횟수
+  lastCheckInBonusCount?: number; // 체크인 후 29분 경과 보너스를 지급한 누적 횟수 (중복 수령 방지)
   dailyCheckIn?: { [date: string]: string }; // date -> time
   dailyTargetWakeUpTime?: { [date: string]: string }; // date -> target time (HH:mm)
   inactiveChunks?: { [date: string]: string[] }; // date -> chunkId[]

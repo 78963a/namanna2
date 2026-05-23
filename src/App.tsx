@@ -3175,6 +3175,7 @@ export default function App() {
         lastResetDate: null,
         dailyCheckCheckCounts: {},
         availableCheckCheckCount: 5,
+        lastCheckInBonusCount: 0,
         autoReorderInactiveGroups: true,
         autoReorderCompletedGroups: true,
         autoReorderInProgressGroups: true,
@@ -3267,6 +3268,7 @@ export default function App() {
     if (parsed.lastResetDate === undefined) parsed.lastResetDate = null;
     if (parsed.dailyCheckCheckCounts === undefined) parsed.dailyCheckCheckCounts = {};
     if (parsed.availableCheckCheckCount === undefined) parsed.availableCheckCheckCount = 5;
+    if (parsed.lastCheckInBonusCount === undefined) parsed.lastCheckInBonusCount = 0;
     if (parsed.dailyCheckIn === undefined) parsed.dailyCheckIn = {};
     
     if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
@@ -3407,6 +3409,51 @@ export default function App() {
       };
     });
   };
+
+  // --- 체크인 후 매 29분이 경과할 때마다 캐릭터 누르기 횟수 2회씩 자동 수혈하는 엔진 ---
+  useEffect(() => {
+    const todayStr = formatDate(currentTime);
+    const checkInTimeStr = userData.dailyCheckIn?.[todayStr];
+    
+    // 사용자가 체크인 혹은 지각 등록을 완료해 기록이 있는 경우에만 29분 감지 엔진을 가동합니다.
+    if (checkInTimeStr) {
+      const [h, m, s] = checkInTimeStr.split(':').map(Number);
+      
+      // 체크인한 시각을 대조용 Date 인스턴스로 복원합니다.
+      const checkInTime = new Date(currentTime);
+      checkInTime.setHours(h, m, s || 0, 0);
+      
+      // 기상 체크인 시점으로부터 흐른 밀리초 차이값을 계산합니다.
+      const diffMs = currentTime.getTime() - checkInTime.getTime();
+      
+      // 하루 지났거나 미래 시간과의 혼합 방지를 위해 경과 시간이 0보다 클 때만 계산을 타도록 유도합니다.
+      if (diffMs > 0) {
+        const minutesPassed = Math.floor(diffMs / (1000 * 60));
+        
+        // 29분당 지급해야 할 총 기대 누적 지급 횟수량 (29분마다 1회차, 2회차...)
+        const expectedBonusCount = Math.floor(minutesPassed / 29);
+        const currentSavedPaidCount = userData.lastCheckInBonusCount || 0;
+        
+        // 새로운 29분 인계 지점을 돌파하면서 누적 보너스 지급 회수 기댓값이 늘어났을 때만 실제 가산 연산을 수행합니다.
+        if (expectedBonusCount > currentSavedPaidCount) {
+          const countDiff = expectedBonusCount - currentSavedPaidCount;
+          const pointsEarned = countDiff * 2; // 29분당 2회씩 가산
+          
+          setUserData(prev => {
+            const currentAvailable = prev.availableCheckCheckCount !== undefined ? prev.availableCheckCheckCount : 5;
+            return {
+              ...prev,
+              availableCheckCheckCount: currentAvailable + pointsEarned,
+              // 보너스 수령 카운트를 동기화하여 중복 처리가 일어나지 않도록 잠금 처리합니다.
+              lastCheckInBonusCount: expectedBonusCount
+            };
+          });
+          
+          console.log(`[체크인 경과 보너스 엔진] 체크인 등록(${checkInTimeStr}) 시점으로부터 ${minutesPassed}분 경과 감지! 누적 ${expectedBonusCount}회차 보너스로 캐릭터 누르기 횟수가 +${pointsEarned}회 자동 추가되었습니다.`);
+        }
+      }
+    }
+  }, [currentTime, userData.dailyCheckIn, userData.lastCheckInBonusCount]);
 
   const naggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastProcessedStartTimeRef = useRef<{ taskId: string; startTime: string } | null>(null);
@@ -4692,10 +4739,15 @@ export default function App() {
     const checkInTimeStr = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
 
     setUserData(prev => {
+      // 기상 체크인 성공 시 캐릭터 누르기 기회 8회 가산!
+      const currentAvailable = prev.availableCheckCheckCount !== undefined ? prev.availableCheckCheckCount : 5;
+      
       const next = {
         ...prev,
         streak: newStreak,
         lastCheckInDate: todayStr,
+        availableCheckCheckCount: currentAvailable + 8, // 8회 추가
+        lastCheckInBonusCount: 0, // 오늘 체크인 가산 횟수 초기화 (체크인 시점 기준 29분 추적용)
         dailyCheckIn: {
           ...(prev.dailyCheckIn || {}),
           [todayStr]: checkInTimeStr
@@ -4741,9 +4793,14 @@ export default function App() {
     voiceService.unlock();
     const checkInTimeStr = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
     setUserData(prev => {
+      // 지각 체크인 성공 시 캐릭터 누르기 기회 3회 가산!
+      const currentAvailable = prev.availableCheckCheckCount !== undefined ? prev.availableCheckCheckCount : 5;
+      
       const next = {
         ...prev,
         lastCheckInDate: todayStr,
+        availableCheckCheckCount: currentAvailable + 3, // 3회 추가
+        lastCheckInBonusCount: 0, // 오늘 체크인 가산 횟수 초기화 (체크인 시점 기준 29분 추적용)
         dailyCheckIn: {
           ...(prev.dailyCheckIn || {}),
           [todayStr]: checkInTimeStr
