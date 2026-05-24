@@ -46,6 +46,7 @@ import {
   Upload,
   Save,
   ArrowUpDown,
+  Globe,
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -3910,7 +3911,7 @@ export default function App() {
       // 단, 현재는 실시간 화면 테스트 편의를 위해 충족 시 홈화면으로 돌아올 때마다(devTestMode = true 일 때) 작동하게 특별 구성합니다.
       // 테스트 종료 시 devTestMode 용 변수를 false로 변경하면 완벽하게 하루에 딱 한 번만 발현됩니다!
       const isTodayEndAlreadyShown = userData.lastTodayEndAnimationDate === todayStr;
-      const devTestModeForTodayEnd = true; // true = 무제한 테스트, false = 하루 한 번 실제 서비스 규칙 적용
+      const devTestModeForTodayEnd = false; // true = 무제한 테스트, false = 하루 한 번 실제 서비스 규칙 적용
 
       if (isTodayEnd && (devTestModeForTodayEnd || !isTodayEndAlreadyShown)) {
         const timer = setTimeout(() => {
@@ -6427,7 +6428,7 @@ export default function App() {
               <div className="pt-1">
                 <button 
                   onClick={() => setSettingsSubView({ type: 'sound' })}
-                  className="w-full flex items-center justify-between p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-300 transition-all text-left active:translate-y-[2px] active:border-b-[2px] group"
+                  className="w-full flex items-center justify-between p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
                 >
                   <span className="text-sm font-black text-slate-700">효과음 설정하기</span>
                   <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
@@ -6446,7 +6447,7 @@ export default function App() {
               <div className="pt-1">
                 <button 
                   onClick={() => setSettingsSubView({ type: 'nagging' })}
-                  className="w-full flex items-center justify-between p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] group"
+                  className="w-full flex items-center justify-between p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
                 >
                   <span className="text-sm font-black text-slate-700">잔소리 설정하기</span>
                   <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
@@ -6503,7 +6504,7 @@ export default function App() {
               <div className="space-y-4 pt-1">
                 <button 
                   onClick={handleExportData}
-                  className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px] group"
+                  className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
                 >
                   <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-indigo-200 transition-colors">
                     <Download className="w-5 h-5 text-indigo-600" />
@@ -6514,7 +6515,7 @@ export default function App() {
                   </div>
                 </button>
 
-                <div className="relative">
+                <div className="relative group/restore">
                   <input 
                     type="file" 
                     accept=".json" 
@@ -6522,9 +6523,9 @@ export default function App() {
                     className="absolute inset-0 opacity-0 cursor-pointer z-10"
                   />
                   <button 
-                    className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px] group"
+                    className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl group-hover/restore:bg-indigo-50 group-hover/restore:border-indigo-200 transition-all text-left group-active/restore:translate-y-[2px] group-active/restore:border-b-[2px] group-active/restore:pb-[18px] mb-[2px] group pointer-events-none"
                   >
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-indigo-200 transition-colors">
+                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover/restore:border-indigo-200 transition-colors">
                       <Upload className="w-5 h-5 text-indigo-600" />
                     </div>
                     <div className="flex flex-col">
@@ -6547,7 +6548,7 @@ export default function App() {
               <div className="space-y-4 pt-1">
                 <button 
                   onClick={resetWakeUpHistory}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                 >
                   <span className="text-sm font-black text-slate-700 mb-1">기상시각 기록 삭제</span>
                   <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 기상시각 기록을 모두 삭제합니다.</span>
@@ -6555,7 +6556,7 @@ export default function App() {
 
                 <button 
                   onClick={resetUsageHistory}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                 >
                   <span className="text-sm font-black text-slate-700 mb-1">사용 시간 기록 삭제</span>
                   <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 사용 시간 바 기록을 모두 삭제합니다.</span>
@@ -6563,7 +6564,7 @@ export default function App() {
 
                 <button 
                   onClick={resetRoutineHistory}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                 >
                   <span className="text-sm font-black text-slate-700 mb-1">루틴 기록 삭제</span>
                   <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 모든 루틴 기록을 삭제합니다. 루틴 설정은 유지합니다.</span>
@@ -6571,7 +6572,7 @@ export default function App() {
 
                 <button 
                   onClick={resetAllRoutines}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                 >
                   <span className="text-sm font-black text-slate-700 mb-1">루틴 전체 삭제</span>
                   <span className="text-[11px] font-bold text-slate-400 leading-tight">지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다.</span>
@@ -6590,7 +6591,7 @@ export default function App() {
               <div className="space-y-4 pt-1">
                 <button 
                   onClick={() => {}}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-300 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                 >
                   <span className="text-sm font-black text-slate-700 mb-1">개인정보 처리방침 Privacy Policy</span>
                   <span className="text-[11px] font-bold text-slate-400 leading-tight">앱의 개인정보 취급 방침을 확인합니다.</span>
@@ -6598,15 +6599,31 @@ export default function App() {
 
                 <button 
                   onClick={() => {}}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-300 transition-all text-left active:translate-y-[2px] active:border-b-[2px] mb-[2px]"
+                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                 >
                   <span className="text-sm font-black text-slate-700 mb-1">지원 Support URL</span>
                   <span className="text-[11px] font-bold text-slate-400 leading-tight">도움말 확인 및 개발자에게 문의합니다.</span>
                 </button>
               </div>
             </div>
+
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Globe className="w-5 h-5 text-slate-600" />
+                </div>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">언어 설정 변경 (Langage)</h3>
+              </div>
+              <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">현재는 한국어만 지원합니다. 추후 더 많은 언어가 추가될 예정입니다.</p>
+              <div className="space-y-4 pt-1">
+                  <div className="flex flex-col items-start text-left pr-4">
+                  <div className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 font-extrabold text-xs rounded-lg whitespace-nowrap shadow-inner">
+                    한국어 (KO)
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          
           {mode === 'modal' && (
             <button 
               onClick={handleSettingsClose}
