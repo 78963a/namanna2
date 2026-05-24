@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { RoutineChunk, UserData } from '../../types';
 import { getJosa, getEffectiveDate } from '../../utils';
 import phrases from '../../phrases.json';
+import { FONT_SETTINGS } from '../../App';
 
 interface RoutineTitleProps {
   chunk: RoutineChunk;
@@ -29,7 +30,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
   todayStr
 }) => {
   const processedMessage = useMemo(() => {
-    const context = isExecutionTitle ? (phrases.settings as any).execution_settings : phrases.settings;
+    const context = isExecutionTitle ? FONT_SETTINGS.execution_settings : FONT_SETTINGS.settings;
     
     const getStyledHtml = (key: string, value: string) => {
       const style = (context as any)[`${key}_style`];
@@ -199,7 +200,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     return message;
   }, [chunk.id, chunk.name, chunk.purpose, chunk.scheduledDays, chunk.startType, chunk.startTime, chunk.situation, chunk.tasks, status, selectedPhrase, userName, startTime, endTime, isExecutionTitle, todayStr, userData?.resetTime]);
 
-  const context = isExecutionTitle ? (phrases.settings as any).execution_settings : phrases.settings;
+  const context = isExecutionTitle ? FONT_SETTINGS.execution_settings : FONT_SETTINGS.settings;
   const baseStyle = (context as any).base_style;
 
   return (

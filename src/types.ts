@@ -183,6 +183,7 @@ export interface UserData {
   dailyResetHour?: number; // 0-4
   firstRoutineAutoStart?: boolean;
   nextRoutineAutoStart?: boolean;
+  nextRoutineGroupGuidanceEnabled?: boolean;
   userName?: string;
   forcedActiveTasks?: { [date: string]: { [taskId: string]: boolean } };
   dailyActivityLog?: { [date: string]: number[] };

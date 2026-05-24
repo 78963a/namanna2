@@ -47,6 +47,7 @@ import {
   Save,
   ArrowUpDown,
   Globe,
+  ArrowBigRightDash,
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -3096,8 +3097,89 @@ const RoutineGroupFormView: React.FC<{
   );
 };
 
+interface NextRoutineSuggestion {
+  chunkId: string;
+  chunkName: string;
+  taskId: string;
+  taskName: string;
+}
+
+// [디자인 수정 구역: 홈화면 및 실행화면 글꼴설정]
+export const FONT_SETTINGS = {
+  // 홈화면의 글꼴설정
+  settings: {
+    base_style: {
+      color: "#000000",
+      fontSize: "1rem",
+      fontWeight: "100"
+    },
+    purpose_style: {
+      color: "#F2C427",
+      fontSize: "1.5rem",
+      fontWeight: "bold"
+    },
+    title_style: {
+      color: "#622AEF",
+      fontSize: "2rem",
+      fontWeight: "bold"
+    },
+    days_style: {
+      color: "#000000",
+      fontSize: "1.1rem"
+    },
+    start_info_style: {
+      color: "#1c9c64",
+      fontSize: "1.1rem"
+    },
+    duration_style: {
+      color: " #544C73",
+      fontSize: "1.1rem"
+    },
+    totalTargetDuration_style: {
+      color: "#1c9c64",
+      fontSize: "1.1rem"
+    },
+    userName_style: {
+      color: "#736533",
+      fontSize: "1.3rem",
+      fontWeight: "bold"
+    },
+    startTime_style: {
+      color: "#1c9c64",
+      fontSize: "1.1rem"
+    },
+    endTime_style: {
+      color: "#1c9c64",
+      fontSize: "1.1rem"
+    },
+    triggerTask_style: {
+      color: "#277EF2",
+      fontSize: "1.1rem",
+      fontWeight: "bold"
+    }
+  },
+  // 실행화면의 글꼴설정
+  execution_settings: {
+    base_style: { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+    purpose_style: { "color": "#ffffff", "fontSize": "1.5rem", "fontWeight": "bold" },
+    title_style: { "color": "#ffffff", "fontSize": "1.8rem", "fontWeight": "bold" },
+    days_style: { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+    start_info_style: { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+    duration_style: { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+    totalTargetDuration_style: { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+    userName_style: { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+    startTime_style: { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+    endTime_style: { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" },
+    triggerTask_style: { "color": "#ffffff", "fontSize": "1rem", "fontWeight": "bold" }
+  }
+};
+
 export default function App() {
   // --- State ---
+  const [justFinishedGroupId, setJustFinishedGroupId] = useState<string | null>(null);
+  const [showNextRoutineModal, setShowNextRoutineModal] = useState(false);
+  const [modalSuggestions, setModalSuggestions] = useState<NextRoutineSuggestion[]>([]);
+
   useEffect(() => {
     (window as any).__showPermissionGuide = () => setShowPermissionGuide(true);
     return () => { delete (window as any).__showPermissionGuide; };
@@ -3183,6 +3265,7 @@ export default function App() {
         autoReorderInProgressGroups: true,
         firstRoutineAutoStart: false,
         nextRoutineAutoStart: false,
+        nextRoutineGroupGuidanceEnabled: false,
         userName: '나',
         isVoiceEnabled: true,
         isWakeUpAlarmEnabled: false,
@@ -3275,6 +3358,7 @@ export default function App() {
     
     if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
     if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
+    if (parsed.nextRoutineGroupGuidanceEnabled === undefined) parsed.nextRoutineGroupGuidanceEnabled = false;
     if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
     if (parsed.isWakeUpAlarmEnabled === undefined) parsed.isWakeUpAlarmEnabled = false;
     
@@ -4781,6 +4865,54 @@ export default function App() {
     }
   };
 
+  const handleSelectNextSuggestedTask = (chunkId: string, taskId: string) => {
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    soundService.unlock();
+    voiceService.unlock();
+
+    const chunk = userData.routineChunks.find(c => c.id === chunkId);
+    if (!chunk) return;
+
+    setUserData(prev => {
+      const next = {
+        ...prev,
+        routineChunks: prev.routineChunks.map(c => {
+          if (c.id === chunkId) {
+            return {
+              ...c,
+              activeTaskId: taskId,
+              tasks: c.tasks.map(task => {
+                if (task.id === taskId) {
+                  return { ...task, status: TaskStatus.IN_PROGRESS };
+                }
+                if (task.status === TaskStatus.IN_PROGRESS) {
+                  return { ...task, status: TaskStatus.NOT_STARTED };
+                }
+                return task;
+              })
+            };
+          }
+          return c;
+        })
+      };
+      return syncHistory(next, todayStr);
+    });
+
+    setSelectedChunkId(chunkId);
+    setActiveTab('execution');
+    setShowNextRoutineModal(false);
+
+    const taskObj = chunk.tasks.find(t => t.id === taskId);
+    const isTaskUnstarted = taskObj && !taskObj.startTime && !taskObj.isPaused;
+    if (userData.firstRoutineAutoStart && isTaskUnstarted) {
+      setTimeout(() => {
+        startTask(taskId, true, true);
+      }, 50);
+    }
+  };
+
   const handleCheckIn = () => {
     soundService.unlock();
     voiceService.unlock();
@@ -5712,6 +5844,78 @@ export default function App() {
     return '미실행';
   };
 
+  const getNextSuggestedTaskForRunningGroup = (chunk: RoutineChunk, scheduledTasks: Task[]) => {
+    // 1. Paused tasks
+    const paused = scheduledTasks.filter(t => t.isPaused && !t.completed && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.PERFECT && t.status !== TaskStatus.SKIP);
+    if (paused.length > 0) return paused[0];
+
+    // 2. Unstarted tasks
+    const unstarted = scheduledTasks.filter(t => (!t.status || t.status === TaskStatus.NOT_STARTED) && !t.completed && !t.startTime);
+    if (unstarted.length > 0) return unstarted[0];
+
+    // 3. Skipped / later tasks
+    const skipped = scheduledTasks.filter(t => t.status === TaskStatus.SKIP || t.laterTimestamp || t.status === TaskStatus.LATER);
+    if (skipped.length > 0) return skipped[0];
+
+    return scheduledTasks[0] || chunk.tasks[0];
+  };
+
+  useEffect(() => {
+    if (activeTab === 'home' && justFinishedGroupId && userData.nextRoutineGroupGuidanceEnabled) {
+      const playable = userData.routineChunks.filter(chunk => {
+        if (chunk.id === justFinishedGroupId) return false;
+        const status = getChunkStatus(chunk);
+        return status === '미실행' || status === '실행중';
+      });
+
+      if (playable.length > 0) {
+        const runningGroups = playable.filter(chunk => getChunkStatus(chunk) === '실행중');
+        const unstartedGroups = playable.filter(chunk => getChunkStatus(chunk) === '미실행');
+
+        const suggestions: NextRoutineSuggestion[] = [];
+
+        // 1. Up to 2 running groups
+        const selectedRunning = runningGroups.slice(0, 2);
+        selectedRunning.forEach(chunk => {
+          const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
+          const suggestedTask = getNextSuggestedTaskForRunningGroup(chunk, scheduledTasks);
+          if (suggestedTask) {
+            suggestions.push({
+              chunkId: chunk.id,
+              chunkName: chunk.name,
+              taskId: suggestedTask.id,
+              taskName: suggestedTask.text
+            });
+          }
+        });
+
+        // 2. Up to 3 unstarted groups to fill the rest of the 5-slots limit
+        const remainingSlots = 5 - suggestions.length;
+        if (remainingSlots > 0 && unstartedGroups.length > 0) {
+          const selectedUnstarted = unstartedGroups.slice(0, Math.min(3, remainingSlots));
+          selectedUnstarted.forEach(chunk => {
+            const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
+            const suggestedTask = scheduledTasks[0] || chunk.tasks[0];
+            if (suggestedTask) {
+              suggestions.push({
+                chunkId: chunk.id,
+                chunkName: chunk.name,
+                taskId: suggestedTask.id,
+                taskName: suggestedTask.text
+              });
+            }
+          });
+        }
+
+        if (suggestions.length > 0) {
+          setModalSuggestions(suggestions);
+          setShowNextRoutineModal(true);
+        }
+      }
+      setJustFinishedGroupId(null);
+    }
+  }, [activeTab, justFinishedGroupId, userData.nextRoutineGroupGuidanceEnabled]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case '비활성': return <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-[10px]">비활성</span>;
@@ -6414,6 +6618,29 @@ export default function App() {
                     <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderInactiveGroups ? 'left-7' : 'left-1'}`} />
                   </button>
                 </div>
+              </div>
+            </div>
+
+            {/* 다음 루틴 그룹 진행 설정 */}
+            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <ArrowBigRightDash className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">다음 루틴 그룹 진행</h3>
+              </div>
+              
+              <div className="pt-1 flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                  <h4 className="text-sm font-black text-slate-700">다음 루틴 그룹 진행</h4>
+                  <p className="text-[11px] font-bold text-slate-400 leading-tight">하나의 루틴 그룹을 완료하면 다음 루틴 그룹 진행을 안내합니다.</p>
+                </div>
+                <button 
+                  onClick={() => setUserData(prev => ({ ...prev, nextRoutineGroupGuidanceEnabled: !prev.nextRoutineGroupGuidanceEnabled }))}
+                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.nextRoutineGroupGuidanceEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.nextRoutineGroupGuidanceEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
               </div>
             </div>
 
@@ -7569,7 +7796,18 @@ export default function App() {
                 userData={userData}
                 setUserData={setUserData}
                 selectedChunkId={selectedChunkId}
-                setActiveTab={setActiveTab}
+                setActiveTab={(tab) => {
+                  if (tab === 'home' && selectedChunkId) {
+                    const chunk = userData.routineChunks.find(c => c.id === selectedChunkId);
+                    if (chunk) {
+                      const status = getChunkStatus(chunk);
+                      if (status === '완벽' || status === '완료') {
+                        setJustFinishedGroupId(selectedChunkId);
+                      }
+                    }
+                  }
+                  setActiveTab(tab);
+                }}
                 currentTime={currentTime}
                 effectiveDate={effectiveDate}
                 todayStr={todayStr}
@@ -7803,6 +8041,66 @@ export default function App() {
         isSoundEnabled={true}
         soundSettings={userData.soundSettings}
       />
+
+      {/* 다음 루틴 그룹 진행 안내 모달 */}
+      <AnimatePresence>
+        {showNextRoutineModal && modalSuggestions.length > 0 && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setShowNextRoutineModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-indigo-50 relative z-10 flex flex-col items-center select-none"
+            >
+              <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-5 shrink-0">
+                <ArrowBigRightDash className="w-10 h-10 text-indigo-600" />
+              </div>
+              
+              <h3 className="text-xl md:text-2xl font-black text-slate-800 text-center mb-1 tracking-tight">
+                이어서 다음 루틴으로 나아갑니다
+              </h3>
+              <p className="text-xs font-bold text-slate-400 text-center mb-5 leading-relaxed">
+                수행 가능한 다음 루틴이 남아있습니다. 바로 시작해보세요!
+              </p>
+
+              <div className="w-full space-y-2.5 mb-5 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
+                {modalSuggestions.map((sug) => (
+                  <button
+                    key={`${sug.chunkId}-${sug.taskId}`}
+                    onClick={() => handleSelectNextSuggestedTask(sug.chunkId, sug.taskId)}
+                    className="w-full p-4 bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/40 rounded-2xl text-left transition-all active:scale-[0.98] group flex items-center justify-between"
+                  >
+                    <div className="flex flex-col gap-0.5 text-left">
+                      <span className="text-[10px] font-black tracking-wider text-indigo-500 uppercase">
+                        {sug.chunkName}
+                      </span>
+                      <span className="text-sm font-black text-slate-700 group-hover:text-indigo-800 transition-colors">
+                        {sug.taskName}
+                      </span>
+                    </div>
+                    <ArrowBigRightDash className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-all group-hover:translate-x-1" />
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowNextRoutineModal(false)}
+                className="w-full p-4 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-2xl text-center text-sm font-black text-slate-500 transition-all active:scale-[0.98]"
+              >
+                지금 안함
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* 알림 권한 안내 모달 */}
       <AnimatePresence>
