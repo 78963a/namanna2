@@ -149,7 +149,9 @@ export interface SoundEffectSettings {
   triggerRoutineStart: SoundEffectItem;
   individualRoutineComplete: SoundEffectItem;
   routineGroupComplete: SoundEffectItem;
+  todayEnd?: SoundEffectItem;
   allGroupsComplete: SoundEffectItem;
+  chickSound?: SoundEffectItem;
 }
 
 /**

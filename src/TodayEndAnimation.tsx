@@ -21,13 +21,13 @@ export const TodayEndAnimation: React.FC<TodayEndAnimationProps> = ({
   useEffect(() => {
     if (isOpen) {
       // 재생할 효과음 설정 가져오기 (디폴트는 Level Win)
-      const allGroupsCompleteConfig = soundSettings?.allGroupsComplete;
-      const allGroupsCompleteEnabled = allGroupsCompleteConfig ? allGroupsCompleteConfig.enabled : true;
-      const allGroupsCompleteFile = allGroupsCompleteConfig?.file || '/sounds/freesound_community-piglevelwin2mp3-14800.mp3';
+      const todayEndConfig = soundSettings?.todayEnd;
+      const todayEndEnabled = todayEndConfig ? todayEndConfig.enabled : true;
+      const todayEndFile = todayEndConfig?.file || '/sounds/freesound_community-piglevelwin2mp3-14800.mp3';
 
-      soundService.refresh(allGroupsCompleteFile);
+      soundService.refresh(todayEndFile);
       soundService.unlock();
-      soundService.play(allGroupsCompleteFile, isSoundEnabled && allGroupsCompleteEnabled);
+      soundService.play(todayEndFile, isSoundEnabled && todayEndEnabled);
 
       // 콘페티(폭죽 효과) 실행
       triggerCelebrationConfetti();

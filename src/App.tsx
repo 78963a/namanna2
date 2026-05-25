@@ -9,6 +9,8 @@ import {
   Moon,
   CheckCircle2, 
   Circle, 
+  CircleDot,
+  PauseCircle,
   ArrowRightCircle,
   User,
   Settings, 
@@ -3176,16 +3178,35 @@ export const FONT_SETTINGS = {
 
 export default function App() {
   // --- State ---
+  const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
   const [justFinishedGroupId, setJustFinishedGroupId] = useState<string | null>(null);
   const [showNextRoutineModal, setShowNextRoutineModal] = useState(false);
   const [modalSuggestions, setModalSuggestions] = useState<NextRoutineSuggestion[]>([]);
+  const [isWaitingForNextRoutineModal, setIsWaitingForNextRoutineModal] = useState(false);
+  const nextRoutineTimerRef = useRef<any>(null);
+
+  // Clean up nextroutine timer on unmount
+  useEffect(() => {
+    return () => {
+      if (nextRoutineTimerRef.current) {
+        clearTimeout(nextRoutineTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Clear nextroutine timer and waiting state if leaving the home tab
+  useEffect(() => {
+    if (activeTab !== 'home' && nextRoutineTimerRef.current) {
+      clearTimeout(nextRoutineTimerRef.current);
+      nextRoutineTimerRef.current = null;
+      setIsWaitingForNextRoutineModal(false);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     (window as any).__showPermissionGuide = () => setShowPermissionGuide(true);
     return () => { delete (window as any).__showPermissionGuide; };
   }, []);
-
-  const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
 
   const [selectedChunkId, setSelectedChunkId] = useState<string | null>(null);
   const [showCheckInCelebration, setShowCheckInCelebration] = useState(false);
@@ -3294,7 +3315,9 @@ export default function App() {
           triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
           individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
           routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-          allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
+          todayEnd: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+          allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+          chickSound: { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
         }
       };
     }
@@ -3410,7 +3433,9 @@ export default function App() {
         triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
         individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
         routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-        allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
+        todayEnd: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+        allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+        chickSound: { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
       };
     } else {
       if (parsed.soundSettings.wakeUpCheckIn === undefined) {
@@ -3425,8 +3450,14 @@ export default function App() {
       if (parsed.soundSettings.routineGroupComplete === undefined) {
         parsed.soundSettings.routineGroupComplete = { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' };
       }
+      if (parsed.soundSettings.todayEnd === undefined) {
+        parsed.soundSettings.todayEnd = { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' };
+      }
       if (parsed.soundSettings.allGroupsComplete === undefined) {
         parsed.soundSettings.allGroupsComplete = { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' };
+      }
+      if (parsed.soundSettings.chickSound === undefined) {
+        parsed.soundSettings.chickSound = { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' };
       }
     }
     
@@ -5908,8 +5939,14 @@ export default function App() {
         }
 
         if (suggestions.length > 0) {
-          setModalSuggestions(suggestions);
-          setShowNextRoutineModal(true);
+          setIsWaitingForNextRoutineModal(true);
+          if (nextRoutineTimerRef.current) clearTimeout(nextRoutineTimerRef.current);
+          nextRoutineTimerRef.current = setTimeout(() => {
+            setModalSuggestions(suggestions);
+            setShowNextRoutineModal(true);
+            setIsWaitingForNextRoutineModal(false);
+            nextRoutineTimerRef.current = null;
+          }, 2000);
         }
       }
       setJustFinishedGroupId(null);
@@ -6114,8 +6151,11 @@ export default function App() {
     
     // 캐릭터를 누를 수 있을 때(잔여 기회 횟수가 1 이상일 때)만 작동을 허용합니다.
     if (isCheckCheckAvailable) {
-      // 지정해주신 효과음('public/sounds/nikin-short-chick-sound-171389.mp3')을 재생합니다.
-      soundService.play('public/sounds/nikin-short-chick-sound-171389.mp3');
+      // 지정해주신 효과음('public/sounds/nikin-short-chick-sound-171389.mp3')을 재생합니다. (다만, 효과음 설정에서 병아리 소리가 비활성화되어 있는 경우는 재생하지 않습니다)
+      const isChickSoundEnabled = userData.soundSettings?.chickSound?.enabled !== false;
+      if (isChickSoundEnabled) {
+        soundService.play('public/sounds/nikin-short-chick-sound-171389.mp3');
+      }
       
       setUserData(prev => {
         const currentCheckCount = (prev.dailyCheckCheckCounts?.[todayStr]) || 0;
@@ -6869,7 +6909,9 @@ export default function App() {
         triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
         individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
         routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-        allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
+        todayEnd: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+        allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+        chickSound: { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
       };
 
       const settings = localSoundSettings || {
@@ -6918,14 +6960,12 @@ export default function App() {
       };
 
       const handleSoundSave = () => {
-        if (localSoundSettings) {
-          setUserData(prev => ({
-            ...prev,
-            soundSettings: localSoundSettings
-          }));
-          setIsSoundSettingsDirty(false);
-          setSoundSuccessMessage('변경사항이 저장되었습니다');
-        }
+        setUserData(prev => ({
+          ...prev,
+          soundSettings: settings
+        }));
+        setIsSoundSettingsDirty(false);
+        setSoundSuccessMessage('변경사항이 저장되었습니다');
       };
 
       const AVAILABLE_SOUNDS = [
@@ -6944,7 +6984,9 @@ export default function App() {
         { key: 'triggerRoutineStart', label: '2. 트리거 루틴 시작', desc: '루틴 그룹을 처음 시작할 때 나오는 효과음입니다.', defaultFile: '/sounds/driken5482-applause-cheer-236786.mp3' },
         { key: 'individualRoutineComplete', label: '3. 개별 루틴 완료', desc: '개별 루틴을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/tithuh-level-up-523624.mp3' },
         { key: 'routineGroupComplete', label: '4. 루틴 그룹 완료', desc: '루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-        { key: 'allGroupsComplete', label: '5. 완벽한 하루 완료', desc: '오늘 예정된 모든 루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' }
+        { key: 'todayEnd', label: '5. 오늘 끝', desc: '오늘의 루틴을 마치면(모든 루틴그룹이 완료/비활성/건너뜀 상태이면서 완벽한 하루는 아님) 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+        { key: 'allGroupsComplete', label: '6. 완벽한 하루 완료', desc: '오늘 예정된 모든 루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+        { key: 'chickSound', label: '7. 병아리 소리', desc: '홈 아이콘줄의 체크체크 캐릭터를 누를 때 나는 소리입니다.', defaultFile: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
       ];
 
       return (
@@ -6980,7 +7022,7 @@ export default function App() {
                     </button>
                   </div>
 
-                  {item.enabled && (
+                  {item.enabled && key !== 'chickSound' && (
                     <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-top-2">
                       <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-bold text-slate-500 ml-1">사운드 선택</label>
@@ -8072,23 +8114,68 @@ export default function App() {
               </p>
 
               <div className="w-full space-y-2.5 mb-5 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
-                {modalSuggestions.map((sug) => (
-                  <button
-                    key={`${sug.chunkId}-${sug.taskId}`}
-                    onClick={() => handleSelectNextSuggestedTask(sug.chunkId, sug.taskId)}
-                    className="w-full p-4 bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/40 rounded-2xl text-left transition-all active:scale-[0.98] group flex items-center justify-between"
-                  >
-                    <div className="flex flex-col gap-0.5 text-left">
-                      <span className="text-[10px] font-black tracking-wider text-indigo-500 uppercase">
-                        {sug.chunkName}
-                      </span>
-                      <span className="text-sm font-black text-slate-700 group-hover:text-indigo-800 transition-colors">
-                        {sug.taskName}
-                      </span>
-                    </div>
-                    <ArrowBigRightDash className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-all group-hover:translate-x-1" />
-                  </button>
-                ))}
+                {modalSuggestions.map((sug) => {
+                  const chunk = userData.routineChunks.find(c => c.id === sug.chunkId);
+                  const task = chunk?.tasks.find(t => t.id === sug.taskId);
+                  const isTrigger = chunk && chunk.tasks.length > 0 && chunk.tasks[0].id === sug.taskId;
+
+                  // Render appropriate check performance/status circle
+                  let iconElement;
+                  if (task) {
+                    if (task.status === TaskStatus.PERFECT) {
+                      iconElement = (
+                        <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
+                          <Circle className="absolute inset-0 w-full h-full text-indigo-600" />
+                          <CheckCheck className="absolute w-[60%] h-[60%] text-indigo-600" strokeWidth={3} />
+                        </div>
+                      );
+                    } else if (task.completed || task.status === TaskStatus.COMPLETED) {
+                      iconElement = (
+                        <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
+                          <Circle className="absolute inset-0 w-full h-full text-indigo-600" />
+                          <Check className="w-3 h-3 text-indigo-600" strokeWidth={3} />
+                        </div>
+                      );
+                    } else if (task.status === TaskStatus.SKIP) {
+                      iconElement = <CircleMinus className="w-5 h-5 text-[#CC9900] shrink-0" />;
+                    } else if (task.isPaused) {
+                      iconElement = <PauseCircle className="w-5 h-5 text-amber-500 shrink-0" />;
+                    } else if (task.startTime) {
+                      iconElement = <CircleDot className="w-5 h-5 text-indigo-500 animate-pulse shrink-0" />;
+                    } else {
+                      // Normal not started
+                      iconElement = <Circle className="w-5 h-5 text-slate-300 shrink-0" />;
+                    }
+                  } else {
+                    iconElement = <Circle className="w-5 h-5 text-slate-300 shrink-0" />;
+                  }
+
+                  const taskIndex = chunk ? chunk.tasks.findIndex(t => t.id === sug.taskId) : -1;
+                  const sequenceNumber = taskIndex !== -1 ? taskIndex + 1 : '';
+
+                  return (
+                    <button
+                      key={`${sug.chunkId}-${sug.taskId}`}
+                      onClick={() => handleSelectNextSuggestedTask(sug.chunkId, sug.taskId)}
+                      className="w-full p-4 bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/40 rounded-2xl text-left transition-all active:scale-[0.98] group flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 text-left overflow-hidden">
+                        <div className="flex-shrink-0">
+                          {iconElement}
+                        </div>
+                        <div className="flex flex-col gap-0.5 text-left overflow-hidden">
+                          <span className="text-[10px] font-black tracking-wider text-indigo-500 uppercase truncate">
+                            {sug.chunkName}
+                          </span>
+                          <span className="text-sm font-black text-slate-700 group-hover:text-indigo-800 transition-colors truncate">
+                            {sequenceNumber}. {isTrigger && "⚡"}{sug.taskName}
+                          </span>
+                        </div>
+                      </div>
+                      <ArrowBigRightDash className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-all group-hover:translate-x-1 shrink-0" />
+                    </button>
+                  );
+                })}
               </div>
 
               <button
@@ -8298,6 +8385,11 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* 2초간 화면 상호작용 및 메뉴 클릭 방지 오버레이 */}
+      {isWaitingForNextRoutineModal && (
+        <div className="fixed inset-0 z-[100000] bg-transparent cursor-wait pointer-events-auto" />
+      )}
     </div>
   );
 }
