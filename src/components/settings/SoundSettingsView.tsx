@@ -107,9 +107,9 @@ export const SoundSettingsView: React.FC<SoundSettingsViewProps> = ({
     { key: 'triggerRoutineStart', label: '2. 트리거 루틴 시작', desc: '루틴 그룹을 처음 시작할 때 나오는 효과음입니다.', defaultFile: '/sounds/driken5482-applause-cheer-236786.mp3' },
     { key: 'individualRoutineComplete', label: '3. 개별 루틴 완료', desc: '개별 루틴을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/tithuh-level-up-523624.mp3' },
     { key: 'routineGroupComplete', label: '4. 루틴 그룹 완료', desc: '루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-    { key: 'todayEnd', label: '5. 오늘 끝', desc: '오늘의 루틴을 마치면(모든 루틴그룹이 완료/비활성/건너뜀 상태이면서 완벽한 하루는 아님) 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-    { key: 'allGroupsComplete', label: '6. 완벽한 하루 완료', desc: '오늘 예정된 모든 루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-    { key: 'chickSound', label: '7. 병아리 소리', desc: '홈 아이콘줄의 체크체크 캐릭터를 누를 때 나는 소리입니다.', defaultFile: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
+    { key: 'todayEnd', label: '5. 오늘 끝', desc: '오늘 예정된 모든 루틴 그룹을 완료 또는 건너뛰기 했을 때 나오는 효과음입니다. ', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+    { key: 'allGroupsComplete', label: '6. 완벽한 하루', desc: '오늘 예정된 모든 루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+    { key: 'chickSound', label: '7. 병아리 소리', desc: '화면 상단 메뉴의 캐릭터를 누를 때 나는 소리입니다.', defaultFile: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
   ];
 
   return (

@@ -6448,7 +6448,7 @@ export default function App() {
               {activeSettingsTab === 'general' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
             </button>
 
-            {/* Right Tab: 루틴 그룹 설정 */}
+            {/* Right Tab: 루틴 그룹 관리 */}
             <button
               onClick={() => {
                 setActiveSettingsTab('groups');
@@ -6461,7 +6461,7 @@ export default function App() {
               }`}
             >
               <Sliders className={`w-3.5 h-3.5 ${activeSettingsTab === 'groups' ? 'text-violet-500' : 'text-slate-300'}`} />
-              루틴 그룹 설정
+              루틴 그룹 관리
               {activeSettingsTab === 'groups' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
             </button>
           </div>
@@ -6761,7 +6761,7 @@ export default function App() {
                         </div>
                         <h3 className="text-base font-black text-slate-900">효과음 설정</h3>
                       </div>
-                      <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">사용자의 활동에 따른 효과음을 선택할 수 있습니다. .</p>
+                      <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">사용자의 활동에 따른 효과음을 선택할 수 있습니다.</p>
                       <div className="pt-1">
                         <button 
                           onClick={() => setSettingsSubView({ type: 'sound' })}
@@ -6933,10 +6933,9 @@ export default function App() {
                     transition={{ duration: 0.2 }}
                     className="space-y-[15px]"
                   >
-                    <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-4">
                         <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Settings className="w-5 h-5 text-indigo-600" />
+                          <Sliders className="w-5 h-5 text-indigo-600" />
                         </div>
                         <h3 className="text-base font-black text-slate-900">루틴 그룹 관리</h3>
                       </div>
@@ -6969,7 +6968,6 @@ export default function App() {
                           </SortableContext>
                         </DndContext>
                       </div>
-                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
