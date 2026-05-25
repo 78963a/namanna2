@@ -103,6 +103,8 @@ import {
   SoundEffectSettings
 } from './types';
 import phrases from './phrases.json';
+import { SoundSettingsView } from './components/settings/SoundSettingsView';
+import { NaggingSettingsView } from './components/settings/NaggingSettingsView';
 import { 
   STORAGE_KEY 
 } from './constants';
@@ -6424,14 +6426,17 @@ export default function App() {
   }, [userData.dailyCompletionRate]);
 
   const renderSettingsContent = (mode: 'main' | 'modal') => {
-    if (settingsSubView.type === 'main') {
+    if (settingsSubView.type === 'main' || settingsSubView.type === 'sound' || settingsSubView.type === 'nagging') {
       return (
         <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Folder Tab Containers */}
           <div className="flex px-4 items-end relative z-20 flex-shrink-0">
             {/* Left Tab: 일반설정 */}
             <button
-              onClick={() => setActiveSettingsTab('general')}
+              onClick={() => {
+                setActiveSettingsTab('general');
+                setSettingsSubView({ type: 'main' });
+              }}
               className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 cursor-pointer ${
                 activeSettingsTab === 'general' 
                   ? 'bg-white text-indigo-600 border-slate-100 -mb-[1px] pt-4' 
@@ -6445,7 +6450,10 @@ export default function App() {
 
             {/* Right Tab: 루틴 그룹 설정 */}
             <button
-              onClick={() => setActiveSettingsTab('groups')}
+              onClick={() => {
+                setActiveSettingsTab('groups');
+                setSettingsSubView({ type: 'main' });
+              }}
               className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 cursor-pointer ${
                 activeSettingsTab === 'groups' 
                   ? 'bg-white text-violet-600 border-slate-100 -mb-[1px] pt-4' 
@@ -6463,14 +6471,40 @@ export default function App() {
             <div className="overflow-y-auto p-[15px] custom-scrollbar flex-grow">
               <AnimatePresence mode="wait">
                 {activeSettingsTab === 'general' ? (
-                  <motion.div
-                    key="general-settings"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 10 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-[15px]"
-                  >
+                  settingsSubView.type === 'sound' ? (
+                    <SoundSettingsView
+                      userData={userData}
+                      setUserData={setUserData}
+                      localSoundSettings={localSoundSettings}
+                      setLocalSoundSettings={setLocalSoundSettings}
+                      isSoundSettingsDirty={isSoundSettingsDirty}
+                      setIsSoundSettingsDirty={setIsSoundSettingsDirty}
+                      setConfirmModal={setConfirmModal}
+                      setSoundSuccessMessage={setSoundSuccessMessage}
+                      setSettingsSubView={setSettingsSubView}
+                      soundService={soundService}
+                    />
+                  ) : settingsSubView.type === 'nagging' ? (
+                    <NaggingSettingsView
+                      userData={userData}
+                      setUserData={setUserData}
+                      localNaggingSettings={localNaggingSettings}
+                      setLocalNaggingSettings={setLocalNaggingSettings}
+                      isNaggingDirty={isNaggingDirty}
+                      setIsNaggingDirty={setIsNaggingDirty}
+                      setConfirmModal={setConfirmModal}
+                      setNaggingSuccessMessage={setNaggingSuccessMessage}
+                      setSettingsSubView={setSettingsSubView}
+                    />
+                  ) : (
+                    <motion.div
+                      key="general-settings"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-[15px]"
+                    >
                     <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -6889,6 +6923,7 @@ export default function App() {
                       </div>
                     </div>
                   </motion.div>
+                  )
                 ) : (
                   <motion.div
                     key="groups-settings"
@@ -6952,7 +6987,7 @@ export default function App() {
       );
     }
 
-    if (settingsSubView.type === 'sound') {
+    if (false && settingsSubView.type === 'sound') {
       const defaultSettings: SoundEffectSettings = {
         wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
         triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
@@ -7125,7 +7160,7 @@ export default function App() {
       );
     }
 
-    if (settingsSubView.type === 'nagging') {
+    if (false && settingsSubView.type === 'nagging') {
       const defaultSettings: NaggingSettings = {
         startEnabled: false,
         restartEnabled: false,

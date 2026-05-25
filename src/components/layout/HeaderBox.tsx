@@ -117,7 +117,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
           </div>
           <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
               <span>
-                {challengeDays}일째 도전중, {successDays}일째 성공중. 설정 분리
+                {challengeDays}일째 도전중, {successDays}일째 성공중. 20일12시
                </span>
           </div>
         </div>
