@@ -14,6 +14,7 @@ import {
   ArrowRightCircle,
   User,
   Settings, 
+  Sliders,
   Plus, 
   Trash2, 
   Clock,
@@ -3588,6 +3589,7 @@ export default function App() {
   const [editingChunkName, setEditingChunkName] = useState('');
   const [editingChunkPurpose, setEditingChunkPurpose] = useState('');
   const [settingsSubView, setSettingsSubView] = useState<SettingsSubView>({ type: 'main' });
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'groups'>('general');
   const [showPermissionGuide, setShowPermissionGuide] = useState(false);
   const [permissionNotificationMessage, setPermissionNotificationMessage] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -6424,471 +6426,518 @@ export default function App() {
   const renderSettingsContent = (mode: 'main' | 'modal') => {
     if (settingsSubView.type === 'main') {
       return (
-        <div className="flex flex-col h-full overflow-hidden">
-          <div className="space-y-[15px] overflow-y-auto pr-2 custom-scrollbar flex-grow">
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">사용자 이름</h3>
-              </div>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  defaultValue={userData.userName || '나'}
-                  id="userNameInput"
-                  placeholder="나"
-                  className="flex-grow text-base font-black p-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                />
-                <button 
-                  onClick={() => {
-                    const input = document.getElementById('userNameInput') as HTMLInputElement;
-                    if (input) updateUserName(input.value);
-                  }}
-                  className="bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
-                >
-                  저장
-                </button>
-              </div>
-            </div>
+        <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Folder Tab Containers */}
+          <div className="flex px-4 items-end relative z-20 flex-shrink-0">
+            {/* Left Tab: 일반설정 */}
+            <button
+              onClick={() => setActiveSettingsTab('general')}
+              className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 cursor-pointer ${
+                activeSettingsTab === 'general' 
+                  ? 'bg-white text-indigo-600 border-slate-100 -mb-[1px] pt-4' 
+                  : 'bg-slate-50 text-slate-400 border-transparent'
+              }`}
+            >
+              <Settings className={`w-3.5 h-3.5 ${activeSettingsTab === 'general' ? 'text-indigo-500' : 'text-slate-300'}`} />
+              일반설정
+              {activeSettingsTab === 'general' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+            </button>
 
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Sun className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">기상 목표 시각</h3>
-              </div>
-              <div className="flex gap-2">
-                {/* [코멘트] 기상 목표 시각 입력창 및 버튼 크기 줄임 / text-base: 글자크기, p-2: 안쪽여백, px-4: 가로여백, rounded-xl: 모서리곡률 */}
-                <input 
-                  type="time" 
-                  defaultValue={userData.targetWakeUpTime}
-                  id="wakeUpTimeInput"
-                  className="flex-grow text-base font-black p-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                />
-                <button 
-                  onClick={() => {
-                    const input = document.getElementById('wakeUpTimeInput') as HTMLInputElement;
-                    if (input) updateWakeUpTime(input.value);
-                  }}
-                  className="h-10 bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md shrink-0"
-                >
-                  변경
-                </button>
-                <button 
-                  onClick={() => {
-                    soundService.unlock();
-                    toggleWakeUpAlarm();
-                  }}
-                  className={`h-10 px-4 rounded-xl font-bold text-sm transition-all shrink-0 flex items-center gap-1.5 ${
-                    userData.isWakeUpAlarmEnabled 
-                      ? 'bg-sky-100 text-sky-700' 
-                      : 'bg-slate-100 text-slate-400'
-                  }`}
-                >
-                  {userData.isWakeUpAlarmEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
-                  알람
-                </button>
-              </div>
-            </div>
+            {/* Right Tab: 루틴 그룹 설정 */}
+            <button
+              onClick={() => setActiveSettingsTab('groups')}
+              className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 cursor-pointer ${
+                activeSettingsTab === 'groups' 
+                  ? 'bg-white text-violet-600 border-slate-100 -mb-[1px] pt-4' 
+                  : 'bg-slate-50 text-slate-400 border-transparent'
+              }`}
+            >
+              <Sliders className={`w-3.5 h-3.5 ${activeSettingsTab === 'groups' ? 'text-violet-500' : 'text-slate-300'}`} />
+              루틴 그룹 설정
+              {activeSettingsTab === 'groups' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+            </button>
+          </div>
 
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex flex-col gap-2 mb-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Moon className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <h3 className="text-base font-black text-slate-800 whitespace-nowrap">하루 리셋 시각</h3>
-                </div>
-                <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">이 시간이 되면 모든 루틴의 완료 상태가 초기화되며, 그 전까지의 기록은 전날로 합산됩니다.</p>
-              </div>
-              
-              <div className="relative">
-                {/* [코멘트] 하루 리셋 시각 선택 버튼 크기 줄임 / p-2.5: 안쪽여백, text-base: 글자크기, rounded-xl: 모서리곡률 */}
-                <button 
-                  onClick={() => setIsResetTimeDropdownOpen(!isResetTimeDropdownOpen)}
-                  className="w-full flex items-center justify-between p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center">
-                      <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                    </div>
-                    <span className="text-base font-black text-slate-800">
-                      오전 {parseInt(userData.resetTime.split(':')[0])}시
-                    </span>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isResetTimeDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                <AnimatePresence>
-                  {isResetTimeDropdownOpen && (
-                    <>
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[60]"
-                        onClick={() => setIsResetTimeDropdownOpen(false)}
-                      />
-                      <motion.div
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        className="absolute left-0 right-0 mt-2 bg-white border border-slate-100 rounded-xl shadow-2xl z-[70] overflow-hidden"
-                      >
-                        <div className="p-1.5 space-y-0.5">
-                          {[0, 1, 2, 3, 4].map((hour) => {
-                            const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                            const isSelected = userData.resetTime === timeStr;
-                            return (
-                              /* [코멘트] 드롭다운 목록 아이템 크기 줄임 / p-2.5: 안쪽여백, text-sm: 글자크기 */
-                              <button
-                                key={hour}
-                                onClick={() => {
-                                  updateResetTime(timeStr);
-                                  setIsResetTimeDropdownOpen(false);
-                                }}
-                                className={`w-full flex items-center justify-between p-2.5 rounded-lg transition-all ${
-                                  isSelected 
-                                    ? 'bg-indigo-600 text-white shadow-md' 
-                                    : 'hover:bg-slate-50 text-slate-600'
-                                }`}
-                              >
-                                <span className="font-black text-sm">오전 {hour}:00</span>
-                                {isSelected && <Check className="w-4 h-4 text-white" />}
-                              </button>
-                            );
-                          })}
+          {/* Main Folder Content Body */}
+          <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 flex-grow flex flex-col">
+            <div className="overflow-y-auto p-[15px] custom-scrollbar flex-grow">
+              <AnimatePresence mode="wait">
+                {activeSettingsTab === 'general' ? (
+                  <motion.div
+                    key="general-settings"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-[15px]"
+                  >
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-indigo-600" />
                         </div>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
-                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Timer className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">타이머 자동 시작</h3>
-              </div>
-              
-              <div className="space-y-4 pt-1">
-                {/* 첫 루틴 자동 시작 */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1">
-                    <h4 className="text-sm font-black text-slate-700">첫 루틴 자동 시작</h4>
-                    <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴 그룹을 시작함과 동시에 타이머가 자동으로 돌아갑니다.</p>
-                  </div>
-                  <button 
-                    onClick={() => setUserData(prev => ({ ...prev, firstRoutineAutoStart: !prev.firstRoutineAutoStart }))}
-                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.firstRoutineAutoStart ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.firstRoutineAutoStart ? 'left-7' : 'left-1'}`} />
-                  </button>
-                </div>
-
-                {/* 다음 루틴 자동 시작 */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1">
-                    <h4 className="text-sm font-black text-slate-700">다음 루틴 자동 시작</h4>
-                    <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴을 완료하면 다음 루틴이 자동으로 시작됩니다.</p>
-                  </div>
-                  <button 
-                    onClick={() => setUserData(prev => ({ ...prev, nextRoutineAutoStart: !prev.nextRoutineAutoStart }))}
-                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.nextRoutineAutoStart ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.nextRoutineAutoStart ? 'left-7' : 'left-1'}`} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
-                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <ArrowUpDown className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">루틴그룹 순서 자동전환</h3>
-              </div>
-              
-              <div className="space-y-4 pt-1">
-                {/* 실행중인 그룹 자동 정렬 */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1">
-                    <h4 className="text-sm font-black text-slate-700">실행중인 그룹 자동 정렬</h4>
-                    <p className="text-[11px] font-bold text-slate-400 leading-tight">실행중인 그룹은 자동으로 목록 상단으로 이동합니다.</p>
-                  </div>
-                  <button 
-                    onClick={() => setUserData(prev => ({ ...prev, autoReorderInProgressGroups: !prev.autoReorderInProgressGroups }))}
-                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.autoReorderInProgressGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderInProgressGroups ? 'left-7' : 'left-1'}`} />
-                  </button>
-                </div>
-
-                {/* 완료된 그룹 자동 정렬 */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1">
-                    <h4 className="text-sm font-black text-slate-700">완료된 그룹 자동 정렬</h4>
-                    <p className="text-[11px] font-bold text-slate-400 leading-tight">완료된 그룹은 자동으로 목록 하단으로 이동합니다.</p>
-                  </div>
-                  <button 
-                    onClick={() => setUserData(prev => ({ ...prev, autoReorderCompletedGroups: !prev.autoReorderCompletedGroups }))}
-                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.autoReorderCompletedGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderCompletedGroups ? 'left-7' : 'left-1'}`} />
-                  </button>
-                </div>
-
-                {/* 비활성 그룹 자동 정렬 */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1">
-                    <h4 className="text-sm font-black text-slate-700">비활성 그룹 자동 정렬</h4>
-                    <p className="text-[11px] font-bold text-slate-400 leading-tight">비활성화된 그룹은 자동으로 목록 가장 하단으로 이동합니다.</p>
-                  </div>
-                  <button 
-                    onClick={() => setUserData(prev => ({ ...prev, autoReorderInactiveGroups: !prev.autoReorderInactiveGroups }))}
-                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.autoReorderInactiveGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderInactiveGroups ? 'left-7' : 'left-1'}`} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* 다음 루틴 그룹 진행 설정 */}
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
-                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <ArrowBigRightDash className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">다음 루틴 그룹 진행</h3>
-              </div>
-              
-              <div className="pt-1 flex items-center justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                  <h4 className="text-sm font-black text-slate-700">다음 루틴 그룹 진행</h4>
-                  <p className="text-[11px] font-bold text-slate-400 leading-tight">하나의 루틴 그룹을 완료하면 다음 루틴 그룹 진행을 안내합니다.</p>
-                </div>
-                <button 
-                  onClick={() => setUserData(prev => ({ ...prev, nextRoutineGroupGuidanceEnabled: !prev.nextRoutineGroupGuidanceEnabled }))}
-                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.nextRoutineGroupGuidanceEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.nextRoutineGroupGuidanceEnabled ? 'left-7' : 'left-1'}`} />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Bell className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-900">효과음 설정</h3>
-              </div>
-              <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">사용자의 활동에 따른 효과음을 선택할 수 있습니다. .</p>
-              <div className="pt-1">
-                <button 
-                  onClick={() => setSettingsSubView({ type: 'sound' })}
-                  className="w-full flex items-center justify-between p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
-                >
-                  <span className="text-sm font-black text-slate-700">효과음 설정하기</span>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Volume2 className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-900">잔소리 기능</h3>
-              </div>
-              <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">사용자 설정에 맞춘 음성 안내를 통해 루틴 진행을 돕습니다. 화면 상단의 스피커 아이콘을 눌러 재생을 정지할 수 있습니다.  </p>
-              <div className="pt-1">
-                <button 
-                  onClick={() => setSettingsSubView({ type: 'nagging' })}
-                  className="w-full flex items-center justify-between p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
-                >
-                  <span className="text-sm font-black text-slate-700">잔소리 설정하기</span>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Settings className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-900">루틴 그룹 관리</h3>
-              </div>
-              
-              <div className="space-y-1">
-                <DndContext 
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleChunkDragEnd}
-                >
-                  <SortableContext 
-                    items={userData.routineChunks.map(c => c.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {userData.routineChunks.map((chunk) => (
-                      <SortableChunkItem 
-                        key={chunk.id}
-                        chunk={chunk}
-                        onEnterDetail={(id) => setSettingsSubView({ type: 'detail', chunkId: id })}
-                        onUpdateInfo={updateChunkInfo}
-                        onDelete={deleteChunk}
-                        editingChunkId={editingChunkId}
-                        setEditingChunkId={setEditingChunkId}
-                        editingChunkName={editingChunkName}
-                        setEditingChunkName={setEditingChunkName}
-                        editingChunkPurpose={editingChunkPurpose}
-                        setEditingChunkPurpose={setEditingChunkPurpose}
-                      />
-                    ))}
-                  </SortableContext>
-                </DndContext>
-              </div>
-            </div>
-
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
-                <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Download className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">백업 및 복구</h3>
-              </div>
-
-              <div className="space-y-4 pt-1">
-                <button 
-                  onClick={handleExportData}
-                  className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
-                >
-                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-indigo-200 transition-colors">
-                    <Download className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-black text-slate-700">데이터 백업하기</span>
-                    <span className="text-[11px] font-bold text-slate-400 leading-tight">현재 데이터를 JSON 파일로 다운로드합니다.</span>
-                  </div>
-                </button>
-
-                <div className="relative group/restore">
-                  <input 
-                    type="file" 
-                    accept=".json" 
-                    onChange={handleImportData}
-                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                  />
-                  <button 
-                    className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl group-hover/restore:bg-indigo-50 group-hover/restore:border-indigo-200 transition-all text-left group-active/restore:translate-y-[2px] group-active/restore:border-b-[2px] group-active/restore:pb-[18px] mb-[2px] group pointer-events-none"
-                  >
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover/restore:border-indigo-200 transition-colors">
-                      <Upload className="w-5 h-5 text-indigo-600" />
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">사용자 이름</h3>
+                      </div>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          defaultValue={userData.userName || '나'}
+                          id="userNameInput"
+                          placeholder="나"
+                          className="flex-grow text-base font-black p-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                        <button 
+                          onClick={() => {
+                            const input = document.getElementById('userNameInput') as HTMLInputElement;
+                            if (input) updateUserName(input.value);
+                          }}
+                          className="bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+                        >
+                          저장
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-black text-slate-700">데이터 복구하기</span>
-                      <span className="text-[11px] font-bold text-slate-400 leading-tight">백업된 JSON 파일을 불러와 데이터를 복원합니다.</span>
+
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Sun className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">기상 목표 시각</h3>
+                      </div>
+                      <div className="flex gap-2">
+                        <input 
+                          type="time" 
+                          defaultValue={userData.targetWakeUpTime}
+                          id="wakeUpTimeInput"
+                          className="flex-grow text-base font-black p-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                        <button 
+                          onClick={() => {
+                            const input = document.getElementById('wakeUpTimeInput') as HTMLInputElement;
+                            if (input) updateWakeUpTime(input.value);
+                          }}
+                          className="h-10 bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md shrink-0"
+                        >
+                          변경
+                        </button>
+                        <button 
+                          onClick={() => {
+                            soundService.unlock();
+                            toggleWakeUpAlarm();
+                          }}
+                          className={`h-10 px-4 rounded-xl font-bold text-sm transition-all shrink-0 flex items-center gap-1.5 ${
+                            userData.isWakeUpAlarmEnabled 
+                              ? 'bg-sky-100 text-sky-700' 
+                              : 'bg-slate-100 text-slate-400'
+                          }`}
+                        >
+                          {userData.isWakeUpAlarmEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                          알람
+                        </button>
+                      </div>
                     </div>
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
-                <div className="w-8 h-8 bg-rose-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Trash2 className="w-5 h-5 text-rose-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">기록 삭제</h3>
-              </div>
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex flex-col gap-2 mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Moon className="w-5 h-5 text-indigo-600" />
+                          </div>
+                          <h3 className="text-base font-black text-slate-800 whitespace-nowrap">하루 리셋 시각</h3>
+                        </div>
+                        <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">이 시간이 되면 모든 루틴의 완료 상태가 초기화되며, 그 전까지의 기록은 전날로 합산됩니다.</p>
+                      </div>
+                      
+                      <div className="relative">
+                        <button 
+                          onClick={() => setIsResetTimeDropdownOpen(!isResetTimeDropdownOpen)}
+                          className="w-full flex items-center justify-between p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center">
+                              <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                            </div>
+                            <span className="text-base font-black text-slate-800">
+                              오전 {parseInt(userData.resetTime.split(':')[0])}시
+                            </span>
+                          </div>
+                          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isResetTimeDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
 
-              <div className="space-y-4 pt-1">
-                <button 
-                  onClick={resetWakeUpHistory}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
-                >
-                  <span className="text-sm font-black text-slate-700 mb-1">기상시각 기록 삭제</span>
-                  <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 기상시각 기록을 모두 삭제합니다.</span>
-                </button>
+                        <AnimatePresence>
+                          {isResetTimeDropdownOpen && (
+                            <>
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 z-[60]"
+                                onClick={() => setIsResetTimeDropdownOpen(false)}
+                              />
+                              <motion.div
+                                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                className="absolute left-0 right-0 mt-2 bg-white border border-slate-100 rounded-xl shadow-2xl z-[70] overflow-hidden"
+                              >
+                                <div className="p-1.5 space-y-0.5">
+                                  {[0, 1, 2, 3, 4].map((hour) => {
+                                    const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+                                    const isSelected = userData.resetTime === timeStr;
+                                    return (
+                                      <button
+                                        key={hour}
+                                        onClick={() => {
+                                          updateResetTime(timeStr);
+                                          setIsResetTimeDropdownOpen(false);
+                                        }}
+                                        className={`w-full flex items-center justify-between p-2.5 rounded-lg transition-all ${
+                                          isSelected 
+                                            ? 'bg-indigo-600 text-white shadow-md' 
+                                            : 'hover:bg-slate-50 text-slate-600'
+                                        }`}
+                                      >
+                                        <span className="font-black text-sm">오전 {hour}:00</span>
+                                        {isSelected && <Check className="w-4 h-4 text-white" />}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </motion.div>
+                            </>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
 
-                <button 
-                  onClick={resetUsageHistory}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
-                >
-                  <span className="text-sm font-black text-slate-700 mb-1">사용 시간 기록 삭제</span>
-                  <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 사용 시간 바 기록을 모두 삭제합니다.</span>
-                </button>
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Timer className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">타이머 자동 시작</h3>
+                      </div>
+                      
+                      <div className="space-y-4 pt-1">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1">
+                            <h4 className="text-sm font-black text-slate-700">첫 루틴 자동 시작</h4>
+                            <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴 그룹을 시작함과 동시에 타이머가 자동으로 돌아갑니다.</p>
+                          </div>
+                          <button 
+                            onClick={() => setUserData(prev => ({ ...prev, firstRoutineAutoStart: !prev.firstRoutineAutoStart }))}
+                            className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.firstRoutineAutoStart ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.firstRoutineAutoStart ? 'left-7' : 'left-1'}`} />
+                          </button>
+                        </div>
 
-                <button 
-                  onClick={resetRoutineHistory}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
-                >
-                  <span className="text-sm font-black text-slate-700 mb-1">루틴 기록 삭제</span>
-                  <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 모든 루틴 기록을 삭제합니다. 루틴 설정은 유지합니다.</span>
-                </button>
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1">
+                            <h4 className="text-sm font-black text-slate-700">다음 루틴 자동 시작</h4>
+                            <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴을 완료하면 다음 루틴이 자동으로 시작됩니다.</p>
+                          </div>
+                          <button 
+                            onClick={() => setUserData(prev => ({ ...prev, nextRoutineAutoStart: !prev.nextRoutineAutoStart }))}
+                            className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.nextRoutineAutoStart ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.nextRoutineAutoStart ? 'left-7' : 'left-1'}`} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
 
-                <button 
-                  onClick={resetAllRoutines}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
-                >
-                  <span className="text-sm font-black text-slate-700 mb-1">루틴 전체 삭제</span>
-                  <span className="text-[11px] font-bold text-slate-400 leading-tight">지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다.</span>
-                </button>
-              </div>
-            </div>
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <ArrowUpDown className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">루틴그룹 순서 자동전환</h3>
+                      </div>
+                      
+                      <div className="space-y-4 pt-1">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1">
+                            <h4 className="text-sm font-black text-slate-700">실행중인 그룹 자동 정렬</h4>
+                            <p className="text-[11px] font-bold text-slate-400 leading-tight">실행중인 그룹은 자동으로 목록 상단으로 이동합니다.</p>
+                          </div>
+                          <button 
+                            onClick={() => setUserData(prev => ({ ...prev, autoReorderInProgressGroups: !prev.autoReorderInProgressGroups }))}
+                            className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.autoReorderInProgressGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderInProgressGroups ? 'left-7' : 'left-1'}`} />
+                          </button>
+                        </div>
 
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
-                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-5 h-5 text-slate-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">소개 및 지원</h3>
-              </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1">
+                            <h4 className="text-sm font-black text-slate-700">완료된 그룹 자동 정렬</h4>
+                            <p className="text-[11px] font-bold text-slate-400 leading-tight">완료된 그룹은 자동으로 목록 하단으로 이동합니다.</p>
+                          </div>
+                          <button 
+                            onClick={() => setUserData(prev => ({ ...prev, autoReorderCompletedGroups: !prev.autoReorderCompletedGroups }))}
+                            className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.autoReorderCompletedGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderCompletedGroups ? 'left-7' : 'left-1'}`} />
+                          </button>
+                        </div>
 
-              <div className="space-y-4 pt-1">
-                <button 
-                  onClick={() => {}}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
-                >
-                  <span className="text-sm font-black text-slate-700 mb-1">개인정보 처리방침 Privacy Policy</span>
-                  <span className="text-[11px] font-bold text-slate-400 leading-tight">앱의 개인정보 취급 방침을 확인합니다.</span>
-                </button>
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1">
+                            <h4 className="text-sm font-black text-slate-700">비활성 그룹 자동 정렬</h4>
+                            <p className="text-[11px] font-bold text-slate-400 leading-tight">비활성화된 그룹은 자동으로 목록 가장 하단으로 이동합니다.</p>
+                          </div>
+                          <button 
+                            onClick={() => setUserData(prev => ({ ...prev, autoReorderInactiveGroups: !prev.autoReorderInactiveGroups }))}
+                            className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.autoReorderInactiveGroups ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoReorderInactiveGroups ? 'left-7' : 'left-1'}`} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
 
-                <button 
-                  onClick={() => {}}
-                  className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
-                >
-                  <span className="text-sm font-black text-slate-700 mb-1">지원 Support URL</span>
-                  <span className="text-[11px] font-bold text-slate-400 leading-tight">도움말 확인 및 개발자에게 문의합니다.</span>
-                </button>
-              </div>
-            </div>
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <ArrowBigRightDash className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">다음 루틴 그룹 진행</h3>
+                      </div>
+                      
+                      <div className="pt-1 flex items-center justify-between gap-4">
+                        <div className="flex flex-col gap-1">
+                          <h4 className="text-sm font-black text-slate-700">다음 루틴 그룹 진행</h4>
+                          <p className="text-[11px] font-bold text-slate-400 leading-tight">하나의 루틴 그룹을 완료하면 다음 루틴 그룹 진행을 안내합니다.</p>
+                        </div>
+                        <button 
+                          onClick={() => setUserData(prev => ({ ...prev, nextRoutineGroupGuidanceEnabled: !prev.nextRoutineGroupGuidanceEnabled }))}
+                          className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.nextRoutineGroupGuidanceEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.nextRoutineGroupGuidanceEnabled ? 'left-7' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    </div>
 
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Globe className="w-5 h-5 text-slate-600" />
-                </div>
-                <h3 className="text-base font-black text-slate-800 whitespace-nowrap">언어 설정 변경 (Langage)</h3>
-              </div>
-              <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">현재는 한국어만 지원합니다. 추후 더 많은 언어가 추가될 예정입니다.</p>
-              <div className="space-y-4 pt-1">
-                  <div className="flex flex-col items-start text-left pr-4">
-                  <div className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 font-extrabold text-xs rounded-lg whitespace-nowrap shadow-inner">
-                    한국어 (KO)
-                  </div>
-                </div>
-              </div>
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Bell className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-900">효과음 설정</h3>
+                      </div>
+                      <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">사용자의 활동에 따른 효과음을 선택할 수 있습니다. .</p>
+                      <div className="pt-1">
+                        <button 
+                          onClick={() => setSettingsSubView({ type: 'sound' })}
+                          className="w-full flex items-center justify-between p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
+                        >
+                          <span className="text-sm font-black text-slate-700">효과음 설정하기</span>
+                          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Volume2 className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-900">잔소리 기능</h3>
+                      </div>
+                      <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">사용자 설정에 맞춘 음성 안내를 통해 루틴 진행을 돕습니다. 화면 상단의 스피커 아이콘을 눌러 재생을 정지할 수 있습니다.  </p>
+                      <div className="pt-1">
+                        <button 
+                          onClick={() => setSettingsSubView({ type: 'nagging' })}
+                          className="w-full flex items-center justify-between p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
+                        >
+                          <span className="text-sm font-black text-slate-700">잔소리 설정하기</span>
+                          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Download className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">백업 및 복구</h3>
+                      </div>
+
+                      <div className="space-y-4 pt-1">
+                        <button 
+                          onClick={handleExportData}
+                          className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
+                        >
+                          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-indigo-200 transition-colors">
+                            <Download className="w-5 h-5 text-indigo-600" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-black text-slate-700">데이터 백업하기</span>
+                            <span className="text-[11px] font-bold text-slate-400 leading-tight">현재 데이터를 JSON 파일로 다운로드합니다.</span>
+                          </div>
+                        </button>
+
+                        <div className="relative group/restore">
+                          <input 
+                            type="file" 
+                            accept=".json" 
+                            onChange={handleImportData}
+                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                          />
+                          <button 
+                            className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl group-hover/restore:bg-indigo-50 group-hover/restore:border-indigo-200 transition-all text-left group-active/restore:translate-y-[2px] group-active/restore:border-b-[2px] group-active/restore:pb-[18px] mb-[2px] group pointer-events-none"
+                          >
+                            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover/restore:border-indigo-200 transition-colors">
+                              <Upload className="w-5 h-5 text-indigo-600" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-black text-slate-700">데이터 복구하기</span>
+                              <span className="text-[11px] font-bold text-slate-400 leading-tight">백업된 JSON 파일을 불러와 데이터를 복원합니다.</span>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                        <div className="w-8 h-8 bg-rose-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Trash2 className="w-5 h-5 text-rose-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">기록 삭제</h3>
+                      </div>
+
+                      <div className="space-y-4 pt-1">
+                        <button 
+                          onClick={resetWakeUpHistory}
+                          className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
+                        >
+                          <span className="text-sm font-black text-slate-700 mb-1">기상시각 기록 삭제</span>
+                          <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 기상시각 기록을 모두 삭제합니다.</span>
+                        </button>
+
+                        <button 
+                          onClick={resetUsageHistory}
+                          className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
+                        >
+                          <span className="text-sm font-black text-slate-700 mb-1">사용 시간 기록 삭제</span>
+                          <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 사용 시간 바 기록을 모두 삭제합니다.</span>
+                        </button>
+
+                        <button 
+                          onClick={resetRoutineHistory}
+                          className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
+                        >
+                          <span className="text-sm font-black text-slate-700 mb-1">루틴 기록 삭제</span>
+                          <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 모든 루틴 기록을 삭제합니다. 루틴 설정은 유지합니다.</span>
+                        </button>
+
+                        <button 
+                          onClick={resetAllRoutines}
+                          className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
+                        >
+                          <span className="text-sm font-black text-slate-700 mb-1">루틴 전체 삭제</span>
+                          <span className="text-[11px] font-bold text-slate-400 leading-tight">지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다.</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                        <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <AlertCircle className="w-5 h-5 text-slate-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">소개 및 지원</h3>
+                      </div>
+
+                      <div className="space-y-4 pt-1">
+                        <button 
+                          onClick={() => {}}
+                          className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
+                        >
+                          <span className="text-sm font-black text-slate-700 mb-1">개인정보 처리방침 Privacy Policy</span>
+                          <span className="text-[11px] font-bold text-slate-400 leading-tight">앱의 개인정보 취급 방침을 확인합니다.</span>
+                        </button>
+
+                        <button 
+                          onClick={() => {}}
+                          className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
+                        >
+                          <span className="text-sm font-black text-slate-700 mb-1">지원 Support URL</span>
+                          <span className="text-[11px] font-bold text-slate-400 leading-tight">도움말 확인 및 개발자에게 문의합니다.</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Globe className="w-5 h-5 text-slate-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">언어 설정 변경 (Langage)</h3>
+                      </div>
+                      <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">현재는 한국어만 지원합니다. 추후 더 많은 언어가 추가될 예정입니다.</p>
+                      <div className="space-y-4 pt-1">
+                          <div className="flex flex-col items-start text-left pr-4">
+                          <div className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 font-extrabold text-xs rounded-lg whitespace-nowrap shadow-inner">
+                            한국어 (KO)
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="groups-settings"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-[15px]"
+                  >
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[10px] shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Settings className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-900">루틴 그룹 관리</h3>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <DndContext 
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleChunkDragEnd}
+                        >
+                          <SortableContext 
+                            items={userData.routineChunks.map(c => c.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {userData.routineChunks.map((chunk) => (
+                              <SortableChunkItem 
+                                key={chunk.id}
+                                chunk={chunk}
+                                onEnterDetail={(id) => setSettingsSubView({ type: 'detail', chunkId: id })}
+                                onUpdateInfo={updateChunkInfo}
+                                onDelete={deleteChunk}
+                                editingChunkId={editingChunkId}
+                                setEditingChunkId={setEditingChunkId}
+                                editingChunkName={editingChunkName}
+                                setEditingChunkName={setEditingChunkName}
+                                editingChunkPurpose={editingChunkPurpose}
+                                setEditingChunkPurpose={setEditingChunkPurpose}
+                              />
+                            ))}
+                          </SortableContext>
+                        </DndContext>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
           {mode === 'modal' && (
