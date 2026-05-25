@@ -651,7 +651,6 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                     {isCheckCheckAvailable && (
                       <div className="mt-1">
                         <span className="flex h-1.5 w-1.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
                         </span>
                       </div>
@@ -6715,7 +6714,6 @@ export default function App() {
                       <div className="space-y-4 pt-1">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex flex-col gap-1">
-                            <h4 className="text-sm font-black text-slate-700">시간 무관 루틴 타이머 숨기기</h4>
                             <p className="text-[11px] font-bold text-slate-400 leading-tight">시간 무관 루틴의 경우 타이머를 표시하지 않습니다</p>
                           </div>
                           <button 
@@ -6788,7 +6786,6 @@ export default function App() {
                       
                       <div className="pt-1 flex items-center justify-between gap-4">
                         <div className="flex flex-col gap-1">
-                          <h4 className="text-sm font-black text-slate-700">다음 루틴 그룹 진행</h4>
                           <p className="text-[11px] font-bold text-slate-400 leading-tight">하나의 루틴 그룹을 완료하면 다음 루틴 그룹 진행을 안내합니다.</p>
                         </div>
                         <button 
@@ -7910,7 +7907,6 @@ export default function App() {
                 {isCheckCheckAvailable && (
                   <div className="mt-1">
                     <span className="flex h-1.5 w-1.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
                     </span>
                   </div>
