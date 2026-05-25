@@ -2632,6 +2632,8 @@ const RoutineGroupFormView: React.FC<{
         if (activeTab === 'execution') {
           setSettingsSubView({ type: 'main' });
           setIsSettingsOpen(false);
+        } else {
+          setSettingsSubView({ type: 'main' });
         }
       }, 2000);
     } else {
@@ -3033,13 +3035,13 @@ const RoutineGroupFormView: React.FC<{
                     confirmColor: 'indigo',
                     showCancel: true,
                     onConfirm: () => {
-                      if (setIsSettingsOpen) setIsSettingsOpen(false);
+                      if (activeTab === 'execution' && setIsSettingsOpen) setIsSettingsOpen(false);
                       if (setSettingsSubView) setSettingsSubView({ type: 'main' });
                       setConfirmModal(prev => ({ ...prev, isOpen: false }));
                     }
                   });
                 } else {
-                  if (setIsSettingsOpen) setIsSettingsOpen(false);
+                  if (activeTab === 'execution' && setIsSettingsOpen) setIsSettingsOpen(false);
                   if (setSettingsSubView) setSettingsSubView({ type: 'main' });
                 }
               } else {
@@ -4048,6 +4050,7 @@ export default function App() {
 
   useEffect(() => {
     if (settingsSubView.type === 'detail') {
+      setActiveSettingsTab('groups');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // Also scroll the modal container if it exists
       const modalScrollContainer = document.querySelector('.custom-scrollbar');
@@ -6426,7 +6429,7 @@ export default function App() {
   }, [userData.dailyCompletionRate]);
 
   const renderSettingsContent = (mode: 'main' | 'modal') => {
-    if (settingsSubView.type === 'main' || settingsSubView.type === 'sound' || settingsSubView.type === 'nagging') {
+    if (settingsSubView.type === 'main' || settingsSubView.type === 'sound' || settingsSubView.type === 'nagging' || (activeTab === 'settings' && settingsSubView.type === 'detail')) {
       return (
         <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Folder Tab Containers */}
@@ -6925,14 +6928,36 @@ export default function App() {
                   </motion.div>
                   )
                 ) : (
-                  <motion.div
-                    key="groups-settings"
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-[15px]"
-                  >
+                  settingsSubView.type === 'detail' ? (
+                    (() => {
+                      const chunk = userData.routineChunks.find(c => c.id === settingsSubView.chunkId);
+                      if (!chunk) return null;
+                      return (
+                        <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                          <RoutineGroupFormView 
+                            addChunk={addChunk}
+                            updateChunk={updateFullChunk}
+                            initialChunk={chunk}
+                            setActiveTab={setActiveTab}
+                            setSettingsSubView={setSettingsSubView}
+                            setIsSettingsOpen={setIsSettingsOpen}
+                            userData={userData}
+                            activeTab={activeTab}
+                            mode="edit"
+                            onDirtyChange={(isDirty) => setIsEditRoutineDirty(isDirty)}
+                          />
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <motion.div
+                      key="groups-settings"
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-[15px]"
+                    >
                       <div className="flex items-center gap-2 mb-4">
                         <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                           <Sliders className="w-5 h-5 text-indigo-600" />
@@ -6968,7 +6993,8 @@ export default function App() {
                           </SortableContext>
                         </DndContext>
                       </div>
-                  </motion.div>
+                    </motion.div>
+                  )
                 )}
               </AnimatePresence>
             </div>
