@@ -195,6 +195,7 @@ export interface UserData {
   isWakeUpAlarmEnabled?: boolean;
   naggingSettings?: NaggingSettings;
   soundSettings?: SoundEffectSettings;
+  hideAnytimeTimer?: boolean;
 }
 
 /**

@@ -996,13 +996,17 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                         - 투명도: opacity-0.2 ~ 0.4
                         - 색상은 위쪽 'getStageInfo' 함수 내 'color' 값을 따릅니다. 
                     */}
-                    {getElapsed(activeTask) > 0 && (
+                    {((userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT) || getElapsed(activeTask) > 0) && (
                       <motion.div 
                         initial={false}
-                        animate={{ 
-                          width: `${getStageInfo(activeTask).progress}%`,
-                          opacity: getStageInfo(activeTask).isFinished ? 0.4 : 0.2
-                        }}
+                        animate={
+                          (userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT) 
+                            ? { width: '100%', opacity: 0.4 } 
+                            : { 
+                                width: `${getStageInfo(activeTask).progress}%`,
+                                opacity: getStageInfo(activeTask).isFinished ? 0.4 : 0.2
+                              }
+                        }
                         className={`absolute inset-y-0 left-0 ${getStageInfo(activeTask).color}`}
                         transition={{ duration: 0.5 }}
                       />
@@ -1022,10 +1026,23 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
         - 일시정지 색상: text-slate-400
         - 분 표시 색상: text-slate-400
     */}
-    <div className={`text-6xl font-black tabular-nums tracking-tighter ${(!activeTask.startTime || activeTask.isPaused) ? 'text-slate-400' : 'text-slate-900'}`}>
-      {formatDuration(getElapsed(activeTask))}
-      <span className="text-xl text-slate-400 ml-2">/ {activeTask.targetDuration}분</span>
-    </div>
+    {(() => {
+      const isAnytimeHidden = userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT;
+      return (
+        <div 
+          className={`text-6xl font-black tabular-nums tracking-tighter ${
+            isAnytimeHidden 
+              ? 'text-transparent' 
+              : (!activeTask.startTime || activeTask.isPaused) 
+                ? 'text-slate-400' 
+                : 'text-slate-900'
+          }`}
+        >
+          {formatDuration(getElapsed(activeTask))}
+          <span className={`text-xl ml-2 ${isAnytimeHidden ? 'text-transparent' : 'text-slate-400'}`}>/ {activeTask.targetDuration}분</span>
+        </div>
+      );
+    })()}
                       
                       {/* [디자인 수정 구역 11: 타이머 상태 텍스트 (Ready/Paused/In Progress)] 
                           - 글자색: text-slate-400 ~ text-slate-500
@@ -3292,6 +3309,7 @@ export default function App() {
         firstRoutineAutoStart: false,
         nextRoutineAutoStart: false,
         nextRoutineGroupGuidanceEnabled: false,
+        hideAnytimeTimer: false,
         userName: '나',
         isVoiceEnabled: true,
         isWakeUpAlarmEnabled: false,
@@ -3387,6 +3405,7 @@ export default function App() {
     if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
     if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
     if (parsed.nextRoutineGroupGuidanceEnabled === undefined) parsed.nextRoutineGroupGuidanceEnabled = false;
+    if (parsed.hideAnytimeTimer === undefined) parsed.hideAnytimeTimer = false;
     if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
     if (parsed.isWakeUpAlarmEnabled === undefined) parsed.isWakeUpAlarmEnabled = false;
     
@@ -6680,6 +6699,30 @@ export default function App() {
                             className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.nextRoutineAutoStart ? 'bg-indigo-600' : 'bg-slate-200'}`}
                           >
                             <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.nextRoutineAutoStart ? 'left-7' : 'left-1'}`} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Clock className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">시간 무관 루틴 타이머 숨기기</h3>
+                      </div>
+                      
+                      <div className="space-y-4 pt-1">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1">
+                            <h4 className="text-sm font-black text-slate-700">시간 무관 루틴 타이머 숨기기</h4>
+                            <p className="text-[11px] font-bold text-slate-400 leading-tight">시간 무관 루틴의 경우 타이머를 표시하지 않습니다</p>
+                          </div>
+                          <button 
+                            onClick={() => setUserData(prev => ({ ...prev, hideAnytimeTimer: !prev.hideAnytimeTimer }))}
+                            className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.hideAnytimeTimer ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.hideAnytimeTimer ? 'left-7' : 'left-1'}`} />
                           </button>
                         </div>
                       </div>
