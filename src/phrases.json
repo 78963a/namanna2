@@ -25,7 +25,7 @@
       "{{userName}}의 오늘 목표는 {{title}}을 완료하는 것이다. 일단 {{triggerTask}}부터 시작해볼까?",
       "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}}, {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다",
       "{{start_info}} {{title}}을/를 실천하기로 했다.",
-      "{{purpose}}{{useName}}이 된다는 것은 {{title}}을 수행한다는 것."
+      "{{purpose}} {{userName}}이 된다는 것은 {{title}}을 수행한다는 것."
     ],
     "IN_PROGRESS": [
       "{{purpose}}이/가 되기 위해 {{title}}을/를 수행하는 중 ({{duration}}째)"
