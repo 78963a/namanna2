@@ -33,20 +33,93 @@ interface StatsViewProps {
   userData: UserData;
   currentTime: Date;
   deleteReview: (groupId: string, date: string) => void;
+  initialSelectedGroupId?: string | null;
+  isSingleGroupStatsOnly?: boolean;
+  onBackOverride?: () => void;
 }
 
 export const StatsView: React.FC<StatsViewProps> = ({ 
   userData,
   currentTime,
-  deleteReview
+  deleteReview,
+  initialSelectedGroupId = null,
+  isSingleGroupStatsOnly = false,
+  onBackOverride
 }) => {
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(initialSelectedGroupId);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialSelectedGroupId) {
+      setSelectedGroupId(initialSelectedGroupId);
+    }
+  }, [initialSelectedGroupId]);
   const [calendarYear, setCalendarYear] = useState(currentTime.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(currentTime.getMonth());
 
   const [activeTab, setActiveTab] = useState<'wake-up' | 'achievement' | 'usage'>('achievement');
   const [viewAllType, setViewAllType] = useState<'overall' | 'group' | 'task' | null>(null);
+
+  const renderFolderTabs = () => {
+    if (isSingleGroupStatsOnly) return null;
+    return (
+      <div className="flex px-4 items-end relative z-20">
+        <button
+          onClick={() => {
+            setActiveTab('wake-up');
+            setViewAllType(null);
+            setSelectedTaskId(null);
+            setSelectedGroupId(null);
+          }}
+          className={`px-[18px] py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+            activeTab === 'wake-up' 
+              ? 'bg-white text-indigo-600 border-slate-100 -mb-[1px] pt-4' 
+              : 'bg-slate-50 text-slate-400 border-transparent'
+          }`}
+        >
+          <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
+          기상시각 통계
+          {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('achievement');
+            setViewAllType(null);
+            setSelectedTaskId(null);
+            setSelectedGroupId(null);
+          }}
+          className={`px-[18px] py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+            activeTab === 'achievement' 
+              ? 'bg-white text-violet-600 border-slate-100 -mb-[1px] pt-4' 
+              : 'bg-slate-50 text-slate-400 border-transparent'
+          }`}
+        >
+          <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
+          달성률 통계
+          {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('usage');
+            setViewAllType(null);
+            setSelectedTaskId(null);
+            setSelectedGroupId(null);
+          }}
+          className={`px-[18px] py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
+            activeTab === 'usage' 
+              ? 'bg-white text-emerald-600 border-slate-100 -mb-[1px] pt-4' 
+              : 'bg-slate-50 text-slate-400 border-transparent'
+          }`}
+        >
+          <Timer className={`w-3.5 h-3.5 ${activeTab === 'usage' ? 'text-emerald-500' : 'text-slate-300'}`} />
+          사용시간 통계
+          {activeTab === 'usage' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
+        </button>
+      </div>
+    );
+  };
 
   // Scroll to top when entering detailed view
   useEffect(() => {
@@ -548,6 +621,74 @@ export const StatsView: React.FC<StatsViewProps> = ({
       totalDuration30: metrics30.totalDuration
     };
   }, [selectedTaskId, userData, last7Days, last30Days, last40Days]);
+
+  const taskAllTimeStats = useMemo(() => {
+    if (!selectedTaskId) return null;
+
+    let taskName = '';
+    for (const chunk of userData.routineChunks) {
+      const task = chunk.tasks.find(t => t.id === selectedTaskId);
+      if (task) {
+        taskName = task.text;
+        break;
+      }
+    }
+
+    const getAllRecordedDays = () => {
+      const dates = new Set<string>();
+      Object.keys(userData.dailyCompletionRate || {}).forEach(d => { if (d) dates.add(d); });
+      (userData.taskHistory || []).forEach(h => { if (h && h.date) dates.add(h.date); });
+      (userData.routineGroupHistory || []).forEach(h => { if (h && h.date) dates.add(h.date); });
+      return Array.from(dates).filter(d => typeof d === 'string').sort((a, b) => b.localeCompare(a));
+    };
+
+    const allDaysSorted = getAllRecordedDays();
+    if (allDaysSorted.length === 0) return null;
+
+    const dateRangeStr = `${allDaysSorted[allDaysSorted.length - 1].replace(/-/g, '.')} ~ ${allDaysSorted[0].replace(/-/g, '.')}`;
+
+    const taskHistory = (userData.taskHistory || []).filter(h => h.taskId === selectedTaskId);
+    const activeEntries = taskHistory.filter(h => h.isActive);
+    const attainmentEntries = activeEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵');
+    const avgRate = activeEntries.length > 0 ? Math.floor((attainmentEntries.length / activeEntries.length) * 100) : 0;
+
+    const startTimes = activeEntries.filter(h => h.startTime).map(h => timeToMinutes(h.startTime!));
+    const endTimes = activeEntries.filter(h => h.endTime).map(h => timeToMinutes(h.endTime!));
+    const durations = activeEntries.filter(h => h.duration > 0).map(h => h.duration);
+
+    const avgStart = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
+    const avgEnd = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
+    const avgDur = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+    const totalDur = durations.reduce((a, b) => a + b, 0);
+
+    const historyByYear: { [year: string]: any[] } = {};
+    allDaysSorted.forEach(date => {
+      const entry = activeEntries.find(h => h.date === date);
+      if (entry) {
+        const year = date.split('-')[0];
+        if (!historyByYear[year]) historyByYear[year] = [];
+        historyByYear[year].push({
+          date,
+          startTime: entry.startTime || '--:--',
+          duration: formatDurationPrecise(entry.duration),
+          endTime: entry.endTime || '--:--',
+          status: entry.status
+        });
+      }
+    });
+
+    return {
+      title: `${taskName} 전체 기록`,
+      name: taskName,
+      avgRate,
+      period: dateRangeStr,
+      avgStart: avgStart !== null ? minutesToTime(avgStart) : '--:--',
+      avgEnd: avgEnd !== null ? minutesToTime(avgEnd) : '--:--',
+      avgDuration: formatDurationPrecise(avgDur),
+      totalDuration: formatDurationPrecise(totalDur),
+      historyByYear
+    };
+  }, [selectedTaskId, userData]);
   
   // --- All Time Stats for View All ---
   const allTimeStats = useMemo(() => {
@@ -607,6 +748,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           const firstStarts = dayGroupHistory.filter(h => h.firstTaskStartTime).map(h => timeToMinutes(h.firstTaskStartTime!));
           const completions = dayGroupHistory.filter(h => h.completedAt).map(h => timeToMinutes(h.completedAt!));
           const durations = dayGroupHistory.map(h => h.totalDuration || 0);
+          const sumDurationSeconds = durations.reduce((a, b) => a + b, 0);
 
           historyByYear[year].push({
             date,
@@ -615,7 +757,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
             breakdown: `(${failed}/${skipped}/${completedPerfect})`,
             startTime: firstStarts.length > 0 ? minutesToTime(Math.min(...firstStarts)) : '--:--',
             endTime: completions.length > 0 ? minutesToTime(Math.max(...completions)) : '--:--',
-            duration: formatDurationPrecise(durations.reduce((a, b) => a + b, 0))
+            duration: sumDurationSeconds > 0 ? Math.floor(sumDurationSeconds / 60) + '분' : '0분'
           });
         }
       });
@@ -800,63 +942,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
     return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {/* Folder Tab Containers */}
-        <div className="flex px-4 items-end relative z-20">
-          <button
-            onClick={() => {
-              setActiveTab('wake-up');
-              setViewAllType(null);
-              setSelectedTaskId(null);
-              setSelectedGroupId(null);
-            }}
-            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-              activeTab === 'wake-up' 
-                ? 'bg-white text-indigo-600 border-slate-100 -mb-[1px] pt-4' 
-                : 'bg-slate-50 text-slate-400 border-transparent'
-            }`}
-          >
-            <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
-            기상 시각 통계
-            {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('achievement');
-              setViewAllType(null);
-              setSelectedTaskId(null);
-              setSelectedGroupId(null);
-            }}
-            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-              activeTab === 'achievement' 
-                ? 'bg-white text-violet-600 border-slate-100 -mb-[1px] pt-4' 
-                : 'bg-slate-50 text-slate-400 border-transparent'
-            }`}
-          >
-            <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
-            달성률 통계
-            {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('usage');
-              setViewAllType(null);
-              setSelectedTaskId(null);
-              setSelectedGroupId(null);
-            }}
-            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-              activeTab === 'usage' 
-                ? 'bg-white text-emerald-600 border-slate-100 -mb-[1px] pt-4' 
-                : 'bg-slate-50 text-slate-400 border-transparent'
-            }`}
-          >
-            <Timer className={`w-3.5 h-3.5 ${activeTab === 'usage' ? 'text-emerald-500' : 'text-slate-300'}`} />
-            사용 시간 통계
-            {activeTab === 'usage' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-          </button>
-        </div>
-
+        {renderFolderTabs()}
         <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 p-4 md:p-6">
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="flex items-center gap-4">
@@ -929,7 +1015,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             <th className="px-2 py-2">날짜</th>
                             <th className="px-2 py-2">달성률</th>
                             <th className="px-2 py-2">
-                              루틴{viewAllType === 'overall' && <span>(실패/스킵/완료·완벽)</span>}
+                              루틴{viewAllType === 'overall' && <span className="block md:inline">(미완료/스킵/완료)</span>}
                             </th>
                             <th className="px-2 py-2 text-center">
                               <span className="hidden md:inline">시작 ~ 종료</span>
@@ -1057,59 +1143,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
   if (selectedTaskId && taskDetailData) {
     return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="flex px-4 items-end relative z-20">
-          <button
-            onClick={() => {
-              setActiveTab('wake-up');
-              setSelectedTaskId(null);
-              setSelectedGroupId(null);
-            }}
-            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-              activeTab === 'wake-up' 
-                ? 'bg-white text-indigo-600 border-slate-100 -mb-[1px] pt-4' 
-                : 'bg-slate-50 text-slate-400 border-transparent'
-            }`}
-          >
-            <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
-            기상 시각 통계
-            {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('achievement');
-              setSelectedTaskId(null);
-              setSelectedGroupId(null);
-            }}
-            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-              activeTab === 'achievement' 
-                ? 'bg-white text-violet-600 border-slate-100 -mb-[1px] pt-4' 
-                : 'bg-slate-50 text-slate-400 border-transparent'
-            }`}
-          >
-            <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
-            달성률 통계
-            {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('usage');
-              setSelectedTaskId(null);
-              setSelectedGroupId(null);
-            }}
-            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-              activeTab === 'usage' 
-                ? 'bg-white text-emerald-600 border-slate-100 -mb-[1px] pt-4' 
-                : 'bg-slate-50 text-slate-400 border-transparent'
-            }`}
-          >
-            <Timer className={`w-3.5 h-3.5 ${activeTab === 'usage' ? 'text-emerald-500' : 'text-slate-300'}`} />
-            사용 시간 통계
-            {activeTab === 'usage' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-          </button>
-        </div>
-
+        {renderFolderTabs()}
         <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 p-4 md:p-6">
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="flex items-center gap-4">
@@ -1122,6 +1156,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
               <h2 className="text-xl font-black text-slate-900"><span className="text-indigo-400">{taskDetailData.name}</span> 상세 통계</h2>
             </div>
 
+            {/* 1. 지난 7일 평균 달성률 : 지난 30일 평균 달성률 */}
             <div className="grid grid-cols-2 gap-4 py-4">
               <div className="text-center space-y-1">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균 달성률</p>
@@ -1145,49 +1180,67 @@ export const StatsView: React.FC<StatsViewProps> = ({
               </div>
             </div>
 
-            <section className="bg-white rounded-[15px] shadow-sm border border-slate-100 overflow-hidden">
-              <div className="p-3 bg-slate-50 border-b border-slate-100">
-                <h3 className="text-xs font-black text-slate-700 flex items-center gap-2">
-                  <History className="w-4 h-4 text-indigo-500" />
-                  최근 7일 기록
-                </h3>
+            {/* 2. 평균 달성률 (전체 평균 달성률 박스) */}
+            {taskAllTimeStats && (
+              <div className="py-8 bg-slate-50/50 rounded-[20px] border border-slate-100">
+                <div className="text-center space-y-2">
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">평균 달성률</p>
+                  <p className="text-[11px] font-bold text-slate-300">{taskAllTimeStats.period}</p>
+                  <h3 className="text-5xl font-black text-slate-900 tracking-tighter">{taskAllTimeStats.avgRate}%</h3>
+                  <div className="mt-4 flex flex-col items-center gap-1 text-xs font-bold text-slate-500">
+                    <div className="flex items-center gap-1.5 justify-center">
+                      <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>{taskAllTimeStats.avgStart} ~ {taskAllTimeStats.avgEnd}</span>
+                    </div>
+                    <div className="flex flex-col items-center mt-1">
+                      <span className="text-slate-400">평균 소요 시간: <span className="text-indigo-600 font-black">{taskAllTimeStats.avgDuration}</span></span>
+                      <span className="text-slate-400">누적 소요 시간: <span className="text-indigo-600 font-black">{taskAllTimeStats.totalDuration}</span></span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-[11px]">
-                  <thead>
-                    <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                      <th className="px-2 py-2">날짜</th>
-                      <th className="px-2 py-2 text-center">시작</th>
-                      <th className="px-2 py-2 text-center">소요</th>
-                      <th className="px-2 py-2 text-center">완료</th>
-                      <th className="px-2 py-2 text-center">상태</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {taskDetailData.history7.map((row, i) => (
-                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                        <td className={`px-2 py-2 font-bold tracking-tighter whitespace-nowrap ${isSunday(row.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
-                        <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime}</td>
-                        <td className="px-2 py-2 text-center font-bold text-indigo-600 tracking-tighter">{row.duration}</td>
-                        <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime}</td>
-                        <td className="px-2 py-2 flex justify-center">
-                          {renderStatusIcon(row.status)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            )}
+
+            {/* 3. 연도별 기록 표 */}
+            {taskAllTimeStats && (
+              <div className="space-y-10">
+                {Object.keys(taskAllTimeStats.historyByYear).sort((a, b) => b.localeCompare(a)).map(year => (
+                  <section key={year} className="bg-white rounded-[15px] shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                      <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-indigo-500" />
+                        {year}년 기록
+                      </h3>
+                      <span className="text-[10px] font-bold text-slate-400">{taskAllTimeStats.historyByYear[year].length}개의 기록</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-[11px]">
+                        <thead>
+                          <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
+                            <th className="px-2 py-2">날짜</th>
+                            <th className="px-2 py-2 text-center">시작</th>
+                            <th className="px-2 py-2 text-center">소요</th>
+                            <th className="px-2 py-2 text-center">완료</th>
+                            <th className="px-2 py-2 text-center">상태</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {taskAllTimeStats.historyByYear[year].map((row, i) => (
+                            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                              <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
+                              <td className="px-2 py-2 text-center font-black text-slate-700">{row.startTime}</td>
+                              <td className="px-2 py-2 text-center font-bold text-indigo-600">{row.duration}</td>
+                              <td className="px-2 py-2 text-center font-black text-slate-700">{row.endTime}</td>
+                              <td className="px-2 py-2 flex justify-center">{renderStatusIcon(row.status)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                ))}
               </div>
-              <div className="p-3 border-t border-slate-50">
-                <button 
-                  onClick={() => setViewAllType('task')}
-                  className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-400 hover:text-indigo-600 transition-colors py-2"
-                >
-                  모든 기록 확인
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </section>
+            )}
           </div>
         </div>
       </div>
@@ -1197,64 +1250,19 @@ export const StatsView: React.FC<StatsViewProps> = ({
   if (selectedGroupId && detailData) {
     return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {/* Folder Tab Containers */}
-        <div className="flex px-4 items-end relative z-20">
-          <button
-            onClick={() => {
-              setActiveTab('wake-up');
-              setSelectedGroupId(null);
-            }}
-            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-              activeTab === 'wake-up' 
-                ? 'bg-white text-indigo-600 border-slate-100 -mb-[1px] pt-4' 
-                : 'bg-slate-50 text-slate-400 border-transparent'
-            }`}
-          >
-            <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
-            기상 시각 통계
-  
-            {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('achievement');
-              setSelectedGroupId(null);
-            }}
-            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-              activeTab === 'achievement' 
-                ? 'bg-white text-violet-600 border-slate-100 -mb-[1px] pt-4' 
-                : 'bg-slate-50 text-slate-400 border-transparent'
-            }`}
-          >
-            <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
-            달성률 통계
-            {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('usage');
-              setSelectedGroupId(null);
-            }}
-            className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-              activeTab === 'usage' 
-                ? 'bg-white text-emerald-600 border-slate-100 -mb-[1px] pt-4' 
-                : 'bg-slate-50 text-slate-400 border-transparent'
-            }`}
-          >
-            <Timer className={`w-3.5 h-3.5 ${activeTab === 'usage' ? 'text-emerald-500' : 'text-slate-300'}`} />
-            사용 시간 통계
-            {activeTab === 'usage' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-          </button>
-        </div>
-
+        {renderFolderTabs()}
         {/* Main Folder Content Body */}
         <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 p-4 md:p-6">
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="flex items-center gap-4">
               <button 
-                onClick={() => setSelectedGroupId(null)}
+                onClick={() => {
+                  if (isSingleGroupStatsOnly && onBackOverride) {
+                    onBackOverride();
+                  } else {
+                    setSelectedGroupId(null);
+                  }
+                }}
                 className="p-2 hover:bg-slate-100 rounded-full transition-colors"
               >
                 <ChevronLeft className="w-6 h-6 text-slate-600" />
@@ -1385,49 +1393,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Folder Tab Containers */}
-      <div className="flex px-4 items-end relative z-20">
-        {/* Left Tab: 기상 시각 통계 */}
-        <button
-          onClick={() => setActiveTab('wake-up')}
-          className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-            activeTab === 'wake-up' 
-              ? 'bg-white text-indigo-600 border-slate-100 -mb-[1px] pt-4' 
-              : 'bg-slate-50 text-slate-400 border-transparent'
-          }`}
-        >
-          <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
-          기상시각 통계
-          {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-        </button>
-
-        {/* Right Tab: 달성률 통계 */}
-        <button
-          onClick={() => setActiveTab('achievement')}
-          className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-            activeTab === 'achievement' 
-              ? 'bg-white text-violet-600 border-slate-100 -mb-[1px] pt-4' 
-              : 'bg-slate-50 text-slate-400 border-transparent'
-          }`}
-        >
-          <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
-          달성률 통계
-          {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-        </button>
-
-        {/* Third Tab: 사용시간 통계 */}
-        <button
-          onClick={() => setActiveTab('usage')}
-          className={`px-5 py-3 text-xs md:text-sm font-black rounded-t-[15px] transition-all duration-300 relative border-x border-t flex items-center gap-2 ${
-            activeTab === 'usage' 
-              ? 'bg-white text-emerald-600 border-slate-100 -mb-[1px] pt-4' 
-              : 'bg-slate-50 text-slate-400 border-transparent'
-          }`}
-        >
-          <Timer className={`w-3.5 h-3.5 ${activeTab === 'usage' ? 'text-emerald-500' : 'text-slate-300'}`} />
-          사용시간 통계
-          {activeTab === 'usage' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
-        </button>
-      </div>
+      {renderFolderTabs()}
 
       {/* Main Folder Content Body */}
       <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10">
@@ -1568,7 +1534,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             <th className="px-2 py-2">날짜</th>
                             <th className="px-2 py-2">달성률</th>
                             <th className="px-2 py-2 md:whitespace-nowrap">
-                              루틴<span>(실패/스킵/완료·완벽)</span>
+                              루틴<span className="block md:inline">(미완료/스킵/완료)</span>
                             </th>
                             <th className="px-2 py-2 text-center">
                               <span className="hidden md:inline">시작 ~ 종료</span>

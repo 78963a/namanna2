@@ -222,7 +222,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   setSelectedChunkId,
   handleCheckCheckClick,
   isCheckCheckAvailable,
-  setConfirmModal
+  setConfirmModal,
+  setStatsKey
 }) => {
   // --- [Hook declarations FIRST to comply with React rules] ---
   const [isCompleted, setIsCompleted] = useState(false);
@@ -603,6 +604,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   onClick={() => {
                     setActiveTab('stats');
                     setSelectedChunkId(null);
+                    setStatsKey?.(prev => prev + 1);
                   }}
                   className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm`}
                 >
@@ -909,6 +911,23 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                 <div className="flex items-center px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
                   <span>총 {scheduledTasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0)}분</span>
                 </div>
+
+
+
+
+
+
+
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSettingsSubView({ type: 'groupStats', chunkId: chunk.id });
+                    setIsSettingsOpen(true);
+                  }}
+                  className="inline-flex items-center justify-center p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-[10px] transition-all ml-1 align-middle"
+                >
+                  <BarChart3 className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
@@ -3200,6 +3219,7 @@ export const FONT_SETTINGS = {
 export default function App() {
   // --- State ---
   const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
+  const [statsKey, setStatsKey] = useState(0);
   const [justFinishedGroupId, setJustFinishedGroupId] = useState<string | null>(null);
   const [showNextRoutineModal, setShowNextRoutineModal] = useState(false);
   const [modalSuggestions, setModalSuggestions] = useState<NextRoutineSuggestion[]>([]);
@@ -6447,6 +6467,21 @@ export default function App() {
   }, [userData.dailyCompletionRate]);
 
   const renderSettingsContent = (mode: 'main' | 'modal') => {
+    if (settingsSubView.type === 'groupStats') {
+      return (
+        <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-bottom-[50px] duration-300">
+          <StatsView
+            userData={userData}
+            currentTime={currentTime}
+            deleteReview={deleteReview}
+            initialSelectedGroupId={settingsSubView.chunkId}
+            isSingleGroupStatsOnly={true}
+            onBackOverride={handleSettingsClose}
+          />
+        </div>
+      );
+    }
+
     if (settingsSubView.type === 'main' || settingsSubView.type === 'sound' || settingsSubView.type === 'nagging' || (activeTab === 'settings' && settingsSubView.type === 'detail')) {
       return (
         <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -7854,6 +7889,7 @@ export default function App() {
               onClick={() => {
                 handleTabTransition('stats', () => {
                   setSelectedChunkId(null);
+                  setStatsKey(prev => prev + 1);
                 });
               }}
               className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${
@@ -7967,6 +8003,7 @@ export default function App() {
               className="space-y-4"
             >
               <StatsView 
+                key={statsKey}
                 userData={userData} 
                 currentTime={currentTime}
                 effectiveDate={effectiveDate}
@@ -7985,6 +8022,7 @@ export default function App() {
                 userData={userData}
                 setUserData={setUserData}
                 selectedChunkId={selectedChunkId}
+                setStatsKey={setStatsKey}
                 setActiveTab={(tab) => {
                   if (tab === 'home' && selectedChunkId) {
                     const chunk = userData.routineChunks.find(c => c.id === selectedChunkId);

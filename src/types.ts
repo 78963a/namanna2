@@ -202,7 +202,7 @@ export interface UserData {
  * Represents the sub-view state within the settings screen.
  */
 export interface SettingsSubView {
-  type: 'main' | 'detail' | 'nagging' | 'sound';
+  type: 'main' | 'detail' | 'nagging' | 'sound' | 'groupStats';
   chunkId?: string;
 }
 
@@ -268,6 +268,7 @@ export interface ExecutionViewProps {
   handleCheckCheckClick: () => void;
   isCheckCheckAvailable: boolean;
   setConfirmModal: (modal: any) => void;
+  setStatsKey?: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export interface AddRoutineGroupViewProps {
