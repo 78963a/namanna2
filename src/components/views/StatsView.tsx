@@ -36,6 +36,8 @@ interface StatsViewProps {
   initialSelectedGroupId?: string | null;
   isSingleGroupStatsOnly?: boolean;
   onBackOverride?: () => void;
+  initialSelectedTaskId?: string | null;
+  isSingleTaskStatsOnly?: boolean;
 }
 
 export const StatsView: React.FC<StatsViewProps> = ({ 
@@ -44,16 +46,24 @@ export const StatsView: React.FC<StatsViewProps> = ({
   deleteReview,
   initialSelectedGroupId = null,
   isSingleGroupStatsOnly = false,
-  onBackOverride
+  onBackOverride,
+  initialSelectedTaskId = null,
+  isSingleTaskStatsOnly = false
 }) => {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(initialSelectedGroupId);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialSelectedTaskId);
 
   useEffect(() => {
     if (initialSelectedGroupId) {
       setSelectedGroupId(initialSelectedGroupId);
     }
   }, [initialSelectedGroupId]);
+
+  useEffect(() => {
+    if (initialSelectedTaskId) {
+      setSelectedTaskId(initialSelectedTaskId);
+    }
+  }, [initialSelectedTaskId]);
   const [calendarYear, setCalendarYear] = useState(currentTime.getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(currentTime.getMonth());
 
@@ -61,7 +71,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
   const [viewAllType, setViewAllType] = useState<'overall' | 'group' | 'task' | null>(null);
 
   const renderFolderTabs = () => {
-    if (isSingleGroupStatsOnly) return null;
+    if (isSingleGroupStatsOnly || isSingleTaskStatsOnly) return null;
     return (
       <div className="flex px-4 items-end relative z-20">
         <button
@@ -1147,12 +1157,16 @@ export const StatsView: React.FC<StatsViewProps> = ({
         <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 p-4 md:p-6">
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="flex items-center gap-4">
-              <button 
-                onClick={() => setSelectedTaskId(null)}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-              >
-                <ChevronLeft className="w-6 h-6 text-slate-600" />
-              </button>
+              {!isSingleTaskStatsOnly && (
+                <button 
+                  onClick={() => {
+                    setSelectedTaskId(null);
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <ChevronLeft className="w-6 h-6 text-slate-600" />
+                </button>
+              )}
               <h2 className="text-xl font-black text-slate-900"><span className="text-indigo-400">{taskDetailData.name}</span> 상세 통계</h2>
             </div>
 

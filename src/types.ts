@@ -269,6 +269,7 @@ export interface ExecutionViewProps {
   isCheckCheckAvailable: boolean;
   setConfirmModal: (modal: any) => void;
   setStatsKey?: React.Dispatch<React.SetStateAction<number>>;
+  setSelectedTaskForStats?: (id: string | null) => void;
 }
 
 export interface AddRoutineGroupViewProps {

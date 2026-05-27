@@ -223,7 +223,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   handleCheckCheckClick,
   isCheckCheckAvailable,
   setConfirmModal,
-  setStatsKey
+  setStatsKey,
+  setSelectedTaskForStats
 }) => {
   // --- [Hook declarations FIRST to comply with React rules] ---
   const [isCompleted, setIsCompleted] = useState(false);
@@ -231,9 +232,127 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   const [visibleTasksCount, setVisibleTasksCount] = useState(0);
   const [shakingTaskId, setShakingTaskId] = useState<string | null>(null);
 
+  const [isPressing, setIsPressing] = useState(false);
+  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pressStartTimeRef = useRef<number>(0);
+  const rollbackTriggeredRef = useRef<boolean>(false);
+  const isTouchActiveRef = useRef<boolean>(false);
+
   const activeTaskRef = useRef<HTMLDivElement>(null);
   const scrollBottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const rollbackTimer = (taskId: string) => {
+    setUserData(prev => {
+      return {
+        ...prev,
+        routineChunks: prev.routineChunks.map(chunk => {
+          if (!chunk.tasks.some(t => t.id === taskId)) return chunk;
+          return {
+            ...chunk,
+            tasks: chunk.tasks.map(t => {
+              if (t.id === taskId) {
+                return {
+                  ...t,
+                  startTime: undefined,
+                  accumulatedDuration: 0,
+                  isPaused: false,
+                  status: TaskStatus.NOT_STARTED
+                };
+              }
+              return t;
+            })
+          };
+        })
+      };
+    });
+  };
+
+  const handlePressStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('button' in e && e.button !== 0) return;
+    if (!activeTask) return;
+
+    setIsPressing(true);
+    rollbackTriggeredRef.current = false;
+    pressStartTimeRef.current = Date.now();
+
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+    }
+
+    longPressTimeoutRef.current = setTimeout(() => {
+      rollbackTimer(activeTask.id);
+      rollbackTriggeredRef.current = true;
+      setIsPressing(false);
+      
+      if (navigator.vibrate) {
+        try {
+          navigator.vibrate(100);
+        } catch (err) {
+          // ignore potential iframe permission blocks
+        }
+      }
+    }, 1000);
+  };
+
+  const handlePressEnd = (e: React.MouseEvent | React.TouchEvent) => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+
+    setIsPressing(false);
+
+    if (rollbackTriggeredRef.current) {
+      rollbackTriggeredRef.current = false;
+      return;
+    }
+
+    if (!activeTask) return;
+
+    const pressDuration = Date.now() - pressStartTimeRef.current;
+    if (pressDuration < 400) {
+      togglePauseTask(activeTask.id, true);
+    }
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    isTouchActiveRef.current = true;
+    handlePressStart(e);
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    handlePressEnd(e);
+  };
+
+  const onTouchCancel = () => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+    setIsPressing(false);
+  };
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (isTouchActiveRef.current) return;
+    handlePressStart(e);
+  };
+
+  const onMouseUp = (e: React.MouseEvent) => {
+    if (isTouchActiveRef.current) {
+      isTouchActiveRef.current = false;
+      return;
+    }
+    handlePressEnd(e);
+  };
+
+  const onMouseLeave = () => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+    setIsPressing(false);
+  };
 
   const isAlreadyFinalized = useMemo(() => {
     if (!selectedChunkId) return false;
@@ -994,6 +1113,16 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                         )}
                         <span>{activeTask.targetDuration}분</span>
                       </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTaskForStats(activeTask.id);
+                        }}
+                        className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-[10px] transition-all ml-2 align-middle cursor-pointer"
+                        title="루틴 상세 통계 보기"
+                      >
+                        <BarChart3 className="w-5 h-5" />
+                      </button>
                     </h3>
                   </div>
 
@@ -1003,38 +1132,45 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                       - 테두리: border-slate-200
                   */}
                   <div 
-                    onClick={() => {
-                      if (activeTask.isPaused || !activeTask.startTime) {
-                        togglePauseTask(activeTask.id, true);
-                      }
-                    }}
-                    className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden cursor-pointer ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200`}
+                    onTouchStart={onTouchStart}
+                    onTouchEnd={onTouchEnd}
+                    onTouchCancel={onTouchCancel}
+                    onMouseDown={onMouseDown}
+                    onMouseUp={onMouseUp}
+                    onMouseLeave={onMouseLeave}
+                    className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden cursor-pointer select-none ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200 touch-none active:scale-[0.99] transition-transform`}
                   >
                     {/* [디자인 수정 구역 8: 타이머 채움 애니메이션 레이어] 
                         - 투명도: opacity-0.2 ~ 0.4
                         - 색상은 위쪽 'getStageInfo' 함수 내 'color' 값을 따릅니다. 
                     */}
-                    {((userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT) || getElapsed(activeTask) > 0) && (
+                    {((userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT) || getElapsed(activeTask) > 0 || isPressing) && (
                       <motion.div 
                         initial={false}
                         animate={
-                          (userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT) 
-                            ? { width: '100%', opacity: 0.4 } 
-                            : { 
-                                width: `${getStageInfo(activeTask).progress}%`,
-                                opacity: getStageInfo(activeTask).isFinished ? 0.4 : 0.2
-                              }
+                          isPressing
+                            ? { width: '0%', opacity: 0.2 }
+                            : (userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT) 
+                              ? { width: '100%', opacity: 0.4 } 
+                              : { 
+                                  width: `${getStageInfo(activeTask).progress}%`,
+                                  opacity: getStageInfo(activeTask).isFinished ? 0.4 : 0.2
+                                }
                         }
                         className={`absolute inset-y-0 left-0 ${getStageInfo(activeTask).color}`}
-                        transition={{ duration: 0.5 }}
+                        transition={
+                          isPressing 
+                            ? { duration: 1.0, ease: 'linear' } 
+                            : { duration: 0.5 }
+                        }
                       />
                     )}
                     
-                    <div className="relative z-10 flex flex-col items-center">
+                    <div className="relative z-10 flex flex-col items-center select-none">
                       {/* [디자인 수정 구역 9: 타이머 내 날짜/시각 정보] 
                           - 글자색: text-slate-500
                       */}
-                      <div className="text-sm font-bold text-slate-500 mb-1 tabular-nums flex flex-col items-center">
+                      <div className="text-sm font-bold text-slate-500 mb-1 tabular-nums flex flex-col items-center select-none">
                         <div>{`${currentTime.getFullYear()}-${(currentTime.getMonth() + 1).toString().padStart(2, '0')}-${currentTime.getDate().toString().padStart(2, '0')}`}</div>
                         <div>{`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}</div>
                       </div>
@@ -1048,7 +1184,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
       const isAnytimeHidden = userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT;
       return (
         <div 
-          className={`text-6xl font-black tabular-nums tracking-tighter ${
+          className={`text-6xl font-black tabular-nums tracking-tighter select-none ${
             isAnytimeHidden 
               ? 'text-transparent' 
               : (!activeTask.startTime || activeTask.isPaused) 
@@ -1057,7 +1193,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           }`}
         >
           {formatDuration(getElapsed(activeTask))}
-          <span className={`text-xl ml-2 ${isAnytimeHidden ? 'text-transparent' : 'text-slate-400'}`}>/ {activeTask.targetDuration}분</span>
+          <span className={`text-xl ml-2 select-none ${isAnytimeHidden ? 'text-transparent' : 'text-slate-400'}`}>/ {activeTask.targetDuration}분</span>
         </div>
       );
     })()}
@@ -1065,8 +1201,8 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                       {/* [디자인 수정 구역 11: 타이머 상태 텍스트 (Ready/Paused/In Progress)] 
                           - 글자색: text-slate-400 ~ text-slate-500
                       */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${activeTask.isPaused || !activeTask.startTime ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <div className="flex items-center gap-2 mt-2 select-none">
+                        <p className={`text-[10px] font-black uppercase tracking-[0.3em] select-none ${activeTask.isPaused || !activeTask.startTime ? 'text-slate-400' : 'text-slate-500'}`}>
                           {!activeTask.startTime ? 'Ready' : activeTask.isPaused ? 'Paused' : 'In Progress'}
                         </p>
                       </div>
@@ -3222,6 +3358,7 @@ export default function App() {
   const [statsKey, setStatsKey] = useState(0);
   const [justFinishedGroupId, setJustFinishedGroupId] = useState<string | null>(null);
   const [showNextRoutineModal, setShowNextRoutineModal] = useState(false);
+  const [selectedTaskForStats, setSelectedTaskForStats] = useState<string | null>(null);
   const [modalSuggestions, setModalSuggestions] = useState<NextRoutineSuggestion[]>([]);
   const [isWaitingForNextRoutineModal, setIsWaitingForNextRoutineModal] = useState(false);
   const nextRoutineTimerRef = useRef<any>(null);
@@ -8051,6 +8188,7 @@ export default function App() {
                 handleCheckCheckClick={handleCheckCheckClick}
                 isCheckCheckAvailable={isCheckCheckAvailable}
                 setConfirmModal={setConfirmModal}
+                setSelectedTaskForStats={setSelectedTaskForStats}
               />
             </motion.div>
           ) : activeTab === 'add' ? (
@@ -8269,9 +8407,9 @@ export default function App() {
         soundSettings={userData.soundSettings}
       />
 
-      {/* 다음 루틴 그룹 진행 안내 모달 */}
+      {/* 다음 루틴 그�            {/* Bottom Sheet Container */}
       <AnimatePresence>
-        {showNextRoutineModal && modalSuggestions.length > 0 && (
+        {showNextRoutineModal && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
@@ -8281,20 +8419,16 @@ export default function App() {
               onClick={() => setShowNextRoutineModal(false)}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-indigo-50 relative z-10 flex flex-col items-center select-none"
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-[25px] overflow-hidden shadow-2xl z-10 p-6 text-center space-y-4"
             >
-              <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-5 shrink-0">
-                <ArrowBigRightDash className="w-10 h-10 text-indigo-600" />
+              <div className="mx-auto w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-2">
+                <Target className="w-8 h-8 text-indigo-500" />
               </div>
-              
-              <h3 className="text-xl md:text-2xl font-black text-slate-800 text-center mb-1 tracking-tight">
-                이어서 다음 루틴으로 나아갑니다
-              </h3>
-              <p className="text-xs font-bold text-slate-400 text-center mb-5 leading-relaxed">
+              <h3 className="text-xl font-black text-slate-800">다음 루틴으로 이동</h3>
+              <p className="text-sm font-bold text-slate-500 leading-relaxed">
                 수행 가능한 다음 루틴이 남아있습니다. 바로 시작해보세요!
               </p>
 
@@ -8568,6 +8702,50 @@ export default function App() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* 개별 루틴 상세 통계 하단 팝업 (Bottom Sheet) */}
+      <AnimatePresence>
+        {selectedTaskForStats && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedTaskForStats(null)}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000] touch-none"
+            />
+            {/* Bottom Sheet Container */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed bottom-0 left-0 right-0 max-h-[90vh] bg-slate-50 rounded-t-[20px] p-6 shadow-2xl z-[1001] max-w-2xl mx-auto overflow-hidden flex flex-col"
+            >
+              {/* Drag Handle & Close Button */}
+              <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 flex-shrink-0" />
+              <button
+                onClick={() => setSelectedTaskForStats(null)}
+                className="absolute top-5 right-6 w-8 h-8 rounded-full bg-slate-250/80 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all cursor-pointer z-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* StatsView Wrapper Container */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar pb-6">
+                <StatsView
+                  userData={userData}
+                  currentTime={currentTime}
+                  deleteReview={deleteReview}
+                  initialSelectedTaskId={selectedTaskForStats}
+                  isSingleTaskStatsOnly={true}
+                />
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
