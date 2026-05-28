@@ -2086,7 +2086,7 @@ const TaskInputSection = ({
   <div className="space-y-3">
     <div className="flex flex-col gap-1">
       <div className="text-[15px] font-bold text-slate-600 ml-1">{label}</div>
-      {description && <p className="text-[10px] font-bold text-slate-400 ml-1 leading-relaxed">{description}</p>}
+      {description && <p className="text-[12px] font-bold text-slate-400 ml-1 leading-relaxed">{description}</p>}
     </div>
     <div className="bg-white p-3 rounded-[10px] border border-slate-200 space-y-4 shadow-none">
       <div className="space-y-1.5">
@@ -2912,6 +2912,10 @@ const RoutineGroupFormView: React.FC<{
           {/* Purpose Input */}
           <div className="space-y-3">
             <SectionTitle>2. 목적</SectionTitle>
+            <p className="text-[12px] font-bold text-slate-400 -mt-3 ml-1 mb-2 leading-tight">
+              이 루틴을 성실하게 수행하는 사람은 어떤 사람일까요?
+            </p>
+
             <input 
               type="text"
               value={purpose}
@@ -2926,7 +2930,7 @@ const RoutineGroupFormView: React.FC<{
           {/* Schedule Settings */}
           <div className="space-y-3">
             <SectionTitle>3. 요일 설정</SectionTitle>
-            <p className="text-[11px] font-bold text-slate-400 -mt-3 ml-1 mb-2 leading-tight">
+            <p className="text-[12px] font-bold text-slate-400 -mt-3 ml-1 mb-2 leading-tight">
               모든 요일을 해제하여 비정기적인 루틴을 수행할 수 있습니다
             </p>
             <div className="flex flex-wrap gap-2">
@@ -3754,6 +3758,7 @@ export default function App() {
 
   const naggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastProcessedStartTimeRef = useRef<{ taskId: string; startTime: string } | null>(null);
+  const prevTriggerRunningRef = useRef<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [addGroupStep, setAddGroupStep] = useState(1);
@@ -4280,6 +4285,26 @@ export default function App() {
       voiceService.stop();
     };
   }, [globalActiveTask?.task?.id]);
+
+  const isCurrentlyTriggerRoutineActiveAndRunning = useMemo(() => {
+    if (!globalActiveTask || !globalActiveTask.task) return false;
+    if (activeTab !== 'execution') return false;
+    const activeTask = globalActiveTask.task;
+    const chunk = userData.routineChunks.find(c => c.tasks.some(t => t.id === activeTask.id));
+    if (!chunk) return false;
+    const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
+    const isFirstScheduled = scheduledTasks[0]?.id === activeTask.id;
+    return isFirstScheduled && !activeTask.isPaused && !activeTask.completed && activeTask.status !== TaskStatus.COMPLETED && activeTask.status !== TaskStatus.PERFECT && activeTask.status !== TaskStatus.SKIP;
+  }, [globalActiveTask, activeTab, userData.routineChunks, effectiveDate, userData]);
+
+  useEffect(() => {
+    if (prevTriggerRunningRef.current && !isCurrentlyTriggerRoutineActiveAndRunning) {
+      const triggerConfig = userData.soundSettings?.triggerRoutineStart;
+      const triggerFile = triggerConfig?.file || '/driken5482-applause-cheer-236786.mp3';
+      soundService.stopFile(triggerFile);
+    }
+    prevTriggerRunningRef.current = isCurrentlyTriggerRoutineActiveAndRunning;
+  }, [isCurrentlyTriggerRoutineActiveAndRunning, userData.soundSettings?.triggerRoutineStart]);
 
   // --- [잔소리 기능 (Nagging Function) 로직] ---
   // 사용자가 설정한 문구와 시점에 맞춰 음성 안내를 실행합니다.
@@ -6255,12 +6280,14 @@ export default function App() {
 
   const updateWakeUpTime = (time: string) => {
     const hasCheckedInToday = userData.lastCheckInDate === todayStr;
-    const warning = hasCheckedInToday ? '\n\n⚠️ 변경 시 오늘의 기상 체크인 기록이 삭제됩니다.' : '';
+    const message = hasCheckedInToday
+      ? `기상 목표 시각을 ${time}${getJosa(time, '으로/로')} 변경하시겠습니까?\n\n오늘 기상 체크인은 이미 완료되어 이전 기록이 유지되며, 변경된 시각은 내일부터 적용됩니다.`
+      : `기상 목표 시각을 ${time}${getJosa(time, '으로/로')} 변경하시겠습니까?\n\n변경된 목표 시각에 따라 오늘의 기상 체크인 가능 여부가 즉시 변경됩니다.`;
 
     setConfirmModal({
       isOpen: true,
       title: '기상 시각 변경',
-      message: `기상 목표 시각을 ${time}${getJosa(time, '으로/로')} 변경하시겠습니까?${warning}`,
+      message: message,
       confirmColor: 'indigo',
       onConfirm: () => {
           setUserData(prev => {
@@ -6268,23 +6295,6 @@ export default function App() {
               ...prev,
               targetWakeUpTime: time,
             };
-
-            if (prev.lastCheckInDate === todayStr) {
-              // Delete today's check-in records across all relevant fields
-              next.history = prev.history.filter(h => h.date !== todayStr);
-              next.lastCheckInDate = null;
-              
-              if (next.dailyCheckIn) {
-                const nextDailyCheckIn = { ...next.dailyCheckIn };
-                delete nextDailyCheckIn[todayStr];
-                next.dailyCheckIn = nextDailyCheckIn;
-              }
-              
-              if (next.wakeUpTimeHistory) {
-                next.wakeUpTimeHistory = next.wakeUpTimeHistory.filter(h => h.date !== todayStr);
-              }
-            }
-
             return next;
           });
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -6627,6 +6637,25 @@ export default function App() {
             {/* Left Tab: 일반설정 */}
             <button
               onClick={() => {
+                if (settingsSubView.type === 'detail' && isEditRoutineDirty) {
+                  setConfirmModal({
+                    isOpen: true,
+                    title: '변경 취소 확인',
+                    message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+                    confirmLabel: '취소하고 나가기',
+                    cancelLabel: '계속 수정하기',
+                    confirmColor: 'indigo',
+                    showCancel: true,
+                    onConfirm: () => {
+                      setIsEditRoutineDirty(false);
+                      setActiveSettingsTab('general');
+                      setSettingsSubView({ type: 'main' });
+                      setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    },
+                    onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+                  });
+                  return;
+                }
                 setActiveSettingsTab('general');
                 setSettingsSubView({ type: 'main' });
               }}
@@ -6644,6 +6673,25 @@ export default function App() {
             {/* Right Tab: 루틴 그룹 관리 */}
             <button
               onClick={() => {
+                if (settingsSubView.type === 'detail' && isEditRoutineDirty) {
+                  setConfirmModal({
+                    isOpen: true,
+                    title: '변경 취소 확인',
+                    message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+                    confirmLabel: '취소하고 나가기',
+                    cancelLabel: '계속 수정하기',
+                    confirmColor: 'indigo',
+                    showCancel: true,
+                    onConfirm: () => {
+                      setIsEditRoutineDirty(false);
+                      setActiveSettingsTab('groups');
+                      setSettingsSubView({ type: 'main' });
+                      setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    },
+                    onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+                  });
+                  return;
+                }
                 setActiveSettingsTab('groups');
                 setSettingsSubView({ type: 'main' });
               }}
@@ -6850,7 +6898,7 @@ export default function App() {
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex flex-col gap-1">
                             <h4 className="text-sm font-black text-slate-700">첫 루틴 자동 시작</h4>
-                            <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴 그룹을 시작함과 동시에 타이머가 자동으로 돌아갑니다.</p>
+                            <p className="text-[12px] font-bold text-slate-400 leading-tight">루틴 그룹을 시작함과 동시에 타이머가 자동으로 돌아갑니다.</p>
                           </div>
                           <button 
                             onClick={() => setUserData(prev => ({ ...prev, firstRoutineAutoStart: !prev.firstRoutineAutoStart }))}
@@ -6863,7 +6911,7 @@ export default function App() {
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex flex-col gap-1">
                             <h4 className="text-sm font-black text-slate-700">다음 루틴 자동 시작</h4>
-                            <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴을 완료하면 다음 루틴이 자동으로 시작됩니다.</p>
+                            <p className="text-[12px] font-bold text-slate-400 leading-tight">루틴을 완료하면 다음 루틴이 자동으로 시작됩니다.</p>
                           </div>
                           <button 
                             onClick={() => setUserData(prev => ({ ...prev, nextRoutineAutoStart: !prev.nextRoutineAutoStart }))}
@@ -6886,7 +6934,7 @@ export default function App() {
                       <div className="space-y-4 pt-1">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex flex-col gap-1">
-                            <p className="text-[11px] font-bold text-slate-400 leading-tight">시간 무관 루틴의 경우 타이머를 표시하지 않습니다</p>
+                            <p className="text-[12px] font-bold text-slate-400 leading-tight">시간 무관 루틴의 경우 타이머를 표시하지 않습니다</p>
                           </div>
                           <button 
                             onClick={() => setUserData(prev => ({ ...prev, hideAnytimeTimer: !prev.hideAnytimeTimer }))}
@@ -6910,7 +6958,7 @@ export default function App() {
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex flex-col gap-1">
                             <h4 className="text-sm font-black text-slate-700">실행중인 그룹 자동 정렬</h4>
-                            <p className="text-[11px] font-bold text-slate-400 leading-tight">실행중인 그룹은 자동으로 목록 상단으로 이동합니다.</p>
+                            <p className="text-[12px] font-bold text-slate-400 leading-tight">실행중인 그룹은 자동으로 목록 상단으로 이동합니다.</p>
                           </div>
                           <button 
                             onClick={() => setUserData(prev => ({ ...prev, autoReorderInProgressGroups: !prev.autoReorderInProgressGroups }))}
@@ -6923,7 +6971,7 @@ export default function App() {
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex flex-col gap-1">
                             <h4 className="text-sm font-black text-slate-700">완료된 그룹 자동 정렬</h4>
-                            <p className="text-[11px] font-bold text-slate-400 leading-tight">완료된 그룹은 자동으로 목록 하단으로 이동합니다.</p>
+                            <p className="text-[12px] font-bold text-slate-400 leading-tight">완료된 그룹은 자동으로 목록 하단으로 이동합니다.</p>
                           </div>
                           <button 
                             onClick={() => setUserData(prev => ({ ...prev, autoReorderCompletedGroups: !prev.autoReorderCompletedGroups }))}
@@ -6936,7 +6984,7 @@ export default function App() {
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex flex-col gap-1">
                             <h4 className="text-sm font-black text-slate-700">비활성 그룹 자동 정렬</h4>
-                            <p className="text-[11px] font-bold text-slate-400 leading-tight">비활성화된 그룹은 자동으로 목록 가장 하단으로 이동합니다.</p>
+                            <p className="text-[12px] font-bold text-slate-400 leading-tight">비활성화된 그룹은 자동으로 목록 가장 하단으로 이동합니다.</p>
                           </div>
                           <button 
                             onClick={() => setUserData(prev => ({ ...prev, autoReorderInactiveGroups: !prev.autoReorderInactiveGroups }))}
@@ -6958,7 +7006,7 @@ export default function App() {
                       
                       <div className="pt-1 flex items-center justify-between gap-4">
                         <div className="flex flex-col gap-1">
-                          <p className="text-[11px] font-bold text-slate-400 leading-tight">하나의 루틴 그룹을 완료하면 다음 루틴 그룹 진행을 안내합니다.</p>
+                          <p className="text-[12px] font-bold text-slate-400 leading-tight">하나의 루틴 그룹을 완료하면 다음 루틴 그룹 진행을 안내합니다.</p>
                         </div>
                         <button 
                           onClick={() => setUserData(prev => ({ ...prev, nextRoutineGroupGuidanceEnabled: !prev.nextRoutineGroupGuidanceEnabled }))}
@@ -7025,7 +7073,7 @@ export default function App() {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-sm font-black text-slate-700">데이터 백업하기</span>
-                            <span className="text-[11px] font-bold text-slate-400 leading-tight">현재 데이터를 JSON 파일로 다운로드합니다.</span>
+                            <span className="text-[12px] font-bold text-slate-400 leading-tight">현재 데이터를 JSON 파일로 다운로드합니다.</span>
                           </div>
                         </button>
 
@@ -7044,7 +7092,7 @@ export default function App() {
                             </div>
                             <div className="flex flex-col">
                               <span className="text-sm font-black text-slate-700">데이터 복구하기</span>
-                              <span className="text-[11px] font-bold text-slate-400 leading-tight">백업된 JSON 파일을 불러와 데이터를 복원합니다.</span>
+                              <span className="text-[12px] font-bold text-slate-400 leading-tight">백업된 JSON 파일을 불러와 데이터를 복원합니다.</span>
                             </div>
                           </button>
                         </div>
@@ -7065,7 +7113,7 @@ export default function App() {
                           className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                         >
                           <span className="text-sm font-black text-slate-700 mb-1">기상시각 기록 삭제</span>
-                          <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 기상시각 기록을 모두 삭제합니다.</span>
+                          <span className="text-[12px] font-bold text-slate-400 leading-tight">현재까지 기록된 기상시각 기록을 모두 삭제합니다.</span>
                         </button>
 
                         <button 
@@ -7073,7 +7121,7 @@ export default function App() {
                           className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                         >
                           <span className="text-sm font-black text-slate-700 mb-1">사용 시간 기록 삭제</span>
-                          <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 사용 시간 바 기록을 모두 삭제합니다.</span>
+                          <span className="text-[12px] font-bold text-slate-400 leading-tight">현재까지 기록된 사용 시간 바 기록을 모두 삭제합니다.</span>
                         </button>
 
                         <button 
@@ -7081,7 +7129,7 @@ export default function App() {
                           className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                         >
                           <span className="text-sm font-black text-slate-700 mb-1">루틴 기록 삭제</span>
-                          <span className="text-[11px] font-bold text-slate-400 leading-tight">현재까지 기록된 모든 루틴 기록을 삭제합니다. 루틴 설정은 유지합니다.</span>
+                          <span className="text-[12px] font-bold text-slate-400 leading-tight">현재까지 기록된 모든 루틴 기록을 삭제합니다. 루틴 설정은 유지합니다.</span>
                         </button>
 
                         <button 
@@ -7089,7 +7137,7 @@ export default function App() {
                           className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                         >
                           <span className="text-sm font-black text-slate-700 mb-1">루틴 전체 삭제</span>
-                          <span className="text-[11px] font-bold text-slate-400 leading-tight">지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다.</span>
+                          <span className="text-[12px] font-bold text-slate-400 leading-tight">지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다.</span>
                         </button>
                       </div>
                     </div>
@@ -7108,7 +7156,7 @@ export default function App() {
                           className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                         >
                           <span className="text-sm font-black text-slate-700 mb-1">개인정보 처리방침 Privacy Policy</span>
-                          <span className="text-[11px] font-bold text-slate-400 leading-tight">앱의 개인정보 취급 방침을 확인합니다.</span>
+                          <span className="text-[12px] font-bold text-slate-400 leading-tight">앱의 개인정보 취급 방침을 확인합니다.</span>
                         </button>
 
                         <button 
@@ -7116,7 +7164,7 @@ export default function App() {
                           className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
                         >
                           <span className="text-sm font-black text-slate-700 mb-1">지원 Support URL</span>
-                          <span className="text-[11px] font-bold text-slate-400 leading-tight">도움말 확인 및 개발자에게 문의합니다.</span>
+                          <span className="text-[12px] font-bold text-slate-400 leading-tight">도움말 확인 및 개발자에게 문의합니다.</span>
                         </button>
                       </div>
                     </div>

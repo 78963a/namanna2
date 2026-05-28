@@ -121,6 +121,24 @@ class SoundService {
   }
 
   /**
+   * Stops a specific sound.
+   */
+  stopFile(path: string) {
+    const fullPath = this.getFullPath(path);
+    const audio = this.audioCache[fullPath];
+    if (audio) {
+      try {
+        const wasPlaying = !audio.paused && audio.currentTime > 0;
+        audio.pause();
+        audio.currentTime = 0;
+        if (wasPlaying) {
+          this.activeCount = Math.max(0, this.activeCount - 1);
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
    * Plays a sound effect.
    */
   play(path: string, isEnabled: boolean = true) {

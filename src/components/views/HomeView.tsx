@@ -85,7 +85,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
     };
   };
 
-  const [targetH, targetM] = userData.targetWakeUpTime.split(':').map(Number);
+  const todayCheckIn = userData.history.find(h => h.date === todayStr);
+
+  const todayTargetWakeUpTime = (todayCheckIn && userData.dailyTargetWakeUpTime?.[todayStr])
+    ? userData.dailyTargetWakeUpTime[todayStr]
+    : userData.targetWakeUpTime;
+
+  const [targetH, targetM] = todayTargetWakeUpTime.split(':').map(Number);
   const targetDate = new Date(currentTime);
   targetDate.setHours(targetH, targetM, 0, 0);
 
@@ -97,8 +103,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const isTooEarly = diffMinutes < -earlyLimit;
   const isWithinWindow = diffMinutes >= -earlyLimit && diffMinutes <= lateLimit;
 
-  const todayCheckIn = userData.history.find(h => h.date === todayStr);
-
   return (
     <div className="space-y-[10px]">
       <div className="flex gap-[10px] items-stretch">
@@ -107,7 +111,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="relative z-10 flex items-center justify-between gap-4 h-full">
             <div className="flex flex-col justify-center">
               <p className="text-indigo-100 text-[9px] font-bold uppercase tracking-wider leading-none mb-1">목표 기상 시간</p>
-              <h2 className="text-lg font-black tracking-tight leading-none">{userData.targetWakeUpTime}</h2>
+              <h2 className="text-lg font-black tracking-tight leading-none">{todayTargetWakeUpTime}</h2>
             </div>
 
             <div className="flex-grow max-w-[120px] flex items-center">
@@ -116,7 +120,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="font-bold text-[12px] whitespace-nowrap">
                     {(() => {
-                      const checkInDiff = timeToMinutes(todayCheckIn.time) - timeToMinutes(userData.targetWakeUpTime);
+                      const checkInDiff = timeToMinutes(todayCheckIn.time) - timeToMinutes(todayTargetWakeUpTime);
                       // 체크인 성공 판정 시에도 설정된 유예 시간 로직 적용
                       return checkInDiff >= -earlyLimit && checkInDiff <= lateLimit 
                         ? `성공 ! (${todayCheckIn.time.slice(0, 5)})` 
