@@ -1664,7 +1664,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <h2 className="text-lg font-black text-slate-800">사용 시간 통계</h2>
                   </div>
                   <div className="bg-emerald-50/50 p-4 rounded-[15px] border border-emerald-100/50">
-                    <p className="text-[10px] font-bold text-emerald-700 leading-relaxed">
+                    <p className="text-[12px] font-bold text-emerald-700 leading-relaxed">
                       ※ 시간 바는 00:00부터 24:00까지의 앱 사용 현황을 보여줍니다.<br/>
                       ※ 검은 색은 앱을 사용하지 않은 시간, 노란 색은 앱을 사용하였으나 타이머가 작동하지 않은 시간, 주황색은 백그라운드에서 타이머가 작동한 시간, 빨간색은 앱을 열어두고 있으면서 타이머가 작동한 시간을 표시합니다.  <br/>
                       ※ 소요 시간은 해당 날짜에 루틴 타이머가 작동한 총 합계입니다.
