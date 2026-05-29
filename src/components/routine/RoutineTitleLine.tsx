@@ -75,6 +75,8 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   let iconColor = "text-slate-200";
   let statusIcon = <Circle className={`w-5 h-5 ${iconColor}`} />;
 
+  const isTaskPausedWithDuration = !!(task.isPaused && (task.duration || task.accumulatedDuration || 0) > 0);
+
   if (!isScheduledToday) {
     iconColor = "text-slate-200";
     statusIcon = (
@@ -105,7 +107,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   } else if (task.laterTimestamp) {
     iconColor = "text-slate-400";
     statusIcon = <ArrowRightCircle className={`w-5 h-5 ${iconColor}`} />;
-  } else if (task.isPaused) {
+  } else if (isTaskPausedWithDuration) {
     iconColor = "text-amber-400";
     statusIcon = <PauseCircle className={`w-5 h-5 ${iconColor}`} />;
   } else if (task.startTime) {
@@ -117,7 +119,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   const isSkip = task.status === TaskStatus.SKIP;
   const isDone = isActuallyCompleted || isSkip;
   
-  const showRestart = onRestart && (isActuallyCompleted || task.isPaused);
+  const showRestart = onRestart && (isActuallyCompleted || isTaskPausedWithDuration);
   
   // "Start/Resume" button logic
   const showStartResume = onDoFirst && 
@@ -128,9 +130,9 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   const showActivate = onActivate && !isScheduledToday;
 
   let startResumeLabel = '';
-  if (task.laterTimestamp || isSkip || (!task.startTime && !task.isPaused && !isActuallyCompleted)) {
+  if (task.laterTimestamp || isSkip || (!task.startTime && !isTaskPausedWithDuration && !isActuallyCompleted)) {
     startResumeLabel = '시작하기';
-  } else if (task.isPaused || isActuallyCompleted) {
+  } else if (isTaskPausedWithDuration || isActuallyCompleted) {
     startResumeLabel = '이어하기';
   } else {
     startResumeLabel = '시작하기';
@@ -184,7 +186,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
         <span>{formatTime(task.duration || 0)} / {targetDuration}분</span>
       ) : isSkip ? (
         <span>0 / {targetDuration}분</span>
-      ) : (task.startTime || task.isPaused) ? (
+      ) : (task.startTime || isTaskPausedWithDuration) ? (
         <span>{formatTime(calculateCurrentDuration(task))} / {targetDuration}분</span>
       ) : (
         <span>{targetDuration}분</span>

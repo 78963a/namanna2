@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import localForage from 'localforage';
 import { 
   Sun,
   Moon,
@@ -3428,270 +3429,376 @@ export default function App() {
     return () => window.removeEventListener('focus', checkPermission);
   }, [notificationPermission]);
 
-  const [activityLog, setActivityLog] = useState<Record<string, number[]>>(() => {
-    const saved = localStorage.getItem('routine_activity_log');
-    return saved ? JSON.parse(saved) : {};
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [activityLog, setActivityLog] = useState<Record<string, number[]>>({});
+  const [userData, setUserData] = useState<UserData>({
+    completionRate: 0,
+    streak: 0,
+    lastCheckInDate: null,
+    targetWakeUpTime: '07:00',
+    routineChunks: [],
+    history: [],
+    startDate: formatDate(new Date()),
+    dailyCompletionRate: {},
+    resetTime: '00:00',
+    dailyResetHour: 0,
+    lastCheckCheckTime: Date.now(),
+    lastResetDate: null,
+    dailyCheckCheckCounts: {},
+    availableCheckCheckCount: 5,
+    lastCheckInBonusCount: 0,
+    autoReorderInactiveGroups: true,
+    autoReorderCompletedGroups: true,
+    autoReorderInProgressGroups: true,
+    firstRoutineAutoStart: false,
+    nextRoutineAutoStart: false,
+    nextRoutineGroupGuidanceEnabled: false,
+    hideAnytimeTimer: false,
+    userName: '나',
+    isVoiceEnabled: true,
+    isWakeUpAlarmEnabled: false,
+    naggingSettings: {
+      startEnabled: false,
+      restartEnabled: false,
+      startMessage: 'task 시작합니다',
+      ongoingEnabled: false,
+      ongoingInterval: 1,
+      ongoingMessage: 'task가 n분째 진행중입니다',
+      beforeEndEnabled: false,
+      beforeEndTime: 1,
+      beforeEndMessage: 'task 종료 r분 전입니다.',
+      endEnabled: false,
+      endMessage: 'task 시간이 지났습니다.',
+      ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+      beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+      endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+      overTimeEnabled: false,
+      overTimeInterval: 1,
+      overTimeMessage: 'name님, task가 m분 지났어요.',
+      overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
+    },
+    soundSettings: {
+      wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+      triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
+      individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
+      routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+      todayEnd: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+      allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+      chickSound: { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
+    }
   });
-  const [userData, setUserData] = useState<UserData>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    const today = formatDate(new Date());
-    
-    let parsed: any;
-    if (saved) {
+
+  // Async Load and migration from localStorage to localForage on mount
+  useEffect(() => {
+    const loadStateAndMigrate = async () => {
       try {
-        parsed = JSON.parse(saved);
-      } catch (e) {
-        console.error(`Failed to parse ${STORAGE_KEY}`, e);
-        parsed = null;
-      }
-    }
+        const today = formatDate(new Date());
 
-    if (!parsed) {
-      parsed = {
-        completionRate: 0,
-        streak: 0,
-        lastCheckInDate: null,
-        targetWakeUpTime: '07:00',
-        routineChunks: [],
-        history: [],
-        startDate: today,
-        dailyCompletionRate: {},
-        resetTime: '00:00',
-        dailyResetHour: 0,
-        lastCheckCheckTime: Date.now(),
-        lastResetDate: null,
-        dailyCheckCheckCounts: {},
-        availableCheckCheckCount: 5,
-        lastCheckInBonusCount: 0,
-        autoReorderInactiveGroups: true,
-        autoReorderCompletedGroups: true,
-        autoReorderInProgressGroups: true,
-        firstRoutineAutoStart: false,
-        nextRoutineAutoStart: false,
-        nextRoutineGroupGuidanceEnabled: false,
-        hideAnytimeTimer: false,
-        userName: '나',
-        isVoiceEnabled: true,
-        isWakeUpAlarmEnabled: false,
-        naggingSettings: {
-          startEnabled: false,
-          restartEnabled: false,
-          startMessage: 'task 시작합니다',
-          ongoingEnabled: false,
-          ongoingInterval: 1,
-          ongoingMessage: 'task가 n분째 진행중입니다',
-          beforeEndEnabled: false,
-          beforeEndTime: 1,
-          beforeEndMessage: 'task 종료 r분 전입니다.',
-          endEnabled: false,
-          endMessage: 'task 시간이 지났습니다.',
-          ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-          beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-          endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-          overTimeEnabled: false,
-          overTimeInterval: 1,
-          overTimeMessage: 'name님, task가 m분 지났어요.',
-          overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
-        },
-        soundSettings: {
-          wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
-          triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
-          individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
-          routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-          todayEnd: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-          allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-          chickSound: { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
+        // 1. Try to load from localForage
+        let mainData = await localForage.getItem<any>(STORAGE_KEY);
+        let activityLogData = await localForage.getItem<Record<string, number[]>>('routine_activity_log');
+
+        // 2. Migration from localStorage if localForage is empty but localStorage has data
+        const oldMainDataStr = localStorage.getItem(STORAGE_KEY);
+        const oldActivityLogStr = localStorage.getItem('routine_activity_log');
+
+        if (!mainData && oldMainDataStr) {
+          console.log('Migrating main data from localStorage to localForage...');
+          try {
+            mainData = JSON.parse(oldMainDataStr);
+            await localForage.setItem(STORAGE_KEY, mainData);
+          } catch (e) {
+            console.error('Failed to parse and migrate old main data', e);
+          }
         }
-      };
-    }
 
-    // Migration for new settings
-    if (parsed.autoReorderInactiveGroups === undefined) {
-      if (parsed.autoReorderGroups !== undefined) {
-        parsed.autoReorderInactiveGroups = parsed.autoReorderGroups;
-      } else {
-        parsed.autoReorderInactiveGroups = true;
-      }
-    }
-    if (parsed.autoReorderCompletedGroups === undefined) {
-      if (parsed.autoReorderGroups !== undefined) {
-        parsed.autoReorderCompletedGroups = parsed.autoReorderGroups;
-      } else {
-        parsed.autoReorderCompletedGroups = true;
-      }
-    }
-    if (parsed.autoReorderInProgressGroups === undefined) {
-      parsed.autoReorderInProgressGroups = true;
-    }
-    // Cleanup old retired key
-    if (parsed.autoReorderGroups !== undefined) {
-      delete parsed.autoReorderGroups;
-    }
+        if (!activityLogData && oldActivityLogStr) {
+          console.log('Migrating activity log from localStorage to localForage...');
+          try {
+            activityLogData = JSON.parse(oldActivityLogStr);
+            await localForage.setItem('routine_activity_log', activityLogData);
+          } catch (e) {
+            console.error('Failed to parse and migrate old activity log', e);
+          }
+        }
 
-    // Load separate history keys
-    try {
-      const wakeUpHistory = localStorage.getItem('WakeUpTimeHistory');
-      if (wakeUpHistory) parsed.wakeUpTimeHistory = JSON.parse(wakeUpHistory);
-      
-      const groupHistory = localStorage.getItem('RoutineGroupHistory');
-      if (groupHistory) parsed.routineGroupHistory = JSON.parse(groupHistory);
-      
-      const taskHistory = localStorage.getItem('TaskHistory');
-      if (taskHistory) parsed.taskHistory = JSON.parse(taskHistory);
-      
-      const savedActivityLog = localStorage.getItem('routine_activity_log');
-      if (savedActivityLog) parsed.dailyActivityLog = JSON.parse(savedActivityLog);
-    } catch (e) {
-      console.error('Failed to parse history data', e);
-    }
+        // Migrate other separate keys if they exist
+        const separateKeys = ['WakeUpTimeHistory', 'RoutineGroupHistory', 'TaskHistory'];
+        for (const key of separateKeys) {
+          let value = await localForage.getItem<any>(key);
+          const oldValueStr = localStorage.getItem(key);
+          if (!value && oldValueStr) {
+            console.log(`Migrating ${key} from localStorage...`);
+            try {
+              value = JSON.parse(oldValueStr);
+              await localForage.setItem(key, value);
+            } catch (e) {
+              console.error(`Failed to parse and migrate ${key}`, e);
+            }
+          }
+        }
 
-    // Migration for old data
-    if (!parsed.history) parsed.history = [];
-    if (!parsed.startDate) parsed.startDate = today;
-    
-    if (!parsed.dailyCompletionRate) parsed.dailyCompletionRate = {};
-    if (parsed.resetTime === undefined) parsed.resetTime = '00:00';
-    if (parsed.dailyResetHour === undefined) {
-      const h = parseInt(parsed.resetTime.split(':')[0]) || 0;
-      parsed.dailyResetHour = h;
-    }
-    if (parsed.lastCheckCheckTime === undefined) parsed.lastCheckCheckTime = Date.now();
-    if (parsed.lastResetDate === undefined) parsed.lastResetDate = null;
-    if (parsed.dailyCheckCheckCounts === undefined) parsed.dailyCheckCheckCounts = {};
-    if (parsed.availableCheckCheckCount === undefined) parsed.availableCheckCheckCount = 5;
-    if (parsed.lastCheckInBonusCount === undefined) parsed.lastCheckInBonusCount = 0;
-    if (parsed.dailyCheckIn === undefined) parsed.dailyCheckIn = {};
-    
-    if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
-    if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
-    if (parsed.nextRoutineGroupGuidanceEnabled === undefined) parsed.nextRoutineGroupGuidanceEnabled = false;
-    if (parsed.hideAnytimeTimer === undefined) parsed.hideAnytimeTimer = false;
-    if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
-    if (parsed.isWakeUpAlarmEnabled === undefined) parsed.isWakeUpAlarmEnabled = false;
-    
-    if (parsed.naggingSettings === undefined) {
-      parsed.naggingSettings = {
-        startEnabled: false,
-        restartEnabled: false,
-        startMessage: 'task 시작합니다',
-        ongoingEnabled: false,
-        ongoingInterval: 1,
-        ongoingMessage: 'task가 n분째 진행중입니다',
-        beforeEndEnabled: false,
-        beforeEndTime: 1,
-        beforeEndMessage: 'task 종료 r분 전입니다.',
-        endEnabled: false,
-        endMessage: 'task 시간이 지났습니다.',
-        ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-        beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-        endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-        overTimeEnabled: false,
-        overTimeInterval: 1,
-        overTimeMessage: 'name님, task가 m분 지났어요.',
-        overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
-      };
-    }
+        // 3. Fallback and Parse userData
+        let parsed = mainData || null;
 
-    if (parsed.naggingSettings) {
-      const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
-      if (parsed.naggingSettings.restartEnabled === undefined) {
-        parsed.naggingSettings.restartEnabled = false;
-      }
-      if (parsed.naggingSettings.overTimeTargetTypes === undefined) {
-        parsed.naggingSettings.overTimeTargetTypes = allTypes;
-      }
-      if (parsed.naggingSettings.ongoingTargetTypes === undefined) {
-        parsed.naggingSettings.ongoingTargetTypes = allTypes;
-      }
-      if (parsed.naggingSettings.beforeEndTargetTypes === undefined) {
-        parsed.naggingSettings.beforeEndTargetTypes = allTypes;
-      }
-      if (parsed.naggingSettings.endTargetTypes === undefined) {
-        parsed.naggingSettings.endTargetTypes = allTypes;
-      }
-    }
+        if (!parsed) {
+          parsed = {
+            completionRate: 0,
+            streak: 0,
+            lastCheckInDate: null,
+            targetWakeUpTime: '07:00',
+            routineChunks: [],
+            history: [],
+            startDate: today,
+            dailyCompletionRate: {},
+            resetTime: '00:00',
+            dailyResetHour: 0,
+            lastCheckCheckTime: Date.now(),
+            lastResetDate: null,
+            dailyCheckCheckCounts: {},
+            availableCheckCheckCount: 5,
+            lastCheckInBonusCount: 0,
+            autoReorderInactiveGroups: true,
+            autoReorderCompletedGroups: true,
+            autoReorderInProgressGroups: true,
+            firstRoutineAutoStart: false,
+            nextRoutineAutoStart: false,
+            nextRoutineGroupGuidanceEnabled: false,
+            hideAnytimeTimer: false,
+            userName: '나',
+            isVoiceEnabled: true,
+            isWakeUpAlarmEnabled: false,
+            naggingSettings: {
+              startEnabled: false,
+              restartEnabled: false,
+              startMessage: 'task 시작합니다',
+              ongoingEnabled: false,
+              ongoingInterval: 1,
+              ongoingMessage: 'task가 n분째 진행중입니다',
+              beforeEndEnabled: false,
+              beforeEndTime: 1,
+              beforeEndMessage: 'task 종료 r분 전입니다.',
+              endEnabled: false,
+              endMessage: 'task 시간이 지났습니다.',
+              ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+              beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+              endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+              overTimeEnabled: false,
+              overTimeInterval: 1,
+              overTimeMessage: 'name님, task가 m분 지났어요.',
+              overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
+            },
+            soundSettings: {
+              wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+              triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
+              individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
+              routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+              todayEnd: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+              allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+              chickSound: { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
+            }
+          };
+        }
 
-    if (parsed.soundSettings === undefined) {
-      parsed.soundSettings = {
-        wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
-        triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
-        individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
-        routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-        todayEnd: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-        allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-        chickSound: { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
-      };
-    } else {
-      if (parsed.soundSettings.wakeUpCheckIn === undefined) {
-        parsed.soundSettings.wakeUpCheckIn = { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' };
-      }
-      if (parsed.soundSettings.triggerRoutineStart === undefined) {
-        parsed.soundSettings.triggerRoutineStart = { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' };
-      }
-      if (parsed.soundSettings.individualRoutineComplete === undefined) {
-        parsed.soundSettings.individualRoutineComplete = { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' };
-      }
-      if (parsed.soundSettings.routineGroupComplete === undefined) {
-        parsed.soundSettings.routineGroupComplete = { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' };
-      }
-      if (parsed.soundSettings.todayEnd === undefined) {
-        parsed.soundSettings.todayEnd = { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' };
-      }
-      if (parsed.soundSettings.allGroupsComplete === undefined) {
-        parsed.soundSettings.allGroupsComplete = { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' };
-      }
-      if (parsed.soundSettings.chickSound === undefined) {
-        parsed.soundSettings.chickSound = { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' };
-      }
-    }
-    
-    if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
-    if (parsed.routineGroupHistory === undefined) parsed.routineGroupHistory = [];
-    if (parsed.taskHistory === undefined) parsed.taskHistory = [];
-    if (parsed.dailyTargetWakeUpTime === undefined) parsed.dailyTargetWakeUpTime = {};
+        // Apply migrations for new settings
+        if (parsed.autoReorderInactiveGroups === undefined) {
+          if (parsed.autoReorderGroups !== undefined) {
+            parsed.autoReorderInactiveGroups = parsed.autoReorderGroups;
+          } else {
+            parsed.autoReorderInactiveGroups = true;
+          }
+        }
+        if (parsed.autoReorderCompletedGroups === undefined) {
+          if (parsed.autoReorderGroups !== undefined) {
+            parsed.autoReorderCompletedGroups = parsed.autoReorderGroups;
+          } else {
+            parsed.autoReorderCompletedGroups = true;
+          }
+        }
+        if (parsed.autoReorderInProgressGroups === undefined) {
+          parsed.autoReorderInProgressGroups = true;
+        }
+        if (parsed.autoReorderGroups !== undefined) {
+          delete parsed.autoReorderGroups;
+        }
 
-    // Migration for chunks
-    if (parsed.routine && !parsed.routineChunks) {
-      parsed.routineChunks = [{
-        id: 'default',
-        name: '기본 루틴',
-        purpose: '더 나은 나',
-        completionDates: [],
-        tasks: parsed.routine.map((t: any) => ({
-          ...t
-        })),
-        startTime: '',
-        duration: 0,
-        endTime: ''
-      }];
-      delete parsed.routine;
-    }
+        // Try load separate history keys into parsed object
+        try {
+          const wakeUpHistory = await localForage.getItem<any>('WakeUpTimeHistory');
+          if (wakeUpHistory) parsed.wakeUpTimeHistory = wakeUpHistory;
+          
+          const groupHistory = await localForage.getItem<any>('RoutineGroupHistory');
+          if (groupHistory) parsed.routineGroupHistory = groupHistory;
+          
+          const taskHistory = await localForage.getItem<any>('TaskHistory');
+          if (taskHistory) parsed.taskHistory = taskHistory;
+          
+          if (activityLogData) parsed.dailyActivityLog = activityLogData;
+        } catch (e) {
+          console.error('Failed to load history data from localForage', e);
+        }
 
-    if (parsed.routineChunks) {
-      parsed.routineChunks = parsed.routineChunks.map((chunk: any) => ({
-        ...chunk,
-        startTime: chunk.startTime || '',
-        duration: chunk.duration || 0,
-        endTime: chunk.endTime || '',
-        purpose: chunk.purpose || '더 나은 나',
-        completionDates: chunk.completionDates || [],
-        inactiveDates: chunk.inactiveDates || [],
-        scheduleType: chunk.scheduleType || 'days',
-        scheduledDays: chunk.scheduledDays || [0, 1, 2, 3, 4, 5, 6],
-        frequency: chunk.frequency || 1,
-        isAlarmEnabled: chunk.isAlarmEnabled || false,
-        lastAlarmTriggeredDate: chunk.lastAlarmTriggeredDate || null,
-        tasks: (chunk.tasks || []).map((t: any) => ({
-          ...t,
-          scheduledDays: t.scheduledDays || [0, 1, 2, 3, 4, 5, 6]
-        }))
-      }));
-    } else {
-      parsed.routineChunks = [];
-    }
+        // Parse default structures
+        if (!parsed.history) parsed.history = [];
+        if (!parsed.startDate) parsed.startDate = today;
+        if (!parsed.dailyCompletionRate) parsed.dailyCompletionRate = {};
+        if (parsed.resetTime === undefined) parsed.resetTime = '00:00';
+        if (parsed.dailyResetHour === undefined) {
+          const h = parseInt(parsed.resetTime.split(':')[0]) || 0;
+          parsed.dailyResetHour = h;
+        }
+        if (parsed.lastCheckCheckTime === undefined) parsed.lastCheckCheckTime = Date.now();
+        if (parsed.lastResetDate === undefined) parsed.lastResetDate = null;
+        if (parsed.dailyCheckCheckCounts === undefined) parsed.dailyCheckCheckCounts = {};
+        if (parsed.availableCheckCheckCount === undefined) parsed.availableCheckCheckCount = 5;
+        if (parsed.lastCheckInBonusCount === undefined) parsed.lastCheckInBonusCount = 0;
+        if (parsed.dailyCheckIn === undefined) parsed.dailyCheckIn = {};
+        
+        if (parsed.firstRoutineAutoStart === undefined) parsed.firstRoutineAutoStart = false;
+        if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
+        if (parsed.nextRoutineGroupGuidanceEnabled === undefined) parsed.nextRoutineGroupGuidanceEnabled = false;
+        if (parsed.hideAnytimeTimer === undefined) parsed.hideAnytimeTimer = false;
+        if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
+        if (parsed.isWakeUpAlarmEnabled === undefined) parsed.isWakeUpAlarmEnabled = false;
+        
+        if (parsed.naggingSettings === undefined) {
+          parsed.naggingSettings = {
+            startEnabled: false,
+            restartEnabled: false,
+            startMessage: 'task 시작합니다',
+            ongoingEnabled: false,
+            ongoingInterval: 1,
+            ongoingMessage: 'task가 n분째 진행중입니다',
+            beforeEndEnabled: false,
+            beforeEndTime: 1,
+            beforeEndMessage: 'task 종료 r분 전입니다.',
+            endEnabled: false,
+            endMessage: 'task 시간이 지났습니다.',
+            ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+            beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+            endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
+            overTimeEnabled: false,
+            overTimeInterval: 1,
+            overTimeMessage: 'name님, task가 m분 지났어요.',
+            overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
+          };
+        }
 
-    return parsed as UserData;
-  });
+        if (parsed.naggingSettings) {
+          const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
+          if (parsed.naggingSettings.restartEnabled === undefined) {
+            parsed.naggingSettings.restartEnabled = false;
+          }
+          if (parsed.naggingSettings.overTimeTargetTypes === undefined) {
+            parsed.naggingSettings.overTimeTargetTypes = allTypes;
+          }
+          if (parsed.naggingSettings.ongoingTargetTypes === undefined) {
+            parsed.naggingSettings.ongoingTargetTypes = allTypes;
+          }
+          if (parsed.naggingSettings.beforeEndTargetTypes === undefined) {
+            parsed.naggingSettings.beforeEndTargetTypes = allTypes;
+          }
+          if (parsed.naggingSettings.endTargetTypes === undefined) {
+            parsed.naggingSettings.endTargetTypes = allTypes;
+          }
+        }
+
+        if (parsed.soundSettings === undefined) {
+          parsed.soundSettings = {
+            wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+            triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
+            individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
+            routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+            todayEnd: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+            allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+            chickSound: { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
+          };
+        } else {
+          if (parsed.soundSettings.wakeUpCheckIn === undefined) {
+            parsed.soundSettings.wakeUpCheckIn = { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' };
+          }
+          if (parsed.soundSettings.triggerRoutineStart === undefined) {
+            parsed.soundSettings.triggerRoutineStart = { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' };
+          }
+          if (parsed.soundSettings.individualRoutineComplete === undefined) {
+            parsed.soundSettings.individualRoutineComplete = { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' };
+          }
+          if (parsed.soundSettings.routineGroupComplete === undefined) {
+            parsed.soundSettings.routineGroupComplete = { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' };
+          }
+          if (parsed.soundSettings.todayEnd === undefined) {
+            parsed.soundSettings.todayEnd = { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' };
+          }
+          if (parsed.soundSettings.allGroupsComplete === undefined) {
+            parsed.soundSettings.allGroupsComplete = { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' };
+          }
+          if (parsed.soundSettings.chickSound === undefined) {
+            parsed.soundSettings.chickSound = { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' };
+          }
+        }
+        
+        if (parsed.wakeUpTimeHistory === undefined) parsed.wakeUpTimeHistory = [];
+        if (parsed.routineGroupHistory === undefined) parsed.routineGroupHistory = [];
+        if (parsed.taskHistory === undefined) parsed.taskHistory = [];
+        if (parsed.dailyTargetWakeUpTime === undefined) parsed.dailyTargetWakeUpTime = {};
+
+        // Chunks migration
+        if (parsed.routine && !parsed.routineChunks) {
+          parsed.routineChunks = [{
+            id: 'default',
+            name: '기본 루틴',
+            purpose: '더 나은 나',
+            completionDates: [],
+            tasks: parsed.routine.map((t: any) => ({
+              ...t,
+              id: t.id || Math.random().toString(36).substr(2, 9),
+              status: t.status || TaskStatus.NOT_STARTED,
+              duration: t.duration || 0,
+              accumulatedDuration: t.accumulatedDuration || 0
+            }))
+          }];
+          delete parsed.routine;
+        }
+
+        if (parsed.routineChunks) {
+          parsed.routineChunks = parsed.routineChunks.map((chunk: any) => ({
+            ...chunk,
+            startTime: chunk.startTime || '',
+            duration: chunk.duration || 0,
+            endTime: chunk.endTime || '',
+            purpose: chunk.purpose || '더 나은 나',
+            completionDates: chunk.completionDates || [],
+            inactiveDates: chunk.inactiveDates || [],
+            scheduleType: chunk.scheduleType || 'days',
+            scheduledDays: chunk.scheduledDays || [0, 1, 2, 3, 4, 5, 6],
+            frequency: chunk.frequency || 1,
+            isAlarmEnabled: chunk.isAlarmEnabled || false,
+            lastAlarmTriggeredDate: chunk.lastAlarmTriggeredDate || null,
+            tasks: (chunk.tasks || []).map((t: any) => ({
+              ...t,
+              scheduledDays: t.scheduledDays || [0, 1, 2, 3, 4, 5, 6]
+            }))
+          }));
+        } else {
+          parsed.routineChunks = [];
+        }
+
+        // Apply loaded structures to states
+        setUserData(parsed);
+        if (activityLogData) {
+          setActivityLog(activityLogData);
+        }
+
+        setIsDataLoaded(true);
+      } catch (err) {
+        console.error('Failed to load state and migrate from localForage/localStorage', err);
+        // Ensure app still opens even on complete storage disruption
+        setIsDataLoaded(true);
+      }
+    };
+
+    loadStateAndMigrate();
+  }, []);
 
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -4484,7 +4591,6 @@ export default function App() {
         }
 
         const next = { ...prev, [dateStr]: currentDayLog };
-        localStorage.setItem('routine_activity_log', JSON.stringify(next));
         return next;
       });
     };
@@ -4495,47 +4601,70 @@ export default function App() {
     return () => clearInterval(ticker);
   }, [userData.dailyResetHour, isForeground, !!globalActiveTask, activeTab]);
 
+  // Synchronize activityLog to localForage on change
   useEffect(() => {
-    // Visibility change catch-up
-    if (isForeground) {
-      const lastSyncStr = localStorage.getItem('routine_last_activity_sync');
-      if (lastSyncStr) {
-        const lastSync = parseInt(lastSyncStr);
-        const now = Date.now();
-        const diffMs = now - lastSync;
-        
-        if (diffMs > 60000) {
-          const resetHour = userData.dailyResetHour || 0;
-          let sweepTime = new Date(lastSync + 60000);
-          const nowDate = new Date(now);
-          
-          while (sweepTime <= nowDate) {
-            const dateStr = getEffectiveDate(sweepTime, resetHour);
-            const sweepTotalMinutes = sweepTime.getHours() * 60 + sweepTime.getMinutes();
-            const resetTotalMinutes = resetHour * 60;
-            let diff = sweepTotalMinutes - resetTotalMinutes;
-            if (diff < 0) diff += 1440;
+    if (isDataLoaded) {
+      localForage.setItem('routine_activity_log', activityLog).catch(e => {
+        console.error('Failed to save activityLog to localForage', e);
+      });
+    }
+  }, [activityLog, isDataLoaded]);
+
+  useEffect(() => {
+    // Visibility change catch-up using localForage
+    const performCatchUp = async () => {
+      if (isForeground && isDataLoaded) {
+        try {
+          const lastSyncStr = await localForage.getItem<string>('routine_last_activity_sync');
+          if (lastSyncStr) {
+            const lastSync = parseInt(lastSyncStr);
+            const now = Date.now();
+            const diffMs = now - lastSync;
             
-            // Background/Closed catch-up: assume 3 (Orange) if timer was running, or 1 (Black)
-            const status = globalActiveTask ? 3 : 1;
-            
-            setActivityLog(prev => {
-              const currentDayLog = [...(prev[dateStr] || new Array(1440).fill(0))];
-              if (currentDayLog[diff] < status) {
-                currentDayLog[diff] = status;
+            if (diffMs > 60000) {
+              const resetHour = userData.dailyResetHour || 0;
+              let sweepTime = new Date(lastSync + 60000);
+              const nowDate = new Date(now);
+              const logsToUpdate: { dateStr: string; diff: number; status: number }[] = [];
+              
+              while (sweepTime <= nowDate) {
+                const dateStr = getEffectiveDate(sweepTime, resetHour);
+                const sweepTotalMinutes = sweepTime.getHours() * 60 + sweepTime.getMinutes();
+                const resetTotalMinutes = resetHour * 60;
+                let diff = sweepTotalMinutes - resetTotalMinutes;
+                if (diff < 0) diff += 1440;
+                
+                // Background/Closed catch-up: assume 3 (Orange) if timer was running, or 1 (Black)
+                const status = globalActiveTask ? 3 : 1;
+                logsToUpdate.push({ dateStr, diff, status });
+                
+                sweepTime = new Date(sweepTime.getTime() + 60000);
               }
-              const next = { ...prev, [dateStr]: currentDayLog };
-              localStorage.setItem('routine_activity_log', JSON.stringify(next));
-              return next;
-            });
-            
-            sweepTime = new Date(sweepTime.getTime() + 60000);
+
+              if (logsToUpdate.length > 0) {
+                setActivityLog(prev => {
+                  const next = { ...prev };
+                  for (const item of logsToUpdate) {
+                    const currentDayLog = [...(next[item.dateStr] || new Array(1440).fill(0))];
+                    if (currentDayLog[item.diff] < item.status) {
+                      currentDayLog[item.diff] = item.status;
+                    }
+                    next[item.dateStr] = currentDayLog;
+                  }
+                  return next;
+                });
+              }
+            }
           }
+          await localForage.setItem('routine_last_activity_sync', Date.now().toString());
+        } catch (e) {
+          console.error('Error performing catch-up with localForage', e);
         }
       }
-      localStorage.setItem('routine_last_activity_sync', Date.now().toString());
-    }
-  }, [isForeground, userData.dailyResetHour, !!globalActiveTask]);
+    };
+
+    performCatchUp();
+  }, [isForeground, isDataLoaded, userData.dailyResetHour, !!globalActiveTask]);
 
   // Pass log to HeaderBox via userData effectively or as direct prop
   const currentDayActivityLog = useMemo(() => {
@@ -4701,26 +4830,28 @@ export default function App() {
     }
   }, [userData.routineChunks, todayStr, currentTime]);
 
-  const saveData = (data: UserData) => {
+  const saveData = async (data: UserData) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      await localForage.setItem(STORAGE_KEY, data);
       if (data.wakeUpTimeHistory) {
-        localStorage.setItem('WakeUpTimeHistory', JSON.stringify(data.wakeUpTimeHistory));
+        await localForage.setItem('WakeUpTimeHistory', data.wakeUpTimeHistory);
       }
       if (data.routineGroupHistory) {
-        localStorage.setItem('RoutineGroupHistory', JSON.stringify(data.routineGroupHistory));
+        await localForage.setItem('RoutineGroupHistory', data.routineGroupHistory);
       }
       if (data.taskHistory) {
-        localStorage.setItem('TaskHistory', JSON.stringify(data.taskHistory));
+        await localForage.setItem('TaskHistory', data.taskHistory);
       }
     } catch (e) {
-      console.error('Error saving data to localStorage', e);
+      console.error('Error saving data to localForage', e);
     }
   };
 
   useEffect(() => {
-    saveData(userData);
-  }, [userData]);
+    if (isDataLoaded) {
+      saveData(userData);
+    }
+  }, [userData, isDataLoaded]);
 
   // --- Screen Wake Lock ---
   const wakeLockRef = useRef<any>(null);
@@ -4852,16 +4983,15 @@ export default function App() {
         
         // Task History
         let statusStr = isScheduled ? '미실행' : '비활성';
+        const taskDuration = task.duration || task.accumulatedDuration || 0;
         if (isScheduled) {
           if (task.status === TaskStatus.PERFECT) statusStr = '완벽';
           else if (task.status === TaskStatus.COMPLETED || task.completed) statusStr = '완료';
           else if (task.status === TaskStatus.SKIP) statusStr = '스킵';
           else if (task.laterTimestamp) statusStr = '나중에';
-          else if (task.isPaused) statusStr = '일시정지';
+          else if (task.isPaused && taskDuration > 0) statusStr = '일시정지';
           else if (task.startTime) statusStr = '실행중';
         }
-
-        const taskDuration = task.duration || task.accumulatedDuration || 0;
         
         const taskEntryIdx = newTaskHistory.findIndex(h => h.date === today && h.taskId === task.id);
         const existingTaskEntry = taskEntryIdx >= 0 ? newTaskHistory[taskEntryIdx] : null;
@@ -5297,13 +5427,13 @@ export default function App() {
             );
             
             // 1. 미실행
-            let n = sched.find(t => !t.startTime && !t.isPaused && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED));
+            let n = sched.find(t => !t.startTime && !(t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0) && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED || t.status === TaskStatus.IN_PROGRESS));
             if (n) return n;
             // 2. 나중에
             n = sched.find(t => t.laterTimestamp);
             if (n) return n;
             // 3. 일시정지
-            n = sched.find(t => t.isPaused || (t.accumulatedDuration || 0) > 0);
+            n = sched.find(t => t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0);
             return n;
           };
 
@@ -5378,13 +5508,13 @@ export default function App() {
             );
             
             // 1. 미실행
-            let n = sched.find(t => !t.startTime && !t.isPaused && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED));
+            let n = sched.find(t => !t.startTime && !(t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0) && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED || t.status === TaskStatus.IN_PROGRESS));
             if (n) return n;
             // 2. 나중에
             n = sched.find(t => t.laterTimestamp);
             if (n) return n;
             // 3. 일시정지
-            n = sched.find(t => (t.isPaused || (t.accumulatedDuration || 0) > 0));
+            n = sched.find(t => t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0);
             return n;
           };
 
@@ -5775,13 +5905,13 @@ export default function App() {
               );
               
               // 1. 미실행
-              let n = sched.find(t => !t.startTime && !t.isPaused && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED));
+              let n = sched.find(t => !t.startTime && !(t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0) && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED || t.status === TaskStatus.IN_PROGRESS));
               if (n) return n;
               // 2. 나중에
               n = sched.find(t => t.laterTimestamp);
               if (n) return n;
               // 3. 일시정지
-              n = sched.find(t => t.isPaused || (t.accumulatedDuration || 0) > 0);
+              n = sched.find(t => t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0);
               return n;
             };
 
@@ -6397,8 +6527,13 @@ export default function App() {
       message: '현재까지 기록된 사용 시간 바 기록을 모두 삭제하시겠습니까?',
       confirmLabel: '삭제',
       validationValue: userData.userName || '나',
-      onConfirm: () => {
+      onConfirm: async () => {
         setActivityLog({});
+        try {
+          await localForage.removeItem('routine_activity_log');
+        } catch (e) {
+          console.error('Failed to remote routine_activity_log from localForage', e);
+        }
         localStorage.removeItem('routine_activity_log');
         setUserData(prev => ({
           ...prev,
@@ -6564,13 +6699,26 @@ export default function App() {
           title: '데이터 복구',
           message: '선택한 백업 파일로 기존 데이터를 모두 덮어씌웁니다. 이 작업은 되돌릴 수 없으며 앱이 새로고침됩니다. 계속하시겠습니까?',
           confirmLabel: '덮어쓰기',
-          onConfirm: () => {
-            Object.entries(data).forEach(([key, value]) => {
-              if (value !== null) {
-                localStorage.setItem(key, value as string);
-              }
-            });
-            window.location.reload();
+          onConfirm: async () => {
+            try {
+              const promises = Object.entries(data).map(async ([key, value]) => {
+                if (value !== null) {
+                  let parsedValue: any = value;
+                  try {
+                    parsedValue = JSON.parse(value as string);
+                  } catch (e) {
+                    // It was a plain string or already parsed
+                  }
+                  await localForage.setItem(key, parsedValue);
+                  localStorage.setItem(key, typeof parsedValue === 'string' ? parsedValue : JSON.stringify(parsedValue));
+                }
+              });
+              await Promise.all(promises);
+              window.location.reload();
+            } catch (err) {
+              console.error('Failed to import backup data to localForage', err);
+              setDeletionMessage('데이터가 완전히 가져오지 못했습니다.');
+            }
           }
         });
       } catch (err) {
@@ -7934,6 +8082,20 @@ export default function App() {
       weekday: 'long' 
     });
   }, [effectiveDate]);
+
+  if (!isDataLoaded) {
+    return (
+      <div className="min-h-screen bg-[#F7FEE7] flex flex-col items-center justify-center font-sans p-6 text-slate-800">
+        <div className="flex flex-col items-center gap-4 max-w-sm text-center">
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <h2 className="text-xl font-black mt-2 text-indigo-900">단하루 불러오는 중...</h2>
+          <p className="text-sm text-slate-500 font-bold leading-relaxed">
+            로컬 저장소(IndexedDB)에서 안전하게 데이터를 불러오는 중입니다. 잠시만 기다려주세요.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F7FEE7] text-slate-900 font-sans pb-20" spellCheck={false}>
