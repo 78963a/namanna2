@@ -293,7 +293,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
           // ignore potential iframe permission blocks
         }
       }
-    }, 1000);
+    }, 1800);
   };
 
   const handlePressEnd = (e: React.MouseEvent | React.TouchEvent) => {
@@ -1133,13 +1133,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                       - 테두리: border-slate-200
                   */}
                   <div 
-                    onTouchStart={onTouchStart}
-                    onTouchEnd={onTouchEnd}
-                    onTouchCancel={onTouchCancel}
-                    onMouseDown={onMouseDown}
-                    onMouseUp={onMouseUp}
-                    onMouseLeave={onMouseLeave}
-                    className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden cursor-pointer select-none ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200 touch-none active:scale-[0.99] transition-transform`}
+                    className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden select-none ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200`}
                   >
                     {/* [디자인 수정 구역 8: 타이머 채움 애니메이션 레이어] 
                         - 투명도: opacity-0.2 ~ 0.4
@@ -1161,7 +1155,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                         className={`absolute inset-y-0 left-0 ${getStageInfo(activeTask).color}`}
                         transition={
                           isPressing 
-                            ? { duration: 1.0, ease: 'linear' } 
+                            ? { duration: 1.8, ease: 'linear' } 
                             : { duration: 0.5 }
                         }
                       />
@@ -1185,7 +1179,13 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
       const isAnytimeHidden = userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT;
       return (
         <div 
-          className={`text-6xl font-black tabular-nums tracking-tighter select-none ${
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchCancel}
+          onMouseDown={onMouseDown}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseLeave}
+          className={`text-6xl font-black tabular-nums tracking-tighter select-none cursor-pointer touch-none active:scale-[0.97] transition-transform duration-150 py-2 px-4 rounded-[10px] ${
             isAnytimeHidden 
               ? 'text-transparent' 
               : (!activeTask.startTime || activeTask.isPaused) 
@@ -8635,9 +8635,9 @@ export default function App() {
               className="relative w-full max-w-sm bg-white rounded-[25px] overflow-hidden shadow-2xl z-10 p-6 text-center space-y-4"
             >
               <div className="mx-auto w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-2">
-                <Target className="w-8 h-8 text-indigo-500" />
+                <ArrowBigRightDash className="w-8 h-8 text-indigo-500" />
               </div>
-              <h3 className="text-xl font-black text-slate-800">다음 루틴으로 이동</h3>
+              <h3 className="text-xl font-black text-slate-800">다음 루틴 시작</h3>
               <p className="text-sm font-bold text-slate-500 leading-relaxed">
                 수행 가능한 다음 루틴이 남아있습니다. 바로 시작해보세요!
               </p>
