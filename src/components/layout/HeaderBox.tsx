@@ -117,7 +117,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
           </div>
           <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
               <span>
-                {challengeDays}일째 도전중, {successDays}일째 성공중. 터치영역 축소
+                {challengeDays}일째 도전중, {successDays}일째 성공중. 캐릭터 터치 영역 확대
                </span>
           </div>
         </div>

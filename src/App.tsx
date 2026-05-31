@@ -52,6 +52,8 @@ import {
   ArrowUpDown,
   Globe,
   ArrowBigRightDash,
+  FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -751,8 +753,13 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                 </button>
 
                 {/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}
-                <button 
+                <motion.button 
                   onClick={handleCheckCheckClick}
+                  whileTap={isCheckCheckAvailable ? "tap" : undefined}
+                  variants={{
+                    tap: { scale: 0.94 }
+                  }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                   className={`transition-all w-16 h-10 flex items-center px-1.5 rounded-[10px] border shadow-sm relative overflow-hidden ${
                     isCheckCheckAvailable 
                       ? 'bg-white border-indigo-200 cursor-pointer hover:border-indigo-400' 
@@ -760,9 +767,11 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                    }`}
                 >
                   <motion.div 
-                    whileTap={{ scaleX: 1.2, scaleY: 0.7 }}
+                    variants={{
+                      tap: { scaleX: 1.25, scaleY: 0.75 }
+                    }}
                     transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                    className="flex-shrink-0 flex items-center justify-center w-9"
+                    className="flex-shrink-0 flex items-center justify-center w-9 origin-bottom"
                   >
                     <CheckCheckIcon iconId={checkCheckIconId} size={32} />
                   </motion.div>
@@ -778,7 +787,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                       </div>
                     )}
                   </div>
-                </button>
+                </motion.button>
               </nav>
             </div>
           </div>
@@ -6473,6 +6482,11 @@ export default function App() {
     
     // 캐릭터를 누를 수 있을 때(잔여 기회 횟수가 1 이상일 때)만 작동을 허용합니다.
     if (isCheckCheckAvailable) {
+      // 모바일 기기 햅틱 진동 피드백 ('두둑'하는 느낌의 짧은 연속 진동)
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([20, 30, 20]);
+      }
+
       // 지정해주신 효과음('public/sounds/nikin-short-chick-sound-171389.mp3')을 재생합니다. (다만, 효과음 설정에서 병아리 소리가 비활성화되어 있는 경우는 재생하지 않습니다)
       const isChickSoundEnabled = userData.soundSettings?.chickSound?.enabled !== false;
       if (isChickSoundEnabled) {
@@ -7212,6 +7226,32 @@ export default function App() {
                       </div>
 
                       <div className="space-y-4 pt-1">
+                        <button 
+                          onClick={() => {}}
+                          className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
+                        >
+                          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-blue-200 transition-colors">
+                            <FileText className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-black text-slate-700">CSV 데이터 내보내기</span>
+                            <span className="text-[12px] font-bold text-slate-400 leading-tight">선택한 기간의 루틴 데이터를 CSV 파일로 내보냅니다.</span>
+                          </div>
+                        </button>
+
+                        <button 
+                          onClick={() => {}}
+                          className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-emerald-50 hover:border-emerald-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
+                        >
+                          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-emerald-200 transition-colors">
+                            <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-black text-slate-700">엑셀 데이터 내보내기</span>
+                            <span className="text-[12px] font-bold text-slate-400 leading-tight">선택한 기간의 루틴 데이터를 엑셀로 내보냅니다.</span>
+                          </div>
+                        </button>
+
                         <button 
                           onClick={handleExportData}
                           className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
@@ -8268,8 +8308,13 @@ export default function App() {
             </button>
 
             {/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}
-            <button 
+            <motion.button 
               onClick={handleCheckCheckClick}
+              whileTap={isCheckCheckAvailable ? "tap" : undefined}
+              variants={{
+                tap: { scale: 0.94 }
+              }}
+              transition={{ type: 'spring', stiffness: 400, damping: 15 }}
               className={`transition-all w-16 h-10 flex items-center px-1.5 rounded-[10px] border shadow-sm relative overflow-hidden ${
                 isCheckCheckAvailable 
                   ? 'bg-white border-indigo-200 cursor-pointer hover:border-indigo-400' 
@@ -8277,9 +8322,11 @@ export default function App() {
               }`}
             >
               <motion.div 
-                whileTap={{ scaleX: 1.2, scaleY: 0.7 }}
+                variants={{
+                  tap: { scaleX: 1.25, scaleY: 0.75 }
+                }}
                 transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                className="flex-shrink-0 flex items-center justify-center w-9"
+                className="flex-shrink-0 flex items-center justify-center w-9 origin-bottom"
               >
                 <CheckCheckIcon iconId={checkCheckIconId} size={32} />
               </motion.div>
@@ -8295,7 +8342,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-            </button>
+            </motion.button>
           </nav>
         </div>
       </div>
