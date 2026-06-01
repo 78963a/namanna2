@@ -1382,13 +1382,25 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
                   if (isScheduledA && !isScheduledB) return -1;
                   if (!isScheduledA && isScheduledB) return 1;
                   
+                  const isFinishedTask = (t: Task) => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP;
+                  const isLaterTask = (t: Task) => !isFinishedTask(t) && !!t.laterTimestamp;
+                  const isPausedTask = (t: Task) => !isFinishedTask(t) && !isLaterTask(t) && (!!t.isPaused || (t.accumulatedDuration || 0) > 0 || !!t.startTime);
+                  const isUnstartedTask = (t: Task) => !isFinishedTask(t) && !isLaterTask(t) && !isPausedTask(t);
+
                   const getPriority = (t: Task) => {
-                    if (t.status === TaskStatus.SKIP) return 4;
-                    if (t.completed) return 3;
-                    if (t.laterTimestamp) return 2;
-                    return 1;
+                    if (isPausedTask(t)) return 1;
+                    if (isUnstartedTask(t)) return 2;
+                    if (isLaterTask(t)) return 3;
+                    if (isFinishedTask(t)) return 4;
+                    return 5;
                   };
-                  return getPriority(a) - getPriority(b);
+
+                  const priorityDiff = getPriority(a) - getPriority(b);
+                  if (priorityDiff !== 0) {
+                    return priorityDiff;
+                  }
+                  
+                  return chunk.tasks.indexOf(a) - chunk.tasks.indexOf(b);
                 })
                 .map((task) => (
                 <motion.div
@@ -5006,13 +5018,17 @@ export default function App() {
         const existingTaskEntry = taskEntryIdx >= 0 ? newTaskHistory[taskEntryIdx] : null;
 
         // Preserve earliest non-null start time for the day
-        const finalTaskStartTime = [task.startTime, existingTaskEntry?.startTime]
-          .filter(Boolean)
-          .sort()[0] || null;
+        const finalTaskStartTime = task.status === TaskStatus.SKIP
+          ? null
+          : ([task.startTime, existingTaskEntry?.startTime]
+              .filter(Boolean)
+              .sort()[0] || null);
 
         // Preserve end time if already completed
         const isFinished = task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT || task.status === TaskStatus.SKIP;
-        const finalTaskEndTime = isFinished ? (task.endTime || existingTaskEntry?.endTime || null) : null;
+        const finalTaskEndTime = task.status === TaskStatus.SKIP
+          ? null
+          : (isFinished ? (task.endTime || existingTaskEntry?.endTime || null) : null);
 
         const taskEntry: TaskHistoryEntry = {
           date: today,
@@ -5021,7 +5037,7 @@ export default function App() {
           isActive: isScheduled,
           startTime: finalTaskStartTime,
           endTime: finalTaskEndTime,
-          duration: taskDuration,
+          duration: task.status === TaskStatus.SKIP ? 0 : taskDuration,
           status: statusStr
         };
 
@@ -5410,7 +5426,7 @@ export default function App() {
               updated = { 
                 ...t, 
                 status: TaskStatus.SKIP,
-                endTime: nowStr, 
+                endTime: undefined, 
                 duration: 0,
                 accumulatedDuration: 0,
                 startTime: undefined,
@@ -5431,19 +5447,23 @@ export default function App() {
             const sched = ts.filter(t => 
               t.id !== id && 
               isTaskScheduledToday(t, chunk, effectiveDate, prev) && 
-              !t.completed &&
-              t.status !== TaskStatus.SKIP
+              !(t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP)
             );
             
-            // 1. 미실행
-            let n = sched.find(t => !t.startTime && !(t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0) && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED || t.status === TaskStatus.IN_PROGRESS));
-            if (n) return n;
-            // 2. 나중에
-            n = sched.find(t => t.laterTimestamp);
-            if (n) return n;
-            // 3. 일시정지
-            n = sched.find(t => t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0);
-            return n;
+            // 1. 미실행 루틴들 중 번호가 앞선 순서
+            const unstarted = sched.find(t => !t.startTime && !t.isPaused && (t.accumulatedDuration || 0) === 0 && !t.laterTimestamp);
+            if (unstarted) return unstarted;
+            
+            // 2. 미실행루틴이 더 이상 없을경우 '나중에' 상태의 루틴들을 번호 순서대로
+            const later = sched.find(t => !!t.laterTimestamp);
+            if (later) return later;
+            
+            // 3. 나중에 상태의 루틴들도 없을 경우 '일시정지' 상태의 루틴들을 번호순서대로
+            const paused = sched.find(t => !!t.isPaused || (t.accumulatedDuration || 0) > 0 || !!t.startTime);
+            if (paused) return paused;
+            
+            // 4. 더 이상 없음
+            return undefined;
           };
 
           const nextTask = getNext(updatedTasks);
@@ -5513,18 +5533,23 @@ export default function App() {
             const sched = ts.filter(t => 
               t.id !== id && 
               isTaskScheduledToday(t, chunk, effectiveDate, prev) && 
-              !t.completed
+              !(t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP)
             );
             
-            // 1. 미실행
-            let n = sched.find(t => !t.startTime && !(t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0) && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED || t.status === TaskStatus.IN_PROGRESS));
-            if (n) return n;
-            // 2. 나중에
-            n = sched.find(t => t.laterTimestamp);
-            if (n) return n;
-            // 3. 일시정지
-            n = sched.find(t => t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0);
-            return n;
+            // 1. 미실행 루틴들 중 번호가 앞선 순서
+            const unstarted = sched.find(t => !t.startTime && !t.isPaused && (t.accumulatedDuration || 0) === 0 && !t.laterTimestamp);
+            if (unstarted) return unstarted;
+            
+            // 2. 미실행루틴이 더 이상 없을경우 '나중에' 상태의 루틴들을 번호 순서대로
+            const later = sched.find(t => !!t.laterTimestamp);
+            if (later) return later;
+            
+            // 3. 나중에 상태의 루틴들도 없을 경우 '일시정지' 상태의 루틴들을 번호순서대로
+            const paused = sched.find(t => !!t.isPaused || (t.accumulatedDuration || 0) > 0 || !!t.startTime);
+            if (paused) return paused;
+            
+            // 4. 더 이상 없음
+            return undefined;
           };
 
           const nextTask = getNext(updatedTasks);
@@ -5910,18 +5935,23 @@ export default function App() {
               const sched = ts.filter(t => 
                 t.id !== id && 
                 isTaskScheduledToday(t, chunk, effectiveDate, prev) && 
-                !t.completed
+                !(t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP)
               );
               
-              // 1. 미실행
-              let n = sched.find(t => !t.startTime && !(t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0) && !t.laterTimestamp && (!t.status || t.status === TaskStatus.NOT_STARTED || t.status === TaskStatus.IN_PROGRESS));
-              if (n) return n;
-              // 2. 나중에
-              n = sched.find(t => t.laterTimestamp);
-              if (n) return n;
-              // 3. 일시정지
-              n = sched.find(t => t.isPaused && (t.duration || t.accumulatedDuration || 0) > 0);
-              return n;
+              // 1. 미실행 루틴들 중 번호가 앞선 순서
+              const unstarted = sched.find(t => !t.startTime && !t.isPaused && (t.accumulatedDuration || 0) === 0 && !t.laterTimestamp);
+              if (unstarted) return unstarted;
+              
+              // 2. 미실행루틴이 더 이상 없을경우 '나중에' 상태의 루틴들을 번호 순서대로
+              const later = sched.find(t => !!t.laterTimestamp);
+              if (later) return later;
+              
+              // 3. 나중에 상태의 루틴들도 없을 경우 '일시정지' 상태의 루틴들을 번호순서대로
+              const paused = sched.find(t => !!t.isPaused || (t.accumulatedDuration || 0) > 0 || !!t.startTime);
+              if (paused) return paused;
+              
+              // 4. 더 이상 없음
+              return undefined;
             };
 
             const nextTask = getNext(updatedTasks);
