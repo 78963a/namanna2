@@ -59,7 +59,7 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
       const explosionTimer = setTimeout(() => {
         setStage('explosion');
         // Play fireworks sound for the giant confetti
-        soundService.play(allGroupsCompleteFile, isSoundEnabled && allGroupsCompleteEnabled);
+        soundService.play(groupCompleteFile, isSoundEnabled && groupCompleteEnabled);
         triggerGiantConfetti();
       }, 4000);
 
@@ -210,18 +210,20 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
                 transition={{ duration: 1, type: "spring" }}
                 className="absolute inset-0 flex flex-col items-center justify-center z-50 pointer-events-none"
               >
-                <div className="bg-white/95 backdrop-blur-2xl p-8 md:p-12 rounded-[40px] md:rounded-[50px] border-4 border-amber-400 shadow-[0_0_80px_rgba(251,191,36,0.6)] text-center transform-gpu max-w-[90vw]">
+                <div className="p-8 md:p-12 text-center transform-gpu max-w-[90vw]">
                   <motion.div
                     animate={{ 
                       scale: [1, 1.3, 1],
                       rotate: [0, 8, -8, 0]
                     }}
                     transition={{ duration: 3, repeat: Infinity }}
-                    className="text-6xl md:text-8xl mb-4 md:mb-6 flex justify-center"
-                  >
+                    className="text-6xl md:text-8xl mb-4 md:mb-6 flex justify-center">                
+
                     🤩
                   </motion.div>
-                  <div className="text-lg md:text-xl font-black text-indigo-500 mb-1 md:mb-2 uppercase tracking-wider whitespace-nowrap opacity-90">
+                  <div className="text-lg md:text-xl font-black text-violet-100 mb-1 md:mb-2 uppercase tracking-wider whitespace-nowrap opacity-90"
+                    style={{ textShadow: "-1px 0px indigo, 0px 1px indigo, 1px 0px indigo, 0px -1px indigo" }}
+                  >
                     {new Date().toLocaleDateString('ko-KR', { 
                       year: 'numeric', 
                       month: 'long', 
@@ -229,10 +231,12 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
                       weekday: 'long' 
                     })}
                   </div>
-                  <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tighter leading-tight whitespace-nowrap">
-                    완벽한 하루!
+                  <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-sky-400 tracking-tighter leading-tight whitespace-nowrap"
+                   style={{ textShadow: "-1px 0px indigo, 0px 1px indigo, 1px 0px indigo, 0px -1px indigo" }}> 
+                   완벽한 하루 
                   </h1>
-                  <p className="text-sm md:text-xl lg:text-xl font-black text-indigo-700 mt-2 md:mt-3 uppercase tracking-widest whitespace-nowrap">
+                  <p className="text-sm md:text-xl lg:text-xl font-black text-blue-300 mt-2 md:mt-3 uppercase tracking-widest whitespace-nowrap"
+                   style={{ textShadow: "-1px 0px indigo, 0px 1px indigo, 1px 0px indigo, 0px -1px indigo" }}>
                     모든 루틴을 완료했습니다!
                   </p>
                   

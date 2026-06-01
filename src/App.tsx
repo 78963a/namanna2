@@ -3969,6 +3969,14 @@ export default function App() {
   const lastProcessedStartTimeRef = useRef<{ taskId: string; startTime: string } | null>(null);
   const prevTriggerRunningRef = useRef<boolean>(false);
   const isAutoNextTransitioningRef = useRef<boolean>(false);
+  const hasShownPerfectDayThisVisitRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (activeTab !== 'home') {
+      hasShownPerfectDayThisVisitRef.current = false;
+    }
+  }, [activeTab]);
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [addGroupStep, setAddGroupStep] = useState(1);
@@ -4381,7 +4389,10 @@ export default function App() {
         });
 
       // 하루에 한 번만 실행되도록 체크
-      if (isPerfect && userData.lastPerfectDayAnimationDate !== todayStr) {
+      const isPerfectAlreadyShown = userData.lastPerfectDayAnimationDate === todayStr;
+      const devTestModeForPerfectDay = false; // [임시 중단 용도] true = 무제한 테스트(홈화면 돌아올 때마다), false = 하루 한 번 실제 서비스 규칙 적용
+
+      if (isPerfect && (devTestModeForPerfectDay ? !hasShownPerfectDayThisVisitRef.current : !isPerfectAlreadyShown) && !showPerfectDay) {
         const groups = normallyScheduledChunks.map(c => ({
           name: c.name,
           status: getChunkStatus(c)
@@ -4390,6 +4401,7 @@ export default function App() {
         // [수정] 1.5초 여유를 둔 후에 애니메이션 작동
         const timer = setTimeout(() => {
           setShowPerfectDay(true);
+          hasShownPerfectDayThisVisitRef.current = true;
           // 표시한 날짜를 기록
           setUserData(prev => ({
             ...prev,
