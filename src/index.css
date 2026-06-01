@@ -4,3 +4,8 @@
   --animate-spin-slow: spin 3s linear infinite;
 }
 
+/* global.css 또는 index.css 파일 최하단 글자선택기능 방지*/
+body {
+  -webkit-user-select: none; /* 사파리 및 iOS 앱 환경 방어 */
+  user-select: none;         /* 표준 브라우저 방어 */
+}

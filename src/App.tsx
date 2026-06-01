@@ -7302,7 +7302,7 @@ export default function App() {
                             const input = document.getElementById('userNameInput') as HTMLInputElement;
                             if (input) updateUserName(input.value);
                           }}
-                          className="bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md"
+                          className="bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md w-max whitespace-nowrap shrink-0"
                         >
                           저장
                         </button>
