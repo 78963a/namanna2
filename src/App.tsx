@@ -3378,6 +3378,84 @@ export const FONT_SETTINGS = {
   }
 };
 
+const playAudioAsync = (path: string, isEnabled: boolean): Promise<void> => {
+  return new Promise<void>((resolve) => {
+    if (!isEnabled) {
+      resolve();
+      return;
+    }
+    try {
+      const resolveFullPath = (p: string): string => {
+        if (p.startsWith('http') || p.startsWith('data:')) return p;
+        let adjustedPath = p;
+        if (p.startsWith('public/')) {
+          adjustedPath = '/' + p.slice(7);
+        }
+        if (adjustedPath.includes('bbo-yong.mp3')) {
+          return 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
+        }
+        const baseUrl = (import.meta.env && import.meta.env.BASE_URL) || '/';
+        const normalizedPath = adjustedPath.startsWith('/') ? adjustedPath.slice(1) : adjustedPath;
+        return baseUrl.endsWith('/') ? `${baseUrl}${normalizedPath}` : `${baseUrl}/${normalizedPath}`;
+      };
+
+      const fullPath = resolveFullPath(path);
+      const audio = new Audio(fullPath);
+      audio.preload = 'auto';
+      audio.addEventListener('ended', () => resolve());
+      audio.addEventListener('error', () => resolve());
+      audio.play().catch((err) => {
+        console.warn('Audio play failed in auto-next sequential player:', err);
+        resolve();
+      });
+    } catch (e) {
+      console.error(e);
+      resolve();
+    }
+  });
+};
+
+const speakAsync = (message: string, isEnabled: boolean, variables?: any): Promise<void> => {
+  return new Promise<void>((resolve) => {
+    if (!isEnabled || !message || typeof window === 'undefined' || !window.speechSynthesis) {
+      resolve();
+      return;
+    }
+    try {
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      let msg = message;
+      if (variables) {
+        const { name = '', task = '', n = 0, m = 0, r = 0 } = variables;
+        const josaRegex = /(name|task)(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이야\/야|이다\/다)/g;
+        msg = msg.replace(josaRegex, (match, variable, p1) => {
+          const val = variable === 'name' ? name : task;
+          return val + getJosa(val, p1 as any);
+        });
+        msg = msg.replace(/name/g, name);
+        msg = msg.replace(/task/g, task);
+        msg = msg.replace(/n/g, n.toString());
+        msg = msg.replace(/m/g, m.toString());
+        msg = msg.replace(/r/g, r.toString());
+      }
+
+      const utterance = new SpeechSynthesisUtterance(msg);
+      utterance.lang = 'ko-KR';
+      const voices = synth.getVoices();
+      const voice = voices.find(v => v.lang === 'ko-KR' || v.lang.startsWith('ko')) || voices[0];
+      if (voice) {
+        utterance.voice = voice;
+      }
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      synth.speak(utterance);
+    } catch (e) {
+      console.error(e);
+      resolve();
+    }
+  });
+};
+
 export default function App() {
   // --- State ---
   const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
@@ -3475,6 +3553,7 @@ export default function App() {
     nextRoutineAutoStart: false,
     nextRoutineGroupGuidanceEnabled: false,
     hideAnytimeTimer: false,
+    autoNextAccumulatedRoutine: false,
     userName: '나',
     isVoiceEnabled: true,
     isWakeUpAlarmEnabled: false,
@@ -3586,6 +3665,7 @@ export default function App() {
             nextRoutineAutoStart: false,
             nextRoutineGroupGuidanceEnabled: false,
             hideAnytimeTimer: false,
+            autoNextAccumulatedRoutine: false,
             userName: '나',
             isVoiceEnabled: true,
             isWakeUpAlarmEnabled: false,
@@ -3679,6 +3759,7 @@ export default function App() {
         if (parsed.nextRoutineAutoStart === undefined) parsed.nextRoutineAutoStart = false;
         if (parsed.nextRoutineGroupGuidanceEnabled === undefined) parsed.nextRoutineGroupGuidanceEnabled = false;
         if (parsed.hideAnytimeTimer === undefined) parsed.hideAnytimeTimer = false;
+        if (parsed.autoNextAccumulatedRoutine === undefined) parsed.autoNextAccumulatedRoutine = false;
         if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
         if (parsed.isWakeUpAlarmEnabled === undefined) parsed.isWakeUpAlarmEnabled = false;
         
@@ -3887,6 +3968,7 @@ export default function App() {
   const naggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastProcessedStartTimeRef = useRef<{ taskId: string; startTime: string } | null>(null);
   const prevTriggerRunningRef = useRef<boolean>(false);
+  const isAutoNextTransitioningRef = useRef<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [addGroupStep, setAddGroupStep] = useState(1);
@@ -4403,12 +4485,249 @@ export default function App() {
     return null;
   }, [userData.routineChunks]);
 
+  const autoCompleteAccumulatedTask = (id: string) => {
+    const now = new Date();
+    const nowStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+    const todayStr = formatDate(now);
+    let targetChunkId: string | null = null;
+    let foundTask: Task | null = null;
+
+    for (const chunk of userData.routineChunks) {
+      const t = chunk.tasks.find(task => task.id === id);
+      if (t) {
+        foundTask = t;
+        targetChunkId = chunk.id;
+        break;
+      }
+    }
+
+    if (!foundTask || !targetChunkId) return;
+
+    // Set transition state flag to prevent interrupting end vocalizations
+    isAutoNextTransitioningRef.current = true;
+
+    // 1. Gather variables/settings we need before modifying state
+    const settings = userData.naggingSettings;
+    const taskText = foundTask.text;
+    const totalSeconds = (foundTask.targetDuration || 0) * 60;
+    const variables = {
+      name: userData.userName || '나',
+      task: taskText,
+      n: foundTask.targetDuration || 0,
+      r: 0,
+      m: 0
+    };
+
+    // Prepare End Voice Announcement Speech
+    const endVoiceEnabled = userData.isVoiceEnabled && settings && settings.endEnabled;
+    const endVoiceMessage = settings?.endMessage || '';
+
+    // Prepare Complete Sound
+    const routineConfig = userData.soundSettings?.individualRoutineComplete;
+    const routineEnabled = routineConfig ? routineConfig.enabled : true;
+    const routineFile = routineConfig?.file || '/sounds/tithuh-level-up-523624.mp3';
+
+    // 2. Determine if there is a next task and its details for next task start voice
+    let nextTaskText = '';
+    let nextVoiceMessage = '';
+    let nextVoiceEnabled = false;
+
+    // Find next task in the exact same way as toggleTask
+    const chunkObj = userData.routineChunks.find(c => c.id === targetChunkId);
+    let nextTaskObj: Task | undefined;
+    if (chunkObj) {
+      const scheduledTasks = chunkObj.tasks.filter(t => isTaskScheduledToday(t, chunkObj, effectiveDate, userData));
+      const updatedTasks = chunkObj.tasks.map(t => {
+        if (t.id === id) {
+          return {
+            ...t,
+            completed: true,
+            status: TaskStatus.PERFECT,
+            duration: totalSeconds,
+            accumulatedDuration: totalSeconds,
+            endTime: nowStr,
+            startTime: undefined,
+            isPaused: false
+          };
+        }
+        return t;
+      });
+
+      const getNext = (ts: Task[]) => {
+        const sched = ts.filter(t => 
+          t.id !== id && 
+          isTaskScheduledToday(t, chunkObj, effectiveDate, userData) && 
+          !(t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP)
+        );
+        return sched.find(t => !t.startTime && !t.isPaused && (t.accumulatedDuration || 0) === 0 && !t.laterTimestamp)
+            || sched.find(t => !!t.laterTimestamp)
+            || sched.find(t => !!t.isPaused || (t.accumulatedDuration || 0) > 0 || !!t.startTime);
+      };
+
+      nextTaskObj = getNext(updatedTasks);
+      if (nextTaskObj && userData.nextRoutineAutoStart) {
+        // Prevent double start vocalization triggers from standard tick loop
+        lastProcessedStartTimeRef.current = {
+          taskId: nextTaskObj.id,
+          startTime: nowStr
+        };
+        nextTaskText = nextTaskObj.text;
+        nextVoiceEnabled = userData.isVoiceEnabled && settings && settings.startEnabled;
+        nextVoiceMessage = settings?.startMessage || 'task 시작합니다';
+      }
+    }
+
+    // 3. Trigger sequential audio/voice playback
+    const runSequence = async () => {
+      // Step A: End Speech
+      if (endVoiceEnabled && endVoiceMessage) {
+        await speakAsync(endVoiceMessage, true, variables);
+      }
+      
+      // Step B: Complete Sound
+      if (routineEnabled && routineFile) {
+        await playAudioAsync(routineFile, true);
+      }
+
+      // Step C: Next Start Speech
+      if (nextVoiceEnabled && nextVoiceMessage && nextTaskText) {
+        const nextVariables = {
+          name: userData.userName || '나',
+          task: nextTaskText,
+          n: 0,
+          r: 0,
+          m: 0
+        };
+        await speakAsync(nextVoiceMessage, true, nextVariables);
+      }
+    };
+
+    runSequence();
+
+    // 4. Update the state
+    setUserData(prev => {
+      let newlyCompletedGroup = false;
+      const newChunks = prev.routineChunks.map(chunk => {
+        if (chunk.id === targetChunkId) {
+          const updatedTasks = chunk.tasks.map(t => {
+            if (t.id === id) {
+              const updated = {
+                ...t,
+                completed: true,
+                endTime: nowStr,
+                duration: totalSeconds,
+                accumulatedDuration: totalSeconds,
+                startTime: undefined,
+                isPaused: false,
+                status: TaskStatus.PERFECT
+              };
+              return updated;
+            } else if (t.status === TaskStatus.IN_PROGRESS) {
+              const updated = { ...t };
+              updated.isPaused = !!updated.startTime || (updated.isPaused && (updated.accumulatedDuration || 0) > 0);
+              updated.accumulatedDuration = calculateTaskDuration(updated, now);
+              updated.startTime = undefined;
+              updated.status = TaskStatus.NOT_STARTED;
+              return updated;
+            }
+            return t;
+          });
+
+          const getNext = (ts: Task[]) => {
+            const sched = ts.filter(t => 
+              t.id !== id && 
+              isTaskScheduledToday(t, chunk, effectiveDate, prev) && 
+              !(t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP)
+            );
+            return sched.find(t => !t.startTime && !t.isPaused && (t.accumulatedDuration || 0) === 0 && !t.laterTimestamp)
+                || sched.find(t => !!t.laterTimestamp)
+                || sched.find(t => !!t.isPaused || (t.accumulatedDuration || 0) > 0 || !!t.startTime);
+          };
+
+          const nextTask = getNext(updatedTasks);
+          const nextActiveId = nextTask ? nextTask.id : undefined;
+          
+          const allCompleted = updatedTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
+          let newCompletionDates = chunk.completionDates || [];
+          if (allCompleted && !newCompletionDates.includes(todayStr)) {
+            newCompletionDates = [...newCompletionDates, todayStr];
+            newlyCompletedGroup = true;
+          }
+
+          return {
+            ...chunk,
+            completionDates: newCompletionDates,
+            activeTaskId: nextActiveId,
+            tasks: updatedTasks.map(t => {
+              if (nextTask && t.id === nextTask.id) {
+                return { 
+                  ...t, 
+                  status: TaskStatus.IN_PROGRESS, 
+                  startTime: prev.nextRoutineAutoStart ? nowStr : undefined,
+                  isPaused: !prev.nextRoutineAutoStart,
+                  laterTimestamp: undefined 
+                };
+              }
+              return t;
+            })
+          };
+        }
+        return chunk;
+      });
+
+      const totalCompleted = newChunks.reduce((acc, chunk) => 
+        acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData) && t.completed).length, 0
+      );
+      const totalScheduledTasksCount = newChunks.reduce((acc, chunk) => 
+        acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData)).length, 0
+      );
+      const completionPercentage = totalScheduledTasksCount > 0 
+        ? Math.floor((totalCompleted / totalScheduledTasksCount) * 100) 
+        : 0;
+
+      const nextState = {
+        ...prev,
+        routineChunks: newChunks,
+        dailyCompletionRate: {
+          ...prev.dailyCompletionRate,
+          [todayStr]: completionPercentage
+        }
+      };
+
+      try {
+        const nextWithHistory = syncHistory(nextState, todayStr);
+        nextWithHistory.availableCheckCheckCount = (nextWithHistory.availableCheckCheckCount || 0) + 3;
+        return nextWithHistory;
+      } catch (e) {
+        return syncHistory(nextState, todayStr);
+      }
+    });
+
+    if (typeof confetti === 'function') {
+      try {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#6366f1', '#a855f7', '#ec4899', '#3b82f6', '#10b981']
+        });
+      } catch (e) {}
+    }
+
+    setTimeout(() => {
+      isAutoNextTransitioningRef.current = false;
+    }, 1500);
+  };
+
   // 루틴 변경 시 음성 안내 즉시 중단 (Nagging voice stop on routine change)
   useEffect(() => {
     return () => {
       if (naggingTimeoutRef.current) {
         clearTimeout(naggingTimeoutRef.current);
         naggingTimeoutRef.current = null;
+      }
+      if (isAutoNextTransitioningRef.current) {
+        return;
       }
       voiceService.stop();
     };
@@ -4441,6 +4760,17 @@ export default function App() {
 
     const activeTask = globalActiveTask.task;
     const elapsed = calculateTaskDuration(activeTask, currentTime);
+    const target = (activeTask.targetDuration || 0) * 60;
+
+    // [시간 축적 루틴 자동 넘김] 엔진 작동 조건
+    if (userData.autoNextAccumulatedRoutine && 
+        activeTask.taskType === TaskType.TIME_ACCUMULATED && 
+        target > 0 && 
+        (activeTask.accumulatedDuration || 0) < target && 
+        elapsed >= target) {
+      autoCompleteAccumulatedTask(activeTask.id);
+      return;
+    }
     
     // 1. 트리거 루틴(첫 루틴) 시작 시 효과음 재생
     if (elapsed === 0) {
@@ -4462,16 +4792,15 @@ export default function App() {
       }
     }
 
-    // 잔소리(음성 안내)는 스피커 아이콘이 켜져 있을 때만(isVoiceEnabled === true) 재생됩니다.
-    if (!userData.isVoiceEnabled) return;
-
-    if (!userData.naggingSettings) return;
-
-    const settings = userData.naggingSettings;
-    const target = (activeTask.targetDuration || 0) * 60;
-    const remaining = target - elapsed;
-    
-    const variables = {
+     // 잔소리(음성 안내)는 스피커 아이콘이 켜져 있을 때만(isVoiceEnabled === true) 재생됩니다.
+     if (!userData.isVoiceEnabled) return;
+ 
+     if (!userData.naggingSettings) return;
+ 
+     const settings = userData.naggingSettings;
+     const remaining = target - elapsed;
+     
+     const variables = {
       name: userData.userName || '나',
       task: activeTask.text,
       n: Math.floor(elapsed / 60),
@@ -5017,16 +5346,19 @@ export default function App() {
         const taskEntryIdx = newTaskHistory.findIndex(h => h.date === today && h.taskId === task.id);
         const existingTaskEntry = taskEntryIdx >= 0 ? newTaskHistory[taskEntryIdx] : null;
 
-        // Preserve earliest non-null start time for the day
-        const finalTaskStartTime = task.status === TaskStatus.SKIP
+        // If inactive, unexecuted, or skipped, do not store start time, end time, or duration (set to null)
+        const isExcluded = !isScheduled || statusStr === '미실행' || statusStr === '스킵';
+
+        // Preserve earliest non-null start time for the day if not excluded
+        const finalTaskStartTime = isExcluded
           ? null
           : ([task.startTime, existingTaskEntry?.startTime]
               .filter(Boolean)
               .sort()[0] || null);
 
-        // Preserve end time if already completed
+        // Preserve end time if already completed and not excluded
         const isFinished = task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT || task.status === TaskStatus.SKIP;
-        const finalTaskEndTime = task.status === TaskStatus.SKIP
+        const finalTaskEndTime = isExcluded
           ? null
           : (isFinished ? (task.endTime || existingTaskEntry?.endTime || null) : null);
 
@@ -5037,7 +5369,7 @@ export default function App() {
           isActive: isScheduled,
           startTime: finalTaskStartTime,
           endTime: finalTaskEndTime,
-          duration: task.status === TaskStatus.SKIP ? 0 : taskDuration,
+          duration: isExcluded ? null : taskDuration,
           status: statusStr
         };
 
@@ -5820,10 +6152,10 @@ export default function App() {
             ? Math.floor((totalCompleted / totalScheduledTasksCount) * 100) 
             : 0;
 
-          // Clear task history for this group and day
+          // Clear task history for this group and day (set duration to null for unexecuted)
           const newTaskHistory = (prev.taskHistory || []).map(h => 
             (h.groupId === chunkId && h.date === todayStr) 
-              ? { ...h, startTime: null, endTime: null, duration: 0, status: '미실행' } 
+              ? { ...h, startTime: null, endTime: null, duration: null, status: '미실행' } 
               : h
           );
           
@@ -7133,6 +7465,29 @@ export default function App() {
                             className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.hideAnytimeTimer ? 'bg-indigo-600' : 'bg-slate-200'}`}
                           >
                             <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.hideAnytimeTimer ? 'left-7' : 'left-1'}`} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
+                      <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
+                        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <BrickWall className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">시간 축적 루틴 자동 넘김</h3>
+                      </div>
+                      
+                      <div className="space-y-4 pt-1">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1">
+                            <p className="text-[12px] font-bold text-slate-400 leading-tight">시간 축적 루틴의 경우, 사용자가 지정한 시간이 지나면 자동으로 다음 루틴으로 넘어갑니다. 단 다음 루틴의 타이머 자동 시작 여부는 위 ’다음 루틴 자동 시작‘ 옵션에서 설정해 주십시오</p>
+                          </div>
+                          <button 
+                            onClick={() => setUserData(prev => ({ ...prev, autoNextAccumulatedRoutine: !prev.autoNextAccumulatedRoutine }))}
+                            className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${userData.autoNextAccumulatedRoutine ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${userData.autoNextAccumulatedRoutine ? 'left-7' : 'left-1'}`} />
                           </button>
                         </div>
                       </div>

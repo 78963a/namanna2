@@ -570,9 +570,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
           };
         }
 
-        const startTime = (entry.status === '스킵' || !entry.startTime) ? '--:--' : entry.startTime;
-        const duration = entry.status === '스킵' ? '-' : formatDurationPrecise(entry.duration);
-        const endTime = (entry.status === '스킵' || !entry.endTime) ? '--:--' : entry.endTime;
+        const startTime = (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime;
+        const duration = (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration);
+        const endTime = (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime;
         const status = entry.status;
 
         return {
@@ -593,9 +593,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
     const getAvgMetricsForPeriod = (days: string[]) => {
       const histories = (userData.taskHistory || []).filter(h => h.taskId === selectedTaskId && days.includes(h.date));
-      const startTimes = histories.filter(h => h.startTime && h.status !== '스킵').map(h => timeToMinutes(h.startTime!));
-      const endTimes = histories.filter(h => h.endTime && h.status !== '스킵').map(h => timeToMinutes(h.endTime!));
-      const durations = histories.filter(h => h.duration > 0 && h.status !== '스킵').map(h => h.duration);
+      const startTimes = histories.filter(h => h.startTime && h.status !== '스킵' && h.status !== '미실행' && h.status !== '비활성').map(h => timeToMinutes(h.startTime!));
+      const endTimes = histories.filter(h => h.endTime && h.status !== '스킵' && h.status !== '미실행' && h.status !== '비활성').map(h => timeToMinutes(h.endTime!));
+      const durations = histories.filter(h => h.duration !== null && h.duration !== undefined && h.duration > 0 && h.status !== '스킵' && h.status !== '미실행' && h.status !== '비활성').map(h => h.duration as number);
 
       const avgStart = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
       const avgEnd = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
@@ -662,9 +662,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const attainmentEntries = activeEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵');
     const avgRate = activeEntries.length > 0 ? Math.floor((attainmentEntries.length / activeEntries.length) * 100) : 0;
 
-    const startTimes = activeEntries.filter(h => h.startTime).map(h => timeToMinutes(h.startTime!));
-    const endTimes = activeEntries.filter(h => h.endTime).map(h => timeToMinutes(h.endTime!));
-    const durations = activeEntries.filter(h => h.duration > 0).map(h => h.duration);
+    const startTimes = activeEntries.filter(h => h.startTime && h.status !== '스킵' && h.status !== '미실행' && h.status !== '비활성').map(h => timeToMinutes(h.startTime!));
+    const endTimes = activeEntries.filter(h => h.endTime && h.status !== '스킵' && h.status !== '미실행' && h.status !== '비활성').map(h => timeToMinutes(h.endTime!));
+    const durations = activeEntries.filter(h => h.duration !== null && h.duration !== undefined && h.duration > 0 && h.status !== '스킵' && h.status !== '미실행' && h.status !== '비활성').map(h => h.duration as number);
 
     const avgStart = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
     const avgEnd = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
@@ -679,9 +679,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
         if (!historyByYear[year]) historyByYear[year] = [];
         historyByYear[year].push({
           date,
-          startTime: entry.startTime || '--:--',
-          duration: formatDurationPrecise(entry.duration),
-          endTime: entry.endTime || '--:--',
+          startTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime,
+          duration: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration),
+          endTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime,
           status: entry.status
         });
       }
@@ -846,9 +846,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const attainmentEntries = activeEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵');
       const avgRate = activeEntries.length > 0 ? Math.floor((attainmentEntries.length / activeEntries.length) * 100) : 0;
 
-      const startTimes = activeEntries.filter(h => h.startTime && h.status !== '스킵').map(h => timeToMinutes(h.startTime!));
-      const endTimes = activeEntries.filter(h => h.endTime && h.status !== '스킵').map(h => timeToMinutes(h.endTime!));
-      const durations = activeEntries.filter(h => h.duration > 0 && h.status !== '스킵').map(h => h.duration);
+      const startTimes = activeEntries.filter(h => h.startTime && h.status !== '스킵' && h.status !== '미실행' && h.status !== '비활성').map(h => timeToMinutes(h.startTime!));
+      const endTimes = activeEntries.filter(h => h.endTime && h.status !== '스킵' && h.status !== '미실행' && h.status !== '비활성').map(h => timeToMinutes(h.endTime!));
+      const durations = activeEntries.filter(h => h.duration !== null && h.duration !== undefined && h.duration > 0 && h.status !== '스킵' && h.status !== '미실행' && h.status !== '비활성').map(h => h.duration as number);
 
       const avgStart = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;
       const avgEnd = endTimes.length > 0 ? endTimes.reduce((a, b) => a + b, 0) / endTimes.length : null;
@@ -863,9 +863,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
           if (!historyByYear[year]) historyByYear[year] = [];
           historyByYear[year].push({
             date,
-            startTime: (entry.status === '스킵' || !entry.startTime) ? '--:--' : entry.startTime,
-            duration: entry.status === '스킵' ? '-' : formatDurationPrecise(entry.duration),
-            endTime: (entry.status === '스킵' || !entry.endTime) ? '--:--' : entry.endTime,
+            startTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime,
+            duration: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration),
+            endTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime,
             status: entry.status
           });
         }

@@ -106,7 +106,7 @@ export interface TaskHistoryEntry {
   taskId: string;
   groupId: string;
   isActive: boolean;
-  duration: number; // seconds
+  duration: number | null; // seconds
   startTime: string | null; // HH:mm:ss
   endTime: string | null;   // HH:mm:ss
   status: string; // '비활성' | '미실행' | '일시정지' | '실행중' | '스킵' | '완벽' | '완료' | '나중에'
@@ -196,6 +196,7 @@ export interface UserData {
   naggingSettings?: NaggingSettings;
   soundSettings?: SoundEffectSettings;
   hideAnytimeTimer?: boolean;
+  autoNextAccumulatedRoutine?: boolean;
 }
 
 /**

@@ -31,7 +31,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
     startMessage: 'task',
     ongoingEnabled: false,
     ongoingInterval: 1,
-    ongoingMessage: 'task가 n분째 진행중입니다',
+    ongoingMessage: 'task이/가 n분째 진행중입니다',
     ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
     beforeEndEnabled: false,
     beforeEndTime: 1,
@@ -42,7 +42,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
     endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
     overTimeEnabled: false,
     overTimeInterval: 1,
-    overTimeMessage: 'name님, task가 m분 지났어요.',
+    overTimeMessage: 'name님, task이/가 m분 지났어요.',
     overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
   };
 

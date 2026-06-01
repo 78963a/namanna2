@@ -117,7 +117,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
           </div>
           <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
               <span>
-                {challengeDays}일째 도전중, {successDays}일째 성공중. 스킵루틴무시
+                {challengeDays}일째 도전중, {successDays}일째 성공중. 시간축적루틴자동넘김기능추가
                </span>
           </div>
         </div>

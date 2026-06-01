@@ -183,7 +183,8 @@ export const getDaysBetween = (date1: string, date2: string): number => {
  * @param {number} seconds - The duration in seconds.
  * @returns {string} The formatted duration string.
  */
-export const formatDurationPrecise = (seconds: number): string => {
+export const formatDurationPrecise = (seconds: number | null | undefined): string => {
+  if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return '-';
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   if (m === 0) return `${s}초`;
