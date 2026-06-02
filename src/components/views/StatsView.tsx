@@ -1248,15 +1248,72 @@ export const StatsView: React.FC<StatsViewProps> = ({
               const dateObj = new Date(yParsed, mParsed - 1, dParsed);
               const dayOfWeek = dateObj.getDay();
 
+              // Calculate special states
+              const todayStr = formatDate(currentTime);
+              const isPastDate = dateStr < todayStr;
+
+              const isNormallyInactive = aliveGroup
+                ? (!aliveGroup.scheduledDays?.includes(dayOfWeek) && !aliveGroup.forcedActiveDates?.includes(dateStr))
+                : false;
+
+              // 2. 건너뜀 (User manually skipped/today-skipped)
+              const isSkipped = aliveGroup
+                ? (aliveGroup.inactiveDates?.includes(dateStr) || userData.inactiveChunks?.[dateStr]?.includes(groupId))
+                : (userData.inactiveChunks?.[dateStr]?.includes(groupId));
+
+              // 1. 쉬는요일 (normally inactive, and not active)
+              const isRestDay = !isSkipped && (
+                groupHistEntry 
+                  ? (groupHistEntry.completionStatus === '비활성' || groupHistEntry.isActive === false)
+                  : isNormallyInactive
+              );
+
+              // 3. 미실행 (active target, but all unexecuted)
+              const activeTasksOnDate = taskHistEntries.filter(t => t.isActive);
+              let allActiveTasksUnexecuted = false;
+              if (activeTasksOnDate.length > 0) {
+                allActiveTasksUnexecuted = activeTasksOnDate.every(t => 
+                  !t.status || t.status === '미실행' || t.status === '비활성'
+                );
+              } else if (aliveGroup) {
+                const isNormallyActiveOnDate = (aliveGroup.scheduledDays?.includes(dayOfWeek) || aliveGroup.forcedActiveDates?.includes(dateStr)) && !aliveGroup.inactiveDates?.includes(dateStr);
+                if (isNormallyActiveOnDate) {
+                  allActiveTasksUnexecuted = true;
+                }
+              }
+
+              const isUnexecuted = !isRestDay && !isSkipped && (
+                groupHistEntry?.completionStatus === '미실행' || 
+                groupHistEntry?.completionStatus === 'fail' ||
+                (groupHistEntry && !groupHistEntry.firstTaskStartTime && groupHistEntry.totalDuration === 0) ||
+                (!groupHistEntry && allActiveTasksUnexecuted)
+              );
+
+              // 4. 기록누락 (past date, target active day, but no data at all)
+              const isRecordMissing = !isRestDay && !isSkipped && !isUnexecuted && (
+                isPastDate && !groupHistEntry && taskHistEntries.length === 0
+              );
+
+              let specialState: '쉬는요일' | '건너뜀' | '미실행' | '기록누락' | null = null;
+              if (isRestDay) {
+                specialState = '쉬는요일';
+              } else if (isSkipped) {
+                specialState = '건너뜀';
+              } else if (isUnexecuted) {
+                specialState = '미실행';
+              } else if (isRecordMissing) {
+                specialState = '기록누락';
+              }
+
               let groupStatus: '정상' | '비활성' | '쉬어감' = '정상';
               
               if (aliveGroup) {
                 const isManuallySkipped = aliveGroup.inactiveDates?.includes(dateStr);
-                const isNormallyInactive = !aliveGroup.scheduledDays?.includes(dayOfWeek) && !aliveGroup.forcedActiveDates?.includes(dateStr);
+                const isNormallyInactiveVal = !aliveGroup.scheduledDays?.includes(dayOfWeek) && !aliveGroup.forcedActiveDates?.includes(dateStr);
                 
                 if (isManuallySkipped) {
                   groupStatus = '쉬어감';
-                } else if (isNormallyInactive || groupHistEntry?.completionStatus === '비활성' || groupHistEntry?.isActive === false) {
+                } else if (isNormallyInactiveVal || groupHistEntry?.completionStatus === '비활성' || groupHistEntry?.isActive === false) {
                   groupStatus = '비활성';
                 }
               } else {
@@ -1266,9 +1323,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
                 }
               }
 
-              // Retrieve tasks if not inactive/skipped
+              // Retrieve tasks if not inactive/skipped/special
               let tasks: any[] = [];
-              if (groupStatus === '정상') {
+              if (groupStatus === '정상' && !specialState) {
                 const aliveTasks = aliveGroup ? (aliveGroup.tasks || []) : [];
                 const aliveTasksOnDate = aliveTasks.filter(task => {
                   const tCreateDate = getGroupCreationDate(task.id);
@@ -1314,6 +1371,14 @@ export const StatsView: React.FC<StatsViewProps> = ({
                 percentageStr = '';
               }
 
+              if (specialState) {
+                displayStartTime = specialState;
+                displayEndTime = '';
+                displayDuration = '';
+                percentageStr = '';
+                tasks = [];
+              }
+
               return {
                 id: groupId,
                 name: aliveGroup ? aliveGroup.name : '삭제된 그룹',
@@ -1323,6 +1388,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                 percentage: percentageStr,
                 status: groupHistEntry?.completionStatus || '미실행',
                 groupStatus,
+                specialState,
                 tasks
               };
             });
@@ -1332,7 +1398,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
             }
 
             const formatTimeCompact = (timeStr: string) => {
-              if (!timeStr || timeStr === '--:--' || timeStr === '비활성' || timeStr === '쉬어감') return timeStr;
+              if (!timeStr || timeStr === '--:--' || timeStr === '비활성' || timeStr === '쉬어감' || 
+                  timeStr === '쉬는요일' || timeStr === '건너뜀' || timeStr === '미실행' || timeStr === '기록누락') return timeStr;
               const parts = timeStr.trim().split(':');
               if (parts.length >= 2) {
                 return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
@@ -1413,7 +1480,16 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                 <h4 className="text-sm font-black text-slate-800 truncate">{group.name}</h4>
                               </div>
                               <div className="col-span-4 text-center text-sm font-bold text-slate-500 font-mono">
-                                {group.groupStatus === '비활성' || group.groupStatus === '쉬어감' ? (
+                                {group.specialState ? (
+                                  <span className={`text-[11px] font-black px-1.5 py-0.5 rounded-[6px] ${
+                                    group.specialState === '쉬는요일' ? 'text-slate-400 bg-slate-100 border border-slate-200' :
+                                    group.specialState === '건너뜀' ? 'text-amber-700 bg-amber-50 border border-amber-100' :
+                                    group.specialState === '미실행' ? 'text-rose-500 bg-rose-50 border border-rose-100/70' :
+                                    'text-slate-400 bg-slate-50 border border-dashed border-slate-200' /* 기록누락 */
+                                  }`}>
+                                    {group.specialState}
+                                  </span>
+                                ) : group.groupStatus === '비활성' || group.groupStatus === '쉬어감' ? (
                                   <span className={`text-[11px] font-black px-1.5 py-0.5 rounded-[6px] ${
                                     group.groupStatus === '쉬어감' ? 'text-amber-700 bg-amber-50 border border-amber-100' : 'text-slate-400 bg-slate-100 border border-slate-200'
                                   }`}>
@@ -1434,7 +1510,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             </div>
 
                             {/* Task List under Group */}
-                            {group.groupStatus === '정상' && (
+                            {!group.specialState && group.groupStatus === '정상' && (
                               <div className="divide-y divide-slate-50">
                                 {group.tasks.length === 0 ? (
                                   <div className="text-slate-400 font-bold pl-2 py-1 text-[12px]">등록된 개별 루틴이 없습니다.</div>

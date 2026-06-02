@@ -4115,13 +4115,19 @@ export default function App() {
       document.body.style.overflow = 'hidden';
       // Use overscroll-behavior to prevent pull-to-refresh and background scroll on touch devices
       document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.overscrollBehavior = 'none';
     } else {
       document.body.style.overflow = '';
       document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.overscrollBehavior = '';
     }
     return () => {
       document.body.style.overflow = '';
       document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.overscrollBehavior = '';
     };
   }, [
     isSettingsOpen, 
@@ -8979,7 +8985,7 @@ export default function App() {
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
-              className={`fixed bottom-0 left-0 right-0 bg-slate-50 rounded-t-[20px] p-6 z-[1201] shadow-2xl max-w-2xl mx-auto overflow-hidden flex flex-col relative ${
+              className={`fixed bottom-0 left-0 right-0 bg-slate-50 rounded-t-[20px] p-6 z-[1201] shadow-2xl max-w-2xl mx-auto overflow-hidden flex flex-col ${
                 settingsSubView.type === 'groupStats' ? 'h-[85vh]' : ''
               }`}
               style={{ maxHeight: '90vh' }}
