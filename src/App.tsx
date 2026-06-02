@@ -8941,10 +8941,18 @@ export default function App() {
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
-              className="fixed bottom-0 left-0 right-0 bg-slate-50 rounded-t-[20px] p-6 z-50 shadow-2xl max-w-2xl mx-auto overflow-hidden flex flex-col"
+              className="fixed bottom-0 left-0 right-0 bg-slate-50 rounded-t-[20px] p-6 z-50 shadow-2xl max-w-2xl mx-auto overflow-hidden flex flex-col relative"
               style={{ maxHeight: '90vh' }}
             >
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 flex-shrink-0" />
+              {settingsSubView.type === 'groupStats' && (
+                <button
+                  onClick={handleSettingsClose}
+                  className="absolute top-4 right-4 p-1 hover:bg-slate-200/60 rounded-full text-slate-400 hover:text-slate-600 transition-colors z-[60]"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
               {renderSettingsContent('modal')}
             </motion.div>
           </>

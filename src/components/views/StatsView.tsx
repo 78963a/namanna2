@@ -69,6 +69,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
   const [activeTab, setActiveTab] = useState<'wake-up' | 'achievement' | 'usage'>('achievement');
   const [viewAllType, setViewAllType] = useState<'overall' | 'group' | 'task' | null>(null);
+  const [selectedHistoryDate, setSelectedHistoryDate] = useState<string | null>(null);
 
   const renderFolderTabs = () => {
     if (isSingleGroupStatsOnly || isSingleTaskStatsOnly) return null;
@@ -135,6 +136,13 @@ export const StatsView: React.FC<StatsViewProps> = ({
   useEffect(() => {
     if (selectedGroupId || selectedTaskId || viewAllType) {
       window.scrollTo({ top: 0, behavior: 'instant' });
+      
+      // Scroll all scrollable parent/container elements in the document to the top
+      const scrollableElements = document.querySelectorAll('.overflow-y-auto, .overflow-auto, .custom-scrollbar');
+      scrollableElements.forEach(el => {
+        el.scrollTo({ top: 0, behavior: 'auto' });
+      });
+
       setCalendarYear(currentTime.getFullYear());
       setCalendarMonth(currentTime.getMonth());
     }
@@ -169,6 +177,30 @@ export const StatsView: React.FC<StatsViewProps> = ({
   }, [calendarYear, calendarMonth, firstDayOfMonth, daysInMonth]);
 
   const todayStr = formatDate(currentTime);
+  
+  const fillMissingDates = (datesSet: Set<string>): string[] => {
+    const activeDates = Array.from(datesSet).filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d));
+    if (activeDates.length === 0) return [];
+    
+    activeDates.sort();
+    const minDateStr = activeDates[0];
+    const maxDateStr = activeDates[activeDates.length - 1] > todayStr ? activeDates[activeDates.length - 1] : todayStr;
+    
+    const result: string[] = [];
+    const start = new Date(minDateStr);
+    const end = new Date(maxDateStr);
+    
+    const current = new Date(start);
+    while (current <= end) {
+      const y = current.getFullYear();
+      const m = String(current.getMonth() + 1).padStart(2, '0');
+      const d = String(current.getDate()).padStart(2, '0');
+      result.push(`${y}-${m}-${d}`);
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return result.sort((a, b) => b.localeCompare(a));
+  };
   
   const getDateRangeStr = (days: string[]) => {
     if (days.length === 0) return '';
@@ -216,7 +248,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
     activityDates.add(todayStr); // Always include today
     history.forEach(h => { if (h && h.date) activityDates.add(h.date); });
 
-    const allDatesSorted = Array.from(activityDates).sort((a, b) => b.localeCompare(a));
+    const allDatesSorted = fillMissingDates(activityDates);
     
     const historyByYear: { [year: string]: any[] } = {};
     allDatesSorted.forEach(date => {
@@ -649,7 +681,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
       Object.keys(userData.dailyCompletionRate || {}).forEach(d => { if (d) dates.add(d); });
       (userData.taskHistory || []).forEach(h => { if (h && h.date) dates.add(h.date); });
       (userData.routineGroupHistory || []).forEach(h => { if (h && h.date) dates.add(h.date); });
-      return Array.from(dates).filter(d => typeof d === 'string').sort((a, b) => b.localeCompare(a));
+      return fillMissingDates(dates);
     };
 
     const allDaysSorted = getAllRecordedDays();
@@ -674,15 +706,24 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const historyByYear: { [year: string]: any[] } = {};
     allDaysSorted.forEach(date => {
       const entry = activeEntries.find(h => h.date === date);
+      const year = date.split('-')[0];
+      if (!historyByYear[year]) historyByYear[year] = [];
+      
       if (entry) {
-        const year = date.split('-')[0];
-        if (!historyByYear[year]) historyByYear[year] = [];
         historyByYear[year].push({
           date,
           startTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime,
           duration: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration),
           endTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime,
           status: entry.status
+        });
+      } else {
+        historyByYear[year].push({
+          date,
+          startTime: '--:--',
+          duration: '-',
+          endTime: '--:--',
+          status: '미기록'
         });
       }
     });
@@ -709,7 +750,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
       Object.keys(userData.dailyCompletionRate || {}).forEach(d => { if (d) dates.add(d); });
       (userData.taskHistory || []).forEach(h => { if (h && h.date) dates.add(h.date); });
       (userData.routineGroupHistory || []).forEach(h => { if (h && h.date) dates.add(h.date); });
-      return Array.from(dates).filter(d => typeof d === 'string').sort((a, b) => b.localeCompare(a)); // Recent first
+      return fillMissingDates(dates);
     };
 
     const allDaysSorted = getAllRecordedDays();
@@ -769,6 +810,16 @@ export const StatsView: React.FC<StatsViewProps> = ({
             endTime: completions.length > 0 ? minutesToTime(Math.max(...completions)) : '--:--',
             duration: sumDurationSeconds > 0 ? Math.floor(sumDurationSeconds / 60) + '분' : '0분'
           });
+        } else {
+          historyByYear[year].push({
+            date,
+            rate: '-',
+            totalActive: 0,
+            breakdown: '-',
+            startTime: '--:--',
+            endTime: '--:--',
+            duration: '-'
+          });
         }
       });
 
@@ -804,10 +855,10 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const historyByYear: { [year: string]: any[] } = {};
       allDaysSorted.forEach(date => {
         const entry = groupHistory.find(h => h.date === date);
+        const year = date.split('-')[0];
+        if (!historyByYear[year]) historyByYear[year] = [];
+        
         if (entry) {
-          const year = date.split('-')[0];
-          if (!historyByYear[year]) historyByYear[year] = [];
-          
           const dayTaskEntries = taskEntries.filter(h => h.date === date);
           const dayCompleted = dayTaskEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵').length;
           const dayRate = dayTaskEntries.length > 0 ? Math.floor((dayCompleted / dayTaskEntries.length) * 100) : 0;
@@ -819,6 +870,15 @@ export const StatsView: React.FC<StatsViewProps> = ({
             endTime: entry.completedAt || '미완료',
             rate: dayRate + '%',
             status: entry.completionStatus
+          });
+        } else {
+          historyByYear[year].push({
+            date,
+            startTime: '--:--',
+            duration: '-',
+            endTime: '--:--',
+            rate: '-',
+            status: '미기록'
           });
         }
       });
@@ -858,15 +918,24 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const historyByYear: { [year: string]: any[] } = {};
       allDaysSorted.forEach(date => {
         const entry = activeEntries.find(h => h.date === date);
+        const year = date.split('-')[0];
+        if (!historyByYear[year]) historyByYear[year] = [];
+        
         if (entry) {
-          const year = date.split('-')[0];
-          if (!historyByYear[year]) historyByYear[year] = [];
           historyByYear[year].push({
             date,
             startTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime,
             duration: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration),
             endTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime,
             status: entry.status
+          });
+        } else {
+          historyByYear[year].push({
+            date,
+            startTime: '--:--',
+            duration: '-',
+            endTime: '--:--',
+            status: '미기록'
           });
         }
       });
@@ -1041,7 +1110,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {allTimeStats.historyByYear[year].map((row, i) => (
-                          <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                          <tr key={i} className="hover:bg-indigo-50/40 active:bg-indigo-100/40 transition-colors cursor-pointer" onClick={() => setSelectedHistoryDate(row.date)}>
                             {viewAllType === 'task' ? (
                               <>
                                 <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
@@ -1085,6 +1154,305 @@ export const StatsView: React.FC<StatsViewProps> = ({
             </div>
           </div>
         </div>
+
+        <AnimatePresence>
+          {selectedHistoryDate && (() => {
+            const dateStr = selectedHistoryDate;
+            const formattedDate = (() => {
+              if (!dateStr || !dateStr.includes('-')) return dateStr;
+              const [y, m, d] = dateStr.split('-').map(Number);
+              if (viewAllType === 'group' && selectedGroupId) {
+                return `${y}년 ${m}월 ${d}일`;
+              }
+              return `${y}년 ${m}월 ${d}일 전체 기록`;
+            })();
+
+            const getGroupCreationDate = (idStr: string): string | null => {
+              if (/^\d{13}$/.test(idStr)) {
+                const d = new Date(parseInt(idStr, 10));
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+              }
+              return null;
+            };
+
+            // 1. Gather all unique group IDs from:
+            //    - Current routine chunks that existed on or before dateStr
+            //    - Historical logs for this date (resilience for deleted groups)
+            const aliveGroupsOnDate = (userData.routineChunks || []).filter(group => {
+              const creationDate = getGroupCreationDate(group.id);
+              const createdOnOrBefore = !creationDate || dateStr >= creationDate;
+              return createdOnOrBefore;
+            });
+
+            const histGroupIds = new Set<string>();
+            (userData.routineGroupHistory || []).forEach(h => {
+              if (h.date === dateStr) {
+                histGroupIds.add(h.groupId);
+              }
+            });
+            (userData.taskHistory || []).forEach(h => {
+              if (h.date === dateStr) {
+                histGroupIds.add(h.groupId);
+              }
+            });
+
+            const allGroupKeys = Array.from(new Set([
+              ...aliveGroupsOnDate.map(g => g.id),
+              ...Array.from(histGroupIds)
+            ]));
+
+            // Gather all daily routine groups and tasks details based on existing history data
+            let groups = allGroupKeys.map(groupId => {
+              const aliveGroup = (userData.routineChunks || []).find(g => g.id === groupId);
+              const groupHistEntry = (userData.routineGroupHistory || []).find(
+                h => h.date === dateStr && h.groupId === groupId
+              );
+              const taskHistEntries = (userData.taskHistory || []).filter(
+                h => h.groupId === groupId && h.date === dateStr
+              );
+
+              // active tasks vs completed tasks on this date to get exact completion rate
+              const activeTasks = taskHistEntries.filter(t => t.isActive);
+              const completedTasksCount = activeTasks.filter(
+                t => t.status === '완벽' || t.status === '완료' || t.status === '스킵'
+              ).length;
+              
+              let percentageStr = activeTasks.length > 0 
+                ? Math.floor((completedTasksCount / activeTasks.length) * 100) + '%'
+                : (groupHistEntry ? '0%' : '-');
+
+              // Determine if it is actually inactive/skipped
+              const [yStr, mStr, dStr] = dateStr.split('-');
+              const yParsed = parseInt(yStr, 10);
+              const mParsed = parseInt(mStr, 10);
+              const dParsed = parseInt(dStr, 10);
+              const dateObj = new Date(yParsed, mParsed - 1, dParsed);
+              const dayOfWeek = dateObj.getDay();
+
+              let groupStatus: '정상' | '비활성' | '쉬어감' = '정상';
+              
+              if (aliveGroup) {
+                const isManuallySkipped = aliveGroup.inactiveDates?.includes(dateStr);
+                const isNormallyInactive = !aliveGroup.scheduledDays?.includes(dayOfWeek) && !aliveGroup.forcedActiveDates?.includes(dateStr);
+                
+                if (isManuallySkipped) {
+                  groupStatus = '쉬어감';
+                } else if (isNormallyInactive || groupHistEntry?.completionStatus === '비활성' || groupHistEntry?.isActive === false) {
+                  groupStatus = '비활성';
+                }
+              } else {
+                // For deleted groups
+                if (groupHistEntry?.completionStatus === '비활성' || groupHistEntry?.isActive === false) {
+                  groupStatus = '비활성';
+                }
+              }
+
+              // Retrieve tasks if not inactive/skipped
+              let tasks: any[] = [];
+              if (groupStatus === '정상') {
+                const aliveTasks = aliveGroup ? (aliveGroup.tasks || []) : [];
+                const aliveTasksOnDate = aliveTasks.filter(task => {
+                  const tCreateDate = getGroupCreationDate(task.id);
+                  const tCreatedOnOrBefore = !tCreateDate || dateStr >= tCreateDate;
+                  return tCreatedOnOrBefore;
+                });
+                
+                const histTasksOnDate = taskHistEntries;
+                const allTaskIds = Array.from(new Set([
+                  ...aliveTasksOnDate.map(t => t.id),
+                  ...histTasksOnDate.map(t => t.taskId)
+                ]));
+
+                tasks = allTaskIds.map(taskId => {
+                  const aliveTask = aliveTasksOnDate.find(t => t.id === taskId);
+                  const taskHistEntry = histTasksOnDate.find(t => t.taskId === taskId);
+                  return {
+                    id: taskId,
+                    name: aliveTask ? aliveTask.text : '삭제된 루틴',
+                    startTime: taskHistEntry?.startTime || '--:--',
+                    endTime: taskHistEntry?.endTime || '--:--',
+                    duration: taskHistEntry?.duration ? formatDurationPrecise(taskHistEntry.duration) : '-',
+                    status: taskHistEntry?.status || '미실행',
+                    isActive: taskHistEntry ? taskHistEntry.isActive : false
+                  };
+                });
+              }
+
+              // Format duration & percentage for inactive/skipped
+              let displayStartTime = groupHistEntry?.firstTaskStartTime || '--:--';
+              let displayEndTime = groupHistEntry?.completedAt || '--:--';
+              let displayDuration = groupHistEntry?.totalDuration ? formatDurationPrecise(groupHistEntry.totalDuration) : '-';
+              
+              if (groupStatus === '비활성') {
+                displayStartTime = '비활성';
+                displayEndTime = '';
+                displayDuration = '';
+                percentageStr = '';
+              } else if (groupStatus === '쉬어감') {
+                displayStartTime = '쉬어감';
+                displayEndTime = '';
+                displayDuration = '';
+                percentageStr = '';
+              }
+
+              return {
+                id: groupId,
+                name: aliveGroup ? aliveGroup.name : '삭제된 그룹',
+                startTime: displayStartTime,
+                endTime: displayEndTime,
+                duration: displayDuration,
+                percentage: percentageStr,
+                status: groupHistEntry?.completionStatus || '미실행',
+                groupStatus,
+                tasks
+              };
+            });
+
+            if (viewAllType === 'group' && selectedGroupId) {
+              groups = groups.filter(g => g.id === selectedGroupId);
+            }
+
+            const formatTimeCompact = (timeStr: string) => {
+              if (!timeStr || timeStr === '--:--' || timeStr === '비활성' || timeStr === '쉬어감') return timeStr;
+              const parts = timeStr.trim().split(':');
+              if (parts.length >= 2) {
+                return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+              }
+              return timeStr;
+            };
+
+            const getTaskStatusCircle = (status: string) => {
+              if (status === '완벽') {
+                return (
+                  <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
+                    <Circle className="absolute inset-0 w-full h-full text-indigo-600" />
+                    <CheckCheck className="absolute w-[60%] h-[60%] text-indigo-600" strokeWidth={3} />
+                  </div>
+                );
+              }
+              if (status === '완료') {
+                return (
+                  <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
+                    <Circle className="absolute inset-0 w-full h-full text-indigo-600" />
+                    <Check className="w-3 h-3 text-indigo-600" strokeWidth={3} />
+                  </div>
+                );
+              }
+              if (status === '스킵') {
+                return <CircleMinus className="w-5 h-5 text-[#CC9900] shrink-0" />;
+              }
+              if (status === '실행중') {
+                return <CircleDot className="w-5 h-5 text-indigo-500 animate-pulse shrink-0" />;
+              }
+              if (status === '일시정지') {
+                return <PauseCircle className="w-5 h-5 text-amber-500 shrink-0" />;
+              }
+              return <Circle className="w-5 h-5 text-slate-300 shrink-0" />;
+            };
+
+            return (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-3 cursor-default"
+                onClick={() => setSelectedHistoryDate(null)}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, y: 15 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.95, y: 15 }}
+                  transition={{ type: "spring", duration: 0.4 }}
+                  className="bg-white rounded-[20px] shadow-2xl border border-slate-100 max-h-[82vh] flex flex-col w-full max-w-lg md:max-w-xl lg:max-w-2xl overflow-hidden relative text-left"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="py-3.5 px-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
+                      <Calendar className="w-4.5 h-4.5 text-indigo-500" />
+                      {formattedDate}
+                    </h3>
+                    <button
+                      onClick={() => setSelectedHistoryDate(null)}
+                      className="p-1 hover:bg-slate-200/60 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="p-4 overflow-y-auto flex-1 bg-white space-y-4">
+                    {groups.length === 0 ? (
+                      <div className="text-center py-10 text-slate-400 font-bold text-xs">
+                        설정된 루틴 그룹이 없습니다.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {groups.map(group => (
+                          <div key={group.id} className="space-y-1">
+                            {/* Group Header Row: Soft Background Accent */}
+                            <div className="grid grid-cols-12 items-center gap-2 bg-indigo-50/50 hover:bg-indigo-50/70 py-2 px-3 rounded-[10px] border border-indigo-100/30 transition-colors">
+                              <div className="col-span-5 flex items-center gap-2 min-w-0">
+                                <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                                <h4 className="text-sm font-black text-slate-800 truncate">{group.name}</h4>
+                              </div>
+                              <div className="col-span-4 text-center text-sm font-bold text-slate-500 font-mono">
+                                {group.groupStatus === '비활성' || group.groupStatus === '쉬어감' ? (
+                                  <span className={`text-[11px] font-black px-2 py-0.5 rounded-[6px] ${
+                                    group.groupStatus === '쉬어감' ? 'text-amber-700 bg-amber-50 border border-amber-100' : 'text-slate-400 bg-slate-100 border border-slate-200'
+                                  }`}>
+                                    {group.startTime}
+                                  </span>
+                                ) : (
+                                  <span>{formatTimeCompact(group.startTime)} ~ {formatTimeCompact(group.endTime)}</span>
+                                )}
+                              </div>
+                              <div className="col-span-2 text-right text-sm font-black text-indigo-600 font-mono pr-2">
+                                <span>{group.duration}</span>
+                              </div>
+                              <div className="col-span-1 flex justify-end">
+                                <span className="text-sm font-black text-indigo-600 leading-none">
+                                  {group.percentage}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Task List under Group */}
+                            {group.groupStatus === '정상' && (
+                              <div className="divide-y divide-slate-50">
+                                {group.tasks.length === 0 ? (
+                                  <div className="text-slate-400 font-bold pl-5 py-1.5 text-[12px]">등록된 개별 루틴이 없습니다.</div>
+                                ) : (
+                                  group.tasks.map(task => (
+                                    <div key={task.id} className="grid grid-cols-12 items-center gap-2 py-1.5 px-2 hover:bg-slate-50/40 rounded-lg transition-colors">
+                                      <div className="col-span-5 flex items-center pl-5 min-w-0">
+                                        <span className="text-sm font-bold text-slate-700 truncate">{task.name}</span>
+                                      </div>
+                                      <div className="col-span-4 text-center text-sm font-bold text-slate-400 font-mono">
+                                        <span>{formatTimeCompact(task.startTime)} ~ {formatTimeCompact(task.endTime)}</span>
+                                      </div>
+                                      <div className="col-span-2 text-right text-sm font-bold text-indigo-500/95 font-mono pr-2">
+                                        <span>{task.duration}</span>
+                                      </div>
+                                      <div className="col-span-1 flex justify-end">
+                                        {getTaskStatusCircle(task.status)}
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
       </div>
     );
   };
@@ -1269,18 +1637,20 @@ export const StatsView: React.FC<StatsViewProps> = ({
         <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 p-4 md:p-6">
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="flex items-center gap-4">
-              <button 
-                onClick={() => {
-                  if (isSingleGroupStatsOnly && onBackOverride) {
-                    onBackOverride();
-                  } else {
-                    setSelectedGroupId(null);
-                  }
-                }}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-              >
-                <ChevronLeft className="w-6 h-6 text-slate-600" />
-              </button>
+              {!isSingleGroupStatsOnly && (
+                <button 
+                  onClick={() => {
+                    if (isSingleGroupStatsOnly && onBackOverride) {
+                      onBackOverride();
+                    } else {
+                      setSelectedGroupId(null);
+                    }
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <ChevronLeft className="w-6 h-6 text-slate-600" />
+                </button>
+              )}
               <div className="flex flex-col">
                 <h2 className="text-xl font-black text-slate-900"><span className="text-indigo-600">{detailData.name}</span> 상세 통계</h2>
                 <p className="text-[10px] font-bold text-slate-400 mt-0.5">※ 해당 기간 동안의 모든 개별 루틴 수행 평균 점수</p>
