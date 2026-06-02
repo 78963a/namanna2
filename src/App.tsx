@@ -2619,6 +2619,22 @@ const RoutineGroupFormView: React.FC<{
     }
   }, [groupAddedMessage]);
 
+  // Prevent background scrolling when local modals inside group form are open
+  useEffect(() => {
+    const isLocalModalOpen = isEditModalOpen || confirmModal.isOpen || isChecklistModalOpen;
+    if (isLocalModalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.overscrollBehavior = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.overscrollBehavior = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.overscrollBehavior = '';
+    };
+  }, [isEditModalOpen, confirmModal.isOpen, isChecklistModalOpen]);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -4083,7 +4099,18 @@ export default function App() {
 
   // Prevent background scrolling when modals are open
   useEffect(() => {
-    const isModalOpen = isSettingsOpen || isAddGroupModalOpen || confirmModal.isOpen || !!activeAlarmChunk || showPerfectDay || showTodayEnd;
+    const isModalOpen = 
+      isSettingsOpen || 
+      isAddGroupModalOpen || 
+      confirmModal.isOpen || 
+      !!activeAlarmChunk || 
+      showPerfectDay || 
+      showTodayEnd ||
+      !!selectedTaskForStats ||
+      resetPauseModal.isOpen ||
+      showPermissionGuide ||
+      !!permissionNotificationMessage;
+
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
       // Use overscroll-behavior to prevent pull-to-refresh and background scroll on touch devices
@@ -4096,7 +4123,18 @@ export default function App() {
       document.body.style.overflow = '';
       document.body.style.overscrollBehavior = '';
     };
-  }, [isSettingsOpen, isAddGroupModalOpen, confirmModal.isOpen, activeAlarmChunk, showPerfectDay, showTodayEnd]);
+  }, [
+    isSettingsOpen, 
+    isAddGroupModalOpen, 
+    confirmModal.isOpen, 
+    activeAlarmChunk, 
+    showPerfectDay, 
+    showTodayEnd,
+    selectedTaskForStats,
+    resetPauseModal.isOpen,
+    showPermissionGuide,
+    permissionNotificationMessage
+  ]);
 
   const [isAddRoutineDirty, setIsAddRoutineDirty] = useState(false);
   const [isEditRoutineDirty, setIsEditRoutineDirty] = useState(false);
@@ -8935,20 +8973,22 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={handleSettingsClose}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 touch-none"
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[1200] touch-none"
             />
             <motion.div 
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
-              className="fixed bottom-0 left-0 right-0 bg-slate-50 rounded-t-[20px] p-6 z-50 shadow-2xl max-w-2xl mx-auto overflow-hidden flex flex-col relative"
+              className={`fixed bottom-0 left-0 right-0 bg-slate-50 rounded-t-[20px] p-6 z-[1201] shadow-2xl max-w-2xl mx-auto overflow-hidden flex flex-col relative ${
+                settingsSubView.type === 'groupStats' ? 'h-[85vh]' : ''
+              }`}
               style={{ maxHeight: '90vh' }}
             >
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 flex-shrink-0" />
               {settingsSubView.type === 'groupStats' && (
                 <button
                   onClick={handleSettingsClose}
-                  className="absolute top-4 right-4 p-1 hover:bg-slate-200/60 rounded-full text-slate-400 hover:text-slate-600 transition-colors z-[60]"
+                  className="absolute top-4 right-4 p-1 hover:bg-slate-200/60 rounded-full text-slate-400 hover:text-slate-600 transition-colors z-[1202]"
                 >
                   <X className="w-5 h-5" />
                 </button>
