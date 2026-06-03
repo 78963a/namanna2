@@ -1452,8 +1452,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
                   className="bg-white rounded-[20px] shadow-2xl border border-slate-100 max-h-[82vh] flex flex-col w-full max-w-lg md:max-w-xl lg:max-w-2xl overflow-hidden relative text-left"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="py-3.5 px-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
+                  <div className="py-2.5 sm:py-3.5 px-3 sm:px-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 className="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-2">
                       <Calendar className="w-4.5 h-4.5 text-indigo-500" />
                       {formattedDate}
                     </h3>
@@ -1465,7 +1465,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     </button>
                   </div>
 
-                  <div className="p-3 overflow-y-auto flex-1 bg-white space-y-3">
+                  <div className="p-2 sm:p-4 overflow-y-auto flex-1 bg-white space-y-3">
                     {groups.length === 0 ? (
                       <div className="text-center py-10 text-slate-400 font-bold text-xs">
                         설정된 루틴 그룹이 없습니다.
@@ -1475,13 +1475,13 @@ export const StatsView: React.FC<StatsViewProps> = ({
                         {groups.map(group => (
                           <div key={group.id} className="space-y-0.5">
                             {/* Group Header Row: Soft Background Accent */}
-                            <div className="grid grid-cols-12 items-center gap-2 bg-indigo-100/60 hover:bg-indigo-100/85 py-1.5 px-2 rounded-[8px] border border-indigo-100/30 transition-colors">
-                              <div className="col-span-5 flex items-center gap-1 min-w-0">
-                                <h4 className="text-sm font-black text-slate-800 truncate">{group.name}</h4>
+                            <div className="grid grid-cols-12 items-center gap-1.5 sm:gap-2 bg-indigo-100/60 hover:bg-indigo-100/85 py-1.5 px-1.5 sm:px-2 rounded-[8px] border border-indigo-100/30 transition-colors">
+                              <div className="col-span-4 flex items-center gap-1 min-w-0">
+                                <h4 className="text-xs sm:text-sm font-black text-slate-800 truncate">{group.name}</h4>
                               </div>
-                              <div className="col-span-4 text-center text-sm font-bold text-slate-500 font-mono">
+                              <div className="col-span-3 text-center text-[10px] sm:text-xs font-bold text-slate-500 font-mono">
                                 {group.specialState ? (
-                                  <span className={`text-[11px] font-black px-1.5 py-0.5 rounded-[6px] ${
+                                  <span className={`text-[9px] sm:text-[11px] font-black px-1 sm:px-1.5 py-0.5 rounded-[5px] sm:rounded-[6px] whitespace-nowrap ${
                                     group.specialState === '쉬는요일' ? 'text-slate-400 bg-slate-100 border border-slate-200' :
                                     group.specialState === '건너뜀' ? 'text-amber-700 bg-amber-50 border border-amber-100' :
                                     group.specialState === '미실행' ? 'text-rose-500 bg-rose-50 border border-rose-100/70' :
@@ -1490,20 +1490,20 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                     {group.specialState}
                                   </span>
                                 ) : group.groupStatus === '비활성' || group.groupStatus === '쉬어감' ? (
-                                  <span className={`text-[11px] font-black px-1.5 py-0.5 rounded-[6px] ${
+                                  <span className={`text-[9px] sm:text-[11px] font-black px-1 sm:px-1.5 py-0.5 rounded-[5px] sm:rounded-[6px] whitespace-nowrap ${
                                     group.groupStatus === '쉬어감' ? 'text-amber-700 bg-amber-50 border border-amber-100' : 'text-slate-400 bg-slate-100 border border-slate-200'
                                   }`}>
                                     {group.startTime}
                                   </span>
                                 ) : (
-                                  <span>{formatTimeCompact(group.startTime)} ~ {formatTimeCompact(group.endTime)}</span>
+                                  <span className="whitespace-nowrap text-[10px] sm:text-xs font-semibold">{formatTimeCompact(group.startTime)}~{formatTimeCompact(group.endTime)}</span>
                                 )}
                               </div>
-                              <div className="col-span-2 text-right text-sm font-black text-indigo-600 font-mono pr-1">
+                              <div className="col-span-3 text-right text-xs sm:text-sm font-black text-indigo-600 font-mono pr-1">
                                 <span>{group.duration}</span>
                               </div>
-                              <div className="col-span-1 flex justify-end">
-                                <span className="text-sm font-black text-indigo-600 leading-none">
+                              <div className="col-span-2 flex justify-end">
+                                <span className="text-xs sm:text-sm font-black text-indigo-600 leading-none">
                                   {group.percentage}
                                 </span>
                               </div>
@@ -1516,17 +1516,17 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                   <div className="text-slate-400 font-bold pl-2 py-1 text-[12px]">등록된 개별 루틴이 없습니다.</div>
                                 ) : (
                                   group.tasks.map(task => (
-                                    <div key={task.id} className="grid grid-cols-12 items-center gap-2 py-1 px-1.5 hover:bg-slate-50/40 rounded-lg transition-colors">
-                                      <div className="col-span-5 flex items-center pl-2 min-w-0">
-                                        <span className="text-sm font-bold text-slate-700 truncate">{task.name}</span>
+                                    <div key={task.id} className="grid grid-cols-12 items-center gap-1.5 sm:gap-2 py-1 px-1 sm:px-1.5 hover:bg-slate-50/40 rounded-lg transition-colors">
+                                      <div className="col-span-4 flex items-center pl-1 sm:pl-2 min-w-0">
+                                        <span className="text-xs sm:text-sm font-bold text-slate-700 truncate">{task.name}</span>
                                       </div>
-                                      <div className="col-span-4 text-center text-sm font-bold text-slate-400 font-mono">
-                                        <span>{formatTimeCompact(task.startTime)} ~ {formatTimeCompact(task.endTime)}</span>
+                                      <div className="col-span-3 text-center text-[10px] sm:text-xs font-bold text-slate-400 font-mono">
+                                        <span className="whitespace-nowrap">{formatTimeCompact(task.startTime)}~{formatTimeCompact(task.endTime)}</span>
                                       </div>
-                                      <div className="col-span-2 text-right text-sm font-bold text-indigo-500/95 font-mono pr-1">
+                                      <div className="col-span-3 text-right text-xs sm:text-sm font-bold text-indigo-500/95 font-mono pr-1">
                                         <span>{task.duration}</span>
                                       </div>
-                                      <div className="col-span-1 flex justify-end">
+                                      <div className="col-span-2 flex justify-end">
                                         {getTaskStatusCircle(task.status)}
                                       </div>
                                     </div>
