@@ -465,31 +465,98 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const sortedDays = [...days].reverse();
       return sortedDays.map(date => {
         const entry = (userData.routineGroupHistory || []).find(h => h.groupId === selectedGroupId && h.date === date);
-        
-        if (!entry) {
+        const [yStr, mStr, dStr] = date.split('-');
+        const yParsed = parseInt(yStr, 10);
+        const mParsed = parseInt(mStr, 10);
+        const dParsed = parseInt(dStr, 10);
+        const dateObj = new Date(yParsed, mParsed - 1, dParsed);
+        const dayOfWeek = dateObj.getDay();
+
+        const isNormallyInactive = group
+          ? (!group.scheduledDays?.includes(dayOfWeek) && !group.forcedActiveDates?.includes(date))
+          : false;
+
+        const isSkipped = group
+          ? (group.inactiveDates?.includes(date) || userData.inactiveChunks?.[date]?.includes(selectedGroupId))
+          : (userData.inactiveChunks?.[date]?.includes(selectedGroupId));
+
+        const isRestDay = !isSkipped && (
+          entry 
+            ? (entry.completionStatus === '비활성' || entry.isActive === false)
+            : isNormallyInactive
+        );
+
+        const taskEntries = (userData.taskHistory || []).filter(h => h.groupId === selectedGroupId && h.date === date && h.isActive);
+        const activeTasksOnDate = taskEntries;
+        let allActiveTasksUnexecuted = false;
+        if (activeTasksOnDate.length > 0) {
+          allActiveTasksUnexecuted = activeTasksOnDate.every(t => 
+            !t.status || t.status === '미실행' || t.status === '비활성'
+          );
+        } else if (group) {
+          const isNormallyActiveOnDate = (group.scheduledDays?.includes(dayOfWeek) || group.forcedActiveDates?.includes(date)) && !group.inactiveDates?.includes(date);
+          if (isNormallyActiveOnDate) {
+            allActiveTasksUnexecuted = true;
+          }
+        }
+
+        const isUnexecuted = !isRestDay && !isSkipped && (
+          entry?.completionStatus === '미실행' || 
+          entry?.completionStatus === 'fail' ||
+          (entry && !entry.firstTaskStartTime && entry.totalDuration === 0) ||
+          (!entry && allActiveTasksUnexecuted)
+        );
+
+        const todayStr = formatDate(currentTime);
+        const isPastDate = date < todayStr;
+        const isRecordMissing = !isRestDay && !isSkipped && !isUnexecuted && (
+          isPastDate && !entry && taskEntries.length === 0
+        );
+
+        if (isRestDay) {
           return {
             date,
             startTime: '--:--',
             duration: '-',
             endTime: '--:--',
-            rate: '-',
-            status: '미기록'
+            rate: '쉬는요일',
+            status: '쉬는요일'
           };
         }
 
-        // Calculate achievement rate for this day
-        const tasksOnThisDay = group.tasks.filter(t => t.scheduledDays?.includes(new Date(date).getDay()) ?? true);
-        const taskEntries = (userData.taskHistory || []).filter(h => h.groupId === selectedGroupId && h.date === date && h.isActive);
+        if (isSkipped) {
+          return {
+            date,
+            startTime: '--:--',
+            duration: '-',
+            endTime: '--:--',
+            rate: '건너뜀',
+            status: '건너뜀'
+          };
+        }
+
+        if (isRecordMissing) {
+          return {
+            date,
+            startTime: '--:--',
+            duration: '-',
+            endTime: '--:--',
+            rate: '기록없음',
+            status: '기록없음'
+          };
+        }
+
+        // Standard formatting
         const completedCount = taskEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵').length;
         const rate = taskEntries.length > 0 ? (completedCount / taskEntries.length) * 100 : 0;
 
         return {
           date,
-          startTime: entry.firstTaskStartTime || '미실행',
-          duration: formatDurationPrecise(entry.totalDuration),
-          endTime: entry.completedAt || '미완료',
+          startTime: entry?.firstTaskStartTime || '미실행',
+          duration: entry ? formatDurationPrecise(entry.totalDuration) : '0초',
+          endTime: entry?.completedAt || '미완료',
           rate: Math.floor(rate) + '%',
-          status: entry.completionStatus
+          status: entry?.completionStatus || '미실행'
         };
       });
     };
@@ -873,28 +940,93 @@ export const StatsView: React.FC<StatsViewProps> = ({
         const entry = groupHistory.find(h => h.date === date);
         const year = date.split('-')[0];
         if (!historyByYear[year]) historyByYear[year] = [];
-        
-        if (entry) {
-          const dayTaskEntries = taskEntries.filter(h => h.date === date);
-          const dayCompleted = dayTaskEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵').length;
-          const dayRate = dayTaskEntries.length > 0 ? Math.floor((dayCompleted / dayTaskEntries.length) * 100) : 0;
 
-          historyByYear[year].push({
-            date,
-            startTime: entry.firstTaskStartTime || '미실행',
-            duration: formatDurationPrecise(entry.totalDuration),
-            endTime: entry.completedAt || '미완료',
-            rate: dayRate + '%',
-            status: entry.completionStatus
-          });
-        } else {
+        const [yStr, mStr, dStr] = date.split('-');
+        const yParsed = parseInt(yStr, 10);
+        const mParsed = parseInt(mStr, 10);
+        const dParsed = parseInt(dStr, 10);
+        const dateObj = new Date(yParsed, mParsed - 1, dParsed);
+        const dayOfWeek = dateObj.getDay();
+
+        const isNormallyInactive = group
+          ? (!group.scheduledDays?.includes(dayOfWeek) && !group.forcedActiveDates?.includes(date))
+          : false;
+
+        const isSkipped = group
+          ? (group.inactiveDates?.includes(date) || userData.inactiveChunks?.[date]?.includes(selectedGroupId))
+          : (userData.inactiveChunks?.[date]?.includes(selectedGroupId));
+
+        const isRestDay = !isSkipped && (
+          entry 
+            ? (entry.completionStatus === '비활성' || entry.isActive === false)
+            : isNormallyInactive
+        );
+
+        const dayTaskEntries = taskEntries.filter(h => h.date === date);
+        const activeTasksOnDate = dayTaskEntries;
+        let allActiveTasksUnexecuted = false;
+        if (activeTasksOnDate.length > 0) {
+          allActiveTasksUnexecuted = activeTasksOnDate.every(t => 
+            !t.status || t.status === '미실행' || t.status === '비활성'
+          );
+        } else if (group) {
+          const isNormallyActiveOnDate = (group.scheduledDays?.includes(dayOfWeek) || group.forcedActiveDates?.includes(date)) && !group.inactiveDates?.includes(date);
+          if (isNormallyActiveOnDate) {
+            allActiveTasksUnexecuted = true;
+          }
+        }
+
+        const isUnexecuted = !isRestDay && !isSkipped && (
+          entry?.completionStatus === '미실행' || 
+          entry?.completionStatus === 'fail' ||
+          (entry && !entry.firstTaskStartTime && entry.totalDuration === 0) ||
+          (!entry && allActiveTasksUnexecuted)
+        );
+
+        const todayStr = formatDate(currentTime);
+        const isPastDate = date < todayStr;
+        const isRecordMissing = !isRestDay && !isSkipped && !isUnexecuted && (
+          isPastDate && !entry && dayTaskEntries.length === 0
+        );
+
+        if (isRestDay) {
           historyByYear[year].push({
             date,
             startTime: '--:--',
             duration: '-',
             endTime: '--:--',
-            rate: '-',
-            status: '미기록'
+            rate: '쉬는요일',
+            status: '쉬는요일'
+          });
+        } else if (isSkipped) {
+          historyByYear[year].push({
+            date,
+            startTime: '--:--',
+            duration: '-',
+            endTime: '--:--',
+            rate: '건너뜀',
+            status: '건너뜀'
+          });
+        } else if (isRecordMissing) {
+          historyByYear[year].push({
+            date,
+            startTime: '--:--',
+            duration: '-',
+            endTime: '--:--',
+            rate: '기록없음',
+            status: '기록없음'
+          });
+        } else {
+          const dayCompleted = dayTaskEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵').length;
+          const dayRate = dayTaskEntries.length > 0 ? Math.floor((dayCompleted / dayTaskEntries.length) * 100) : 0;
+
+          historyByYear[year].push({
+            date,
+            startTime: entry?.firstTaskStartTime || '미실행',
+            duration: entry ? formatDurationPrecise(entry.totalDuration) : '0초',
+            endTime: entry?.completedAt || '미완료',
+            rate: dayRate + '%',
+            status: entry?.completionStatus || '미실행'
           });
         }
       });
@@ -1141,7 +1273,19 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                  <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime}</td>
                                  <td className="px-2 py-2 text-center font-bold text-indigo-600 tracking-tighter">{row.duration}</td>
                                  <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime}</td>
-                                 <td className="px-2 py-2 text-right font-black text-emerald-600 tracking-tighter">{row.rate}</td>
+                                 <td className="px-2 py-2 text-right font-black tracking-tighter">
+                                   {row.rate === '쉬는요일' || row.rate === '건너뜀' || row.rate === '기록없음' ? (
+                                     <span className={`text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-[6px] whitespace-nowrap ${
+                                       row.rate === '쉬는요일' ? 'text-slate-400 bg-slate-100 border border-slate-200' :
+                                       row.rate === '건너뜀' ? 'text-amber-700 bg-amber-50 border border-amber-100' :
+                                       'text-slate-400 bg-slate-50 border border-dashed border-slate-200'
+                                     }`}>
+                                       {row.rate}
+                                     </span>
+                                   ) : (
+                                     <span className="text-emerald-600">{row.rate}</span>
+                                   )}
+                                 </td>
                                </>
                             ) : (
                               <>
@@ -1797,7 +1941,19 @@ export const StatsView: React.FC<StatsViewProps> = ({
                         <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime}</td>
                         <td className="px-2 py-2 text-center font-bold text-indigo-600 tracking-tighter">{row.duration}</td>
                         <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime}</td>
-                        <td className="px-2 py-2 text-right font-black text-emerald-600 tracking-tighter">{row.rate}</td>
+                        <td className="px-2 py-2 text-right font-black tracking-tighter">
+                          {row.rate === '쉬는요일' || row.rate === '건너뜀' || row.rate === '기록없음' ? (
+                            <span className={`text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-[6px] whitespace-nowrap ${
+                              row.rate === '쉬는요일' ? 'text-slate-400 bg-slate-100 border border-slate-200' :
+                              row.rate === '건너뜀' ? 'text-amber-700 bg-amber-50 border border-amber-100' :
+                              'text-slate-400 bg-slate-50 border border-dashed border-slate-200'
+                            }`}>
+                              {row.rate}
+                            </span>
+                          ) : (
+                            <span className="text-emerald-600">{row.rate}</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
