@@ -77,13 +77,19 @@ export const StatsView: React.FC<StatsViewProps> = ({
     if (selectedHistoryDate) {
       document.body.style.overflow = 'hidden';
       document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.overscrollBehavior = 'none';
     } else {
       document.body.style.overflow = '';
       document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.overscrollBehavior = '';
     }
     return () => {
       document.body.style.overflow = '';
       document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.overscrollBehavior = '';
     };
   }, [selectedHistoryDate]);
 
@@ -662,10 +668,14 @@ export const StatsView: React.FC<StatsViewProps> = ({
     
     // Find the task in all chunks
     let foundTaskText = '';
+    let foundChunk: any = null;
+    let foundTask: any = null;
     for (const chunk of userData.routineChunks) {
       const task = chunk.tasks.find(t => t.id === selectedTaskId);
       if (task) {
         foundTaskText = task.text;
+        foundChunk = chunk;
+        foundTask = task;
         break;
       }
     }
@@ -675,20 +685,31 @@ export const StatsView: React.FC<StatsViewProps> = ({
       return sortedDays.map(date => {
         const entry = (userData.taskHistory || []).find(h => h.taskId === selectedTaskId && h.date === date);
         
+        const [yStr, mStr, dStr] = date.split('-');
+        const dateObj = new Date(parseInt(yStr, 10), parseInt(mStr, 10) - 1, parseInt(dStr, 10));
+        let isScheduled = true;
+        if (foundChunk && foundTask) {
+          isScheduled = isTaskScheduledToday(foundTask, foundChunk, dateObj, userData);
+        }
+
         if (!entry) {
           return {
             date,
             startTime: '--:--',
             duration: '-',
             endTime: '--:--',
-            status: '미기록'
+            status: !isScheduled ? '비활성' : '미기록'
           };
         }
 
-        const startTime = (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime;
-        const duration = (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration);
-        const endTime = (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime;
-        const status = entry.status;
+        let status = entry.status;
+        if (!isScheduled && (status === '미실행' || status === '비활성' || status === '미기록')) {
+          status = '비활성';
+        }
+
+        const startTime = (status === '스킵' || status === '미실행' || status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime;
+        const duration = (status === '스킵' || status === '미실행' || status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration);
+        const endTime = (status === '스킵' || status === '미실행' || status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime;
 
         return {
           date,
@@ -751,10 +772,14 @@ export const StatsView: React.FC<StatsViewProps> = ({
     if (!selectedTaskId) return null;
 
     let taskName = '';
+    let foundChunk: any = null;
+    let foundTask: any = null;
     for (const chunk of userData.routineChunks) {
       const task = chunk.tasks.find(t => t.id === selectedTaskId);
       if (task) {
         taskName = task.text;
+        foundChunk = chunk;
+        foundTask = task;
         break;
       }
     }
@@ -792,13 +817,24 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const year = date.split('-')[0];
       if (!historyByYear[year]) historyByYear[year] = [];
       
+      const [yStr, mStr, dStr] = date.split('-');
+      const dateObj = new Date(parseInt(yStr, 10), parseInt(mStr, 10) - 1, parseInt(dStr, 10));
+      let isScheduled = true;
+      if (foundChunk && foundTask) {
+        isScheduled = isTaskScheduledToday(foundTask, foundChunk, dateObj, userData);
+      }
+
       if (entry) {
+        let status = entry.status;
+        if (!isScheduled && (status === '미실행' || status === '비활성' || status === '미기록')) {
+          status = '비활성';
+        }
         historyByYear[year].push({
           date,
-          startTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime,
-          duration: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration),
-          endTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime,
-          status: entry.status
+          startTime: (status === '스킵' || status === '미실행' || status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime,
+          duration: (status === '스킵' || status === '미실행' || status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration),
+          endTime: (status === '스킵' || status === '미실행' || status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime,
+          status: status
         });
       } else {
         historyByYear[year].push({
@@ -806,7 +842,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           startTime: '--:--',
           duration: '-',
           endTime: '--:--',
-          status: '미기록'
+          status: !isScheduled ? '비활성' : '미기록'
         });
       }
     });
@@ -1044,9 +1080,16 @@ export const StatsView: React.FC<StatsViewProps> = ({
       };
     } else if (viewAllType === 'task' && selectedTaskId) {
       let taskName = '';
+      let foundChunk: any = null;
+      let foundTask: any = null;
       for (const chunk of userData.routineChunks) {
         const task = chunk.tasks.find(t => t.id === selectedTaskId);
-        if (task) { taskName = task.text; break; }
+        if (task) {
+          taskName = task.text;
+          foundChunk = chunk;
+          foundTask = task;
+          break;
+        }
       }
 
       const taskHistory = (userData.taskHistory || []).filter(h => h.taskId === selectedTaskId);
@@ -1069,13 +1112,24 @@ export const StatsView: React.FC<StatsViewProps> = ({
         const year = date.split('-')[0];
         if (!historyByYear[year]) historyByYear[year] = [];
         
+        const [yStr, mStr, dStr] = date.split('-');
+        const dateObj = new Date(parseInt(yStr, 10), parseInt(mStr, 10) - 1, parseInt(dStr, 10));
+        let isScheduled = true;
+        if (foundChunk && foundTask) {
+          isScheduled = isTaskScheduledToday(foundTask, foundChunk, dateObj, userData);
+        }
+
         if (entry) {
+          let status = entry.status;
+          if (!isScheduled && (status === '미실행' || status === '비활성' || status === '미기록')) {
+            status = '비활성';
+          }
           historyByYear[year].push({
             date,
-            startTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime,
-            duration: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration),
-            endTime: (entry.status === '스킵' || entry.status === '미실행' || entry.status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime,
-            status: entry.status
+            startTime: (status === '스킵' || status === '미실행' || status === '비활성' || !entry.startTime) ? '--:--' : entry.startTime,
+            duration: (status === '스킵' || status === '미실행' || status === '비활성' || entry.duration === null || entry.duration === undefined) ? '-' : formatDurationPrecise(entry.duration),
+            endTime: (status === '스킵' || status === '미실행' || status === '비활성' || !entry.endTime) ? '--:--' : entry.endTime,
+            status: status
           });
         } else {
           historyByYear[year].push({
@@ -1083,7 +1137,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
             startTime: '--:--',
             duration: '-',
             endTime: '--:--',
-            status: '미기록'
+            status: !isScheduled ? '비활성' : '미기록'
           });
         }
       });
@@ -1585,7 +1639,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-3 cursor-default"
+                className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-3 cursor-default touch-none"
                 onClick={() => setSelectedHistoryDate(null)}
               >
                 <motion.div
@@ -1609,7 +1663,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     </button>
                   </div>
 
-                  <div className="p-2 sm:p-4 overflow-y-auto flex-1 bg-white space-y-3">
+                  <div className="p-2 sm:p-4 overflow-y-auto flex-1 bg-white space-y-3 overscroll-contain">
                     {groups.length === 0 ? (
                       <div className="text-center py-10 text-slate-400 font-bold text-xs">
                         설정된 루틴 그룹이 없습니다.

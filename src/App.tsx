@@ -4029,6 +4029,21 @@ export default function App() {
   const [resetPauseModal, setResetPauseModal] = useState<{ isOpen: boolean, taskTitle: string | null }>({ isOpen: false, taskTitle: null });
   const [groupAddedMessage, setGroupAddedMessage] = useState<string | null>(null);
 
+  const [userNameEdit, setUserNameEdit] = useState<string>('');
+  const [wakeUpTimeEdit, setWakeUpTimeEdit] = useState<string>('');
+
+  useEffect(() => {
+    if (userData?.userName) {
+      setUserNameEdit(userData.userName);
+    }
+  }, [userData?.userName]);
+
+  useEffect(() => {
+    if (userData?.targetWakeUpTime) {
+      setWakeUpTimeEdit(userData.targetWakeUpTime);
+    }
+  }, [userData?.targetWakeUpTime]);
+
   // [가산 엔진 트리거]: 사용자가 통계 탭(페이지)을 확인할 때마다 기회 횟수 가산 (+1점)
   useEffect(() => {
     if (activeTab === 'stats') {
@@ -4109,7 +4124,8 @@ export default function App() {
       !!selectedTaskForStats ||
       resetPauseModal.isOpen ||
       showPermissionGuide ||
-      !!permissionNotificationMessage;
+      !!permissionNotificationMessage ||
+      showNextRoutineModal;
 
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -4139,7 +4155,8 @@ export default function App() {
     selectedTaskForStats,
     resetPauseModal.isOpen,
     showPermissionGuide,
-    permissionNotificationMessage
+    permissionNotificationMessage,
+    showNextRoutineModal
   ]);
 
   const [isAddRoutineDirty, setIsAddRoutineDirty] = useState(false);
@@ -7196,7 +7213,7 @@ export default function App() {
   const renderSettingsContent = (mode: 'main' | 'modal') => {
     if (settingsSubView.type === 'groupStats') {
       return (
-        <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-bottom-[50px] duration-300">
+        <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-bottom-[50px] duration-300 overscroll-contain">
           <StatsView
             userData={userData}
             currentTime={currentTime}
@@ -7289,7 +7306,7 @@ export default function App() {
 
           {/* Main Folder Content Body */}
           <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 flex-grow flex flex-col">
-            <div className="overflow-y-auto p-[15px] custom-scrollbar flex-grow">
+            <div className="overflow-y-auto p-[15px] custom-scrollbar flex-grow overscroll-contain">
               <AnimatePresence mode="wait">
                 {activeSettingsTab === 'general' ? (
                   settingsSubView.type === 'sound' ? (
@@ -7336,17 +7353,24 @@ export default function App() {
                       <div className="flex gap-2">
                         <input 
                           type="text" 
-                          defaultValue={userData.userName || '나'}
+                          value={userNameEdit}
+                          onChange={(e) => setUserNameEdit(e.target.value)}
                           id="userNameInput"
                           placeholder="나"
-                          className="flex-grow text-base font-black p-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                          className="w-full min-w-0 flex-grow text-base font-black p-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                         />
                         <button 
                           onClick={() => {
-                            const input = document.getElementById('userNameInput') as HTMLInputElement;
-                            if (input) updateUserName(input.value);
+                            if (userNameEdit !== (userData.userName || '나')) {
+                              updateUserName(userNameEdit);
+                            }
                           }}
-                          className="bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md w-max whitespace-nowrap shrink-0"
+                          disabled={userNameEdit === (userData.userName || '나')}
+                          className={`px-4 rounded-xl font-bold text-sm transition-colors shadow-md w-max whitespace-nowrap shrink-0 ${
+                            userNameEdit !== (userData.userName || '나')
+                              ? 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                              : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                          }`}
                         >
                           저장
                         </button>
@@ -7360,19 +7384,26 @@ export default function App() {
                         </div>
                         <h3 className="text-base font-black text-slate-800 whitespace-nowrap">기상 목표 시각</h3>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5 sm:gap-2 items-center">
                         <input 
                           type="time" 
-                          defaultValue={userData.targetWakeUpTime}
+                          value={wakeUpTimeEdit}
+                          onChange={(e) => setWakeUpTimeEdit(e.target.value)}
                           id="wakeUpTimeInput"
-                          className="flex-grow text-base font-black p-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                          className="w-full min-w-0 flex-grow text-sm sm:text-base font-black p-1.5 sm:p-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                         />
                         <button 
                           onClick={() => {
-                            const input = document.getElementById('wakeUpTimeInput') as HTMLInputElement;
-                            if (input) updateWakeUpTime(input.value);
+                            if (wakeUpTimeEdit !== userData.targetWakeUpTime) {
+                              updateWakeUpTime(wakeUpTimeEdit);
+                            }
                           }}
-                          className="h-10 bg-indigo-600 text-white px-4 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-md shrink-0"
+                          disabled={wakeUpTimeEdit === userData.targetWakeUpTime}
+                          className={`h-10 px-2.5 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-colors shadow-md shrink-0 ${
+                            wakeUpTimeEdit !== userData.targetWakeUpTime
+                              ? 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                              : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                          }`}
                         >
                           변경
                         </button>
@@ -7381,13 +7412,13 @@ export default function App() {
                             soundService.unlock();
                             toggleWakeUpAlarm();
                           }}
-                          className={`h-10 px-4 rounded-xl font-bold text-sm transition-all shrink-0 flex items-center gap-1.5 ${
+                          className={`h-10 px-2.5 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all shrink-0 flex items-center gap-1 sm:gap-1.5 ${
                             userData.isWakeUpAlarmEnabled 
                               ? 'bg-sky-100 text-sky-700' 
                               : 'bg-slate-100 text-slate-400'
                           }`}
                         >
-                          {userData.isWakeUpAlarmEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                          {userData.isWakeUpAlarmEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
                           알람
                         </button>
                       </div>
@@ -9123,7 +9154,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm touch-none"
               onClick={() => setShowNextRoutineModal(false)}
             />
             <motion.div
@@ -9140,7 +9171,7 @@ export default function App() {
                 수행 가능한 다음 루틴이 남아있습니다. 바로 시작해보세요!
               </p>
 
-              <div className="w-full space-y-2.5 mb-5 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
+              <div className="w-full space-y-2.5 mb-5 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar overscroll-contain">
                 {modalSuggestions.map((sug) => {
                   const chunk = userData.routineChunks.find(c => c.id === sug.chunkId);
                   const task = chunk?.tasks.find(t => t.id === sug.taskId);
@@ -9224,7 +9255,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm touch-none"
               onClick={() => setShowPermissionGuide(false)}
             />
             <motion.div
@@ -9261,7 +9292,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm touch-none"
               onClick={() => setPermissionNotificationMessage(null)}
             />
             <motion.div
@@ -9383,7 +9414,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm touch-none"
               onClick={() => setResetPauseModal({ isOpen: false, taskTitle: null })}
             />
             <motion.div
@@ -9443,7 +9474,7 @@ export default function App() {
               </button>
 
               {/* StatsView Wrapper Container */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar pb-6">
+              <div className="flex-1 overflow-y-auto custom-scrollbar pb-6 overscroll-contain">
                 <StatsView
                   userData={userData}
                   currentTime={currentTime}
