@@ -27,7 +27,7 @@ import {
   X
 } from 'lucide-react';
 import { UserData, TaskStatus, TaskType } from '../../types';
-import { timeToMinutes, minutesToTime, formatDate, formatDurationPrecise, isTaskScheduledToday, calculateTaskDuration } from '../../utils';
+import { timeToMinutes, minutesToTime, formatDate, formatDurationPrecise, isTaskScheduledToday, calculateTaskDuration, getCreationDate } from '../../utils';
 
 interface StatsViewProps {
   userData: UserData;
@@ -467,9 +467,22 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const group = userData.routineChunks.find(g => g.id === selectedGroupId);
     if (!group) return null;
 
+    const groupCreationDate = getCreationDate(selectedGroupId, userData);
+
     const getHistoryForPeriod = (days: string[]) => {
       const sortedDays = [...days].reverse();
       return sortedDays.map(date => {
+        if (date < groupCreationDate) {
+          return {
+            date,
+            startTime: '--:--',
+            duration: '-',
+            endTime: '--:--',
+            rate: '기록없음',
+            status: '기록없음'
+          };
+        }
+
         const entry = (userData.routineGroupHistory || []).find(h => h.groupId === selectedGroupId && h.date === date);
         const [yStr, mStr, dStr] = date.split('-');
         const yParsed = parseInt(yStr, 10);
@@ -680,9 +693,21 @@ export const StatsView: React.FC<StatsViewProps> = ({
       }
     }
 
+    const taskCreationDate = getCreationDate(selectedTaskId, userData);
+
     const getHistoryForPeriod = (days: string[]) => {
       const sortedDays = [...days].reverse();
       return sortedDays.map(date => {
+        if (date < taskCreationDate) {
+          return {
+            date,
+            startTime: '--:--',
+            duration: '-',
+            endTime: '--:--',
+            status: '기록없음'
+          };
+        }
+
         const entry = (userData.taskHistory || []).find(h => h.taskId === selectedTaskId && h.date === date);
         
         const [yStr, mStr, dStr] = date.split('-');
@@ -795,7 +820,11 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const allDaysSorted = getAllRecordedDays();
     if (allDaysSorted.length === 0) return null;
 
-    const dateRangeStr = `${allDaysSorted[allDaysSorted.length - 1].replace(/-/g, '.')} ~ ${allDaysSorted[0].replace(/-/g, '.')}`;
+    const taskCreationDate = getCreationDate(selectedTaskId, userData);
+    const allDaysSortedFiltered = allDaysSorted.filter(date => date >= taskCreationDate);
+    if (allDaysSortedFiltered.length === 0) return null;
+
+    const dateRangeStr = `${allDaysSortedFiltered[allDaysSortedFiltered.length - 1].replace(/-/g, '.')} ~ ${allDaysSortedFiltered[0].replace(/-/g, '.')}`;
 
     const taskHistory = (userData.taskHistory || []).filter(h => h.taskId === selectedTaskId);
     const activeEntries = taskHistory.filter(h => h.isActive);
@@ -812,7 +841,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
     const totalDur = durations.reduce((a, b) => a + b, 0);
 
     const historyByYear: { [year: string]: any[] } = {};
-    allDaysSorted.forEach(date => {
+    allDaysSortedFiltered.forEach(date => {
       const entry = activeEntries.find(h => h.date === date);
       const year = date.split('-')[0];
       if (!historyByYear[year]) historyByYear[year] = [];
@@ -957,6 +986,12 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const group = userData.routineChunks.find(g => g.id === selectedGroupId);
       if (!group) return null;
 
+      const groupCreationDate = getCreationDate(selectedGroupId, userData);
+      const allDaysSortedFiltered = allDaysSorted.filter(date => date >= groupCreationDate);
+      const dateRangeStrFiltered = allDaysSortedFiltered.length > 0 
+        ? `${allDaysSortedFiltered[allDaysSortedFiltered.length - 1].replace(/-/g, '.')} ~ ${allDaysSortedFiltered[0].replace(/-/g, '.')}`
+        : dateRangeStr;
+
       const groupHistory = (userData.routineGroupHistory || []).filter(h => h.groupId === selectedGroupId);
       const startTimes = groupHistory.filter(h => h.firstTaskStartTime).map(h => timeToMinutes(h.firstTaskStartTime!));
       const endTimes = groupHistory.filter(h => h.completedAt).map(h => timeToMinutes(h.completedAt!));
@@ -972,7 +1007,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const totalDur = durations.reduce((a, b) => a + b, 0);
 
       const historyByYear: { [year: string]: any[] } = {};
-      allDaysSorted.forEach(date => {
+      allDaysSortedFiltered.forEach(date => {
         const entry = groupHistory.find(h => h.date === date);
         const year = date.split('-')[0];
         if (!historyByYear[year]) historyByYear[year] = [];
@@ -1071,7 +1106,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
         title: `${group.name} 전체 기록`,
         name: group.name,
         avgRate,
-        period: dateRangeStr,
+        period: dateRangeStrFiltered,
         avgStart: avgStart !== null ? minutesToTime(avgStart) : '--:--',
         avgEnd: avgEnd !== null ? minutesToTime(avgEnd) : '--:--',
         avgDuration: formatDurationPrecise(avgDur),
@@ -1092,6 +1127,12 @@ export const StatsView: React.FC<StatsViewProps> = ({
         }
       }
 
+      const taskCreationDate = getCreationDate(selectedTaskId, userData);
+      const allDaysSortedFiltered = allDaysSorted.filter(date => date >= taskCreationDate);
+      const dateRangeStrFiltered = allDaysSortedFiltered.length > 0 
+        ? `${allDaysSortedFiltered[allDaysSortedFiltered.length - 1].replace(/-/g, '.')} ~ ${allDaysSortedFiltered[0].replace(/-/g, '.')}`
+        : dateRangeStr;
+
       const taskHistory = (userData.taskHistory || []).filter(h => h.taskId === selectedTaskId);
       const activeEntries = taskHistory.filter(h => h.isActive);
       const attainmentEntries = activeEntries.filter(h => h.status === '완벽' || h.status === '완료' || h.status === '스킵');
@@ -1107,7 +1148,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
       const totalDur = durations.reduce((a, b) => a + b, 0);
 
       const historyByYear: { [year: string]: any[] } = {};
-      allDaysSorted.forEach(date => {
+      allDaysSortedFiltered.forEach(date => {
         const entry = activeEntries.find(h => h.date === date);
         const year = date.split('-')[0];
         if (!historyByYear[year]) historyByYear[year] = [];
@@ -1146,7 +1187,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
         title: `${taskName} 전체 기록`,
         name: taskName,
         avgRate,
-        period: dateRangeStr,
+        period: dateRangeStrFiltered,
         avgStart: avgStart !== null ? minutesToTime(avgStart) : '--:--',
         avgEnd: avgEnd !== null ? minutesToTime(avgEnd) : '--:--',
         avgDuration: formatDurationPrecise(avgDur),
@@ -1381,23 +1422,12 @@ export const StatsView: React.FC<StatsViewProps> = ({
               return `${y}년 ${m}월 ${d}일 전체 기록`;
             })();
 
-            const getGroupCreationDate = (idStr: string): string | null => {
-              if (/^\d{13}$/.test(idStr)) {
-                const d = new Date(parseInt(idStr, 10));
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-              }
-              return null;
-            };
-
             // 1. Gather all unique group IDs from:
             //    - Current routine chunks that existed on or before dateStr
             //    - Historical logs for this date (resilience for deleted groups)
             const aliveGroupsOnDate = (userData.routineChunks || []).filter(group => {
-              const creationDate = getGroupCreationDate(group.id);
-              const createdOnOrBefore = !creationDate || dateStr >= creationDate;
+              const creationDate = getCreationDate(group.id, userData);
+              const createdOnOrBefore = dateStr >= creationDate;
               return createdOnOrBefore;
             });
 
@@ -1416,7 +1446,10 @@ export const StatsView: React.FC<StatsViewProps> = ({
             const allGroupKeys = Array.from(new Set([
               ...aliveGroupsOnDate.map(g => g.id),
               ...Array.from(histGroupIds)
-            ]));
+            ])).filter(groupId => {
+              const creationDate = getCreationDate(groupId, userData);
+              return dateStr >= creationDate;
+            });
 
             // Gather all daily routine groups and tasks details based on existing history data
             let groups = allGroupKeys.map(groupId => {
@@ -1526,8 +1559,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
               if (groupStatus === '정상' && !specialState) {
                 const aliveTasks = aliveGroup ? (aliveGroup.tasks || []) : [];
                 const aliveTasksOnDate = aliveTasks.filter(task => {
-                  const tCreateDate = getGroupCreationDate(task.id);
-                  const tCreatedOnOrBefore = !tCreateDate || dateStr >= tCreateDate;
+                  const tCreateDate = getCreationDate(task.id, userData);
+                  const tCreatedOnOrBefore = dateStr >= tCreateDate;
                   return tCreatedOnOrBefore;
                 });
                 
@@ -1535,19 +1568,43 @@ export const StatsView: React.FC<StatsViewProps> = ({
                 const allTaskIds = Array.from(new Set([
                   ...aliveTasksOnDate.map(t => t.id),
                   ...histTasksOnDate.map(t => t.taskId)
-                ]));
+                ])).filter(taskId => {
+                  const tCreateDate = getCreationDate(taskId, userData);
+                  return dateStr >= tCreateDate;
+                });
 
                 tasks = allTaskIds.map(taskId => {
                   const aliveTask = aliveTasksOnDate.find(t => t.id === taskId);
                   const taskHistEntry = histTasksOnDate.find(t => t.taskId === taskId);
+
+                  let isScheduled = true;
+                  if (aliveGroup && aliveTask) {
+                    isScheduled = isTaskScheduledToday(aliveTask, aliveGroup, dateObj, userData);
+                  }
+
+                  let finalStatus = taskHistEntry?.status || '미실행';
+                  if (!isScheduled && (finalStatus === '미실행' || finalStatus === '미기록' || finalStatus === '비활성')) {
+                    finalStatus = '비활성';
+                  }
+
+                  let displayStartTime = taskHistEntry?.startTime || '--:--';
+                  let displayEndTime = taskHistEntry?.endTime || '--:--';
+                  let displayDuration = taskHistEntry?.duration ? formatDurationPrecise(taskHistEntry.duration) : '-';
+
+                  if (finalStatus === '비활성') {
+                    displayStartTime = '--:--';
+                    displayEndTime = '--:--';
+                    displayDuration = '-';
+                  }
+
                   return {
                     id: taskId,
                     name: aliveTask ? aliveTask.text : '삭제된 루틴',
-                    startTime: taskHistEntry?.startTime || '--:--',
-                    endTime: taskHistEntry?.endTime || '--:--',
-                    duration: taskHistEntry?.duration ? formatDurationPrecise(taskHistEntry.duration) : '-',
-                    status: taskHistEntry?.status || '미실행',
-                    isActive: taskHistEntry ? taskHistEntry.isActive : false
+                    startTime: displayStartTime,
+                    endTime: displayEndTime,
+                    duration: displayDuration,
+                    status: finalStatus,
+                    isActive: taskHistEntry ? taskHistEntry.isActive : isScheduled
                   };
                 });
               }
@@ -1630,6 +1687,14 @@ export const StatsView: React.FC<StatsViewProps> = ({
               }
               if (status === '일시정지') {
                 return <PauseCircle className="w-5 h-5 text-amber-500 shrink-0" />;
+              }
+              if (status === '비활성' || status === '쉬는요일') {
+                return (
+                  <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
+                    <Circle className="absolute inset-0 w-full h-full text-slate-200" />
+                    <X className="w-3 h-3 text-slate-400" strokeWidth={4} />
+                  </div>
+                );
               }
               return <Circle className="w-5 h-5 text-slate-300 shrink-0" />;
             };

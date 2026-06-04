@@ -283,3 +283,53 @@ export const calculateTaskDuration = (task: Task, currentTime: Date): number => 
   }
   return (task.accumulatedDuration || 0) + currentSession;
 };
+
+/**
+ * Gets the oldest/minimum recorded date across all history records from userData.
+ */
+export const getMinRecordedDate = (userData: UserData): string => {
+  const dates: string[] = [];
+  if (userData.dailyCompletionRate) {
+    Object.keys(userData.dailyCompletionRate).forEach(d => { if (d) dates.push(d); });
+  }
+  if (userData.taskHistory) {
+    userData.taskHistory.forEach(h => { if (h && h.date) dates.push(h.date); });
+  }
+  if (userData.routineGroupHistory) {
+    userData.routineGroupHistory.forEach(h => { if (h && h.date) dates.push(h.date); });
+  }
+  if (userData.history) {
+    userData.history.forEach(h => { if (h && h.date) dates.push(h.date); });
+  }
+  const validDates = dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
+  if (validDates.length === 0) {
+    return formatDate(new Date());
+  }
+  validDates.sort();
+  return validDates[0];
+};
+
+/**
+ * Gets the creation date of a group or task using its 13-digit ID.
+ * If the creation date is before the oldest recorded date in history,
+ * we treat the oldest recorded date (or today if none) as the creation date.
+ */
+export const getCreationDate = (idStr: string, userData: UserData): string => {
+  const minDate = getMinRecordedDate(userData);
+  if (/^\d{13}$/.test(idStr)) {
+    const timestamp = parseInt(idStr, 10);
+    const d = new Date(timestamp);
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const parsedDate = `${year}-${month}-${day}`;
+      if (parsedDate < minDate) {
+        return minDate;
+      }
+      return parsedDate;
+    }
+  }
+  return minDate;
+};
+
