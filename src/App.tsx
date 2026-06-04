@@ -7184,6 +7184,7 @@ export default function App() {
       allDatesSorted.push(`${y}-${m}-${d}`);
       current.setDate(current.getDate() + 1);
     }
+    allDatesSorted.reverse();
 
     const headers = [
       '날짜',
