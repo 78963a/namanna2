@@ -124,7 +124,8 @@ import {
   getDaysBetween,
   formatDurationPrecise,
   getJosa,
-  calculateTaskDuration
+  calculateTaskDuration,
+  getCreationDate
 } from './utils';
 import { CheckCheckIcon } from './components/CheckCheckIcon';
 import { voiceService } from './services/voiceService';
@@ -7129,6 +7130,392 @@ export default function App() {
     setDeletionMessage('데이터가 파일로 저장되었습니다');
   };
 
+  const handleExportCSV = async () => {
+    const now = new Date();
+    const resetHour = userData.dailyResetHour || 0;
+    const currentTodayStr = getEffectiveDate(now, resetHour);
+
+    let snapshot: UserData = JSON.parse(JSON.stringify(userData));
+
+    snapshot.routineChunks = snapshot.routineChunks.map(chunk => ({
+      ...chunk,
+      tasks: chunk.tasks.map(task => {
+        if (task.startTime && !task.isPaused && !task.completed && task.status !== TaskStatus.SKIP) {
+          const currentDuration = calculateTaskDuration(task, now);
+          return {
+            ...task,
+            accumulatedDuration: currentDuration
+          };
+        }
+        return task;
+      })
+    }));
+
+    snapshot = syncHistory(snapshot, currentTodayStr);
+
+    const datesSet = new Set<string>();
+    Object.keys(snapshot.dailyCompletionRate || {}).forEach(d => { if (d) datesSet.add(d); });
+    if (snapshot.dailyCheckIn) {
+      Object.keys(snapshot.dailyCheckIn).forEach(d => { if (d) datesSet.add(d); });
+    }
+    (snapshot.taskHistory || []).forEach(h => { if (h && h.date) datesSet.add(h.date); });
+    (snapshot.routineGroupHistory || []).forEach(h => { if (h && h.date) datesSet.add(h.date); });
+    (snapshot.wakeUpTimeHistory || []).forEach(h => { if (h && h.date) datesSet.add(h.date); });
+    datesSet.add(currentTodayStr);
+
+    const activeDates = Array.from(datesSet).filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d));
+    if (activeDates.length === 0) {
+      setDeletionMessage('해당하는 루틴 기록이 없습니다.');
+      return;
+    }
+    
+    activeDates.sort();
+    const minDateStr = activeDates[0];
+    const maxDateStr = activeDates[activeDates.length - 1];
+
+    const allDatesSorted: string[] = [];
+    const start = new Date(minDateStr);
+    const end = new Date(maxDateStr);
+    const current = new Date(start);
+    while (current <= end) {
+      const y = current.getFullYear();
+      const m = String(current.getMonth() + 1).padStart(2, '0');
+      const d = String(current.getDate()).padStart(2, '0');
+      allDatesSorted.push(`${y}-${m}-${d}`);
+      current.setDate(current.getDate() + 1);
+    }
+
+    const headers = [
+      '날짜',
+      '루틴그룹 이름',
+      '루틴그룹 시작시각',
+      '루틴그룹 완료시각',
+      '루틴그룹 소요시간',
+      '루틴그룹 완료여부',
+      '개별루틴 이름',
+      '개별루틴 시작시각',
+      '개별루틴 완료시각',
+      '개별루틴 시간별타입',
+      '개별루틴 목표 시간',
+      '개별루틴 실제소요시간',
+      '개별루틴 완료여부'
+    ];
+
+    const csvRows: string[][] = [headers];
+
+    allDatesSorted.forEach(dateStr => {
+      const aliveGroupsOnDate = (snapshot.routineChunks || []).filter(group => {
+        const creationDate = getCreationDate(group.id, snapshot);
+        return dateStr >= creationDate;
+      });
+
+      const histGroupIds = new Set<string>();
+      (snapshot.routineGroupHistory || []).forEach(h => {
+        if (h.date === dateStr) histGroupIds.add(h.groupId);
+      });
+      (snapshot.taskHistory || []).forEach(h => {
+        if (h.date === dateStr) histGroupIds.add(h.groupId);
+      });
+
+      const allGroupKeys = Array.from(new Set([
+        ...aliveGroupsOnDate.map(g => g.id),
+        ...Array.from(histGroupIds)
+      ])).filter(groupId => {
+        const creationDate = getCreationDate(groupId, snapshot);
+        return dateStr >= creationDate;
+      });
+
+      allGroupKeys.forEach(groupId => {
+        const aliveGroup = (snapshot.routineChunks || []).find(g => g.id === groupId);
+        const groupHistEntry = (snapshot.routineGroupHistory || []).find(
+          h => h.date === dateStr && h.groupId === groupId
+        );
+        const taskHistEntries = (snapshot.taskHistory || []).filter(
+          h => h.groupId === groupId && h.date === dateStr
+        );
+
+        const [yStr, mStr, dStr] = dateStr.split('-');
+        const yParsed = parseInt(yStr, 10);
+        const mParsed = parseInt(mStr, 10);
+        const dParsed = parseInt(dStr, 10);
+        const dateObj = new Date(yParsed, mParsed - 1, dParsed);
+        const dayOfWeek = dateObj.getDay();
+
+        const isNormallyInactive = aliveGroup
+          ? (!aliveGroup.scheduledDays?.includes(dayOfWeek) && !aliveGroup.forcedActiveDates?.includes(dateStr))
+          : false;
+
+        const isSkipped = aliveGroup
+          ? (aliveGroup.inactiveDates?.includes(dateStr) || snapshot.inactiveChunks?.[dateStr]?.includes(groupId))
+          : (snapshot.inactiveChunks?.[dateStr]?.includes(groupId));
+
+        const isRestDay = !isSkipped && (
+          groupHistEntry
+            ? (groupHistEntry.completionStatus === '비활성' || groupHistEntry.isActive === false)
+            : isNormallyInactive
+        );
+
+        const activeTasks = taskHistEntries.filter(t => t.isActive);
+        let allActiveTasksUnexecuted = false;
+        if (activeTasks.length > 0) {
+          allActiveTasksUnexecuted = activeTasks.every(t => 
+            !t.status || t.status === '미실행' || t.status === '비활성'
+          );
+        } else if (aliveGroup) {
+          const isNormallyActiveOnDate = (aliveGroup.scheduledDays?.includes(dayOfWeek) || aliveGroup.forcedActiveDates?.includes(dateStr)) && !aliveGroup.inactiveDates?.includes(dateStr);
+          if (isNormallyActiveOnDate) {
+            allActiveTasksUnexecuted = true;
+          }
+        }
+
+        const isUnexecuted = !isRestDay && !isSkipped && (
+          groupHistEntry?.completionStatus === '미실행' || 
+          (groupHistEntry && !groupHistEntry.firstTaskStartTime && groupHistEntry.totalDuration === 0) ||
+          (!groupHistEntry && allActiveTasksUnexecuted)
+        );
+
+        const isRecordMissing = !isRestDay && !isSkipped && !isUnexecuted && (
+          dateStr < currentTodayStr && !groupHistEntry && taskHistEntries.length === 0
+        );
+
+        let specialState: '쉬는요일' | '건너뜀' | '미실행' | '기록누락' | null = null;
+        if (isRestDay) {
+          specialState = '쉬는요일';
+        } else if (isSkipped) {
+          specialState = '건너뜀';
+        } else if (isUnexecuted) {
+          specialState = '미실행';
+        } else if (isRecordMissing) {
+          specialState = '기록누락';
+        }
+
+        let groupStatus: '정상' | '비활성' | '쉬어감' = '정상';
+        if (aliveGroup) {
+          if (aliveGroup.inactiveDates?.includes(dateStr)) {
+            groupStatus = '쉬어감';
+          } else if (isNormallyInactive || groupHistEntry?.completionStatus === '비활성' || groupHistEntry?.isActive === false) {
+            groupStatus = '비활성';
+          }
+        } else {
+          if (groupHistEntry?.completionStatus === '비활성' || groupHistEntry?.isActive === false) {
+            groupStatus = '비활성';
+          }
+        }
+
+        const g_name = aliveGroup ? aliveGroup.name : '삭제된 그룹';
+        
+        let g_start = groupHistEntry?.firstTaskStartTime || '--:--';
+        let g_end = groupHistEntry?.completedAt || '--:--';
+        let g_dur = groupHistEntry?.totalDuration ? formatDurationPrecise(groupHistEntry.totalDuration) : '-';
+
+        if (g_start !== '--:--' && g_start.split(':').length >= 3) {
+          g_start = g_start.split(':').slice(0, 2).join(':');
+        }
+        if (g_end !== '--:--' && g_end.split(':').length >= 3) {
+          g_end = g_end.split(':').slice(0, 2).join(':');
+        }
+
+        let g_completion_status = '0%';
+        if (specialState === '기록누락') {
+          g_completion_status = '기록없음';
+          g_start = '--:--';
+          g_end = '--:--';
+          g_dur = '-';
+        } else if (specialState === '쉬는요일') {
+          g_completion_status = '쉬는요일';
+          g_start = '--:--';
+          g_end = '--:--';
+          g_dur = '-';
+        } else if (specialState === '건너뜀' || groupStatus === '쉬어감') {
+          g_completion_status = '건너뜀';
+          g_start = '--:--';
+          g_end = '--:--';
+          g_dur = '-';
+        } else if (specialState === '미실행') {
+          g_completion_status = '0%';
+          g_start = '--:--';
+          g_end = '--:--';
+          g_dur = '-';
+        } else {
+          const totalActiveOnDate = taskHistEntries.filter(t => t.isActive);
+          const completedTasksCount = totalActiveOnDate.filter(
+            t => t.status === '완벽' || t.status === '완료' || t.status === '스킵'
+          ).length;
+
+          if (totalActiveOnDate.length > 0) {
+            if (completedTasksCount === totalActiveOnDate.length) {
+              const hasSkip = totalActiveOnDate.some(t => t.status === '스킵');
+              g_completion_status = hasSkip ? '완료(100%)' : '완벽(100%)';
+            } else {
+              const pct = Math.floor((completedTasksCount / totalActiveOnDate.length) * 100);
+              g_completion_status = `${pct}%`;
+            }
+          } else {
+            if (groupHistEntry?.completionStatus === '전체완료') {
+              g_completion_status = '완벽(100%)';
+            } else {
+              g_completion_status = '0%';
+            }
+          }
+        }
+
+        const aliveTasks = aliveGroup ? (aliveGroup.tasks || []) : [];
+        const aliveTasksOnDate = aliveTasks.filter(task => {
+          const tCreateDate = getCreationDate(task.id, snapshot);
+          return dateStr >= tCreateDate;
+        });
+
+        const allTaskIds = Array.from(new Set([
+          ...aliveTasksOnDate.map(t => t.id),
+          ...taskHistEntries.map(t => t.taskId)
+        ])).filter(taskId => {
+          const tCreateDate = getCreationDate(taskId, snapshot);
+          return dateStr >= tCreateDate;
+        });
+
+        if (allTaskIds.length === 0) {
+          csvRows.push([
+            dateStr,
+            g_name,
+            g_start,
+            g_end,
+            g_dur,
+            g_completion_status,
+            '-',
+            '--:--',
+            '--:--',
+            '-',
+            '-',
+            '-',
+            g_completion_status === '기록없음' ? '기록없음' : (g_completion_status === '쉬는요일' ? '쉬는요일' : '미실행')
+          ]);
+        } else {
+          allTaskIds.forEach(taskId => {
+            const aliveTask = aliveTasksOnDate.find(t => t.id === taskId);
+            const taskHistEntry = taskHistEntries.find(t => t.taskId === taskId);
+
+            const t_name = aliveTask ? aliveTask.text : '삭제된 루틴';
+            
+            let isScheduled = true;
+            if (aliveGroup && aliveTask) {
+              isScheduled = isTaskScheduledToday(aliveTask, aliveGroup, dateObj, snapshot);
+            }
+
+            let t_status = '미실행';
+            if (taskHistEntry) {
+              if (taskHistEntry.status === '완벽') {
+                t_status = '완벽';
+              } else if (taskHistEntry.status === '완료') {
+                t_status = '완료';
+              } else if (taskHistEntry.status === '스킵') {
+                t_status = '스킵';
+              } else if (taskHistEntry.status === '비활성') {
+                t_status = '쉬는요일';
+              } else {
+                t_status = '미실행';
+              }
+            } else {
+              if (specialState === '기록누락') {
+                t_status = '기록없음';
+              } else if (specialState === '쉬는요일' || !isScheduled) {
+                t_status = '쉬는요일';
+              } else if (specialState === '건너뜀') {
+                t_status = '스킵';
+              } else {
+                t_status = '미실행';
+              }
+            }
+
+            let t_start = taskHistEntry?.startTime || '--:--';
+            let t_end = taskHistEntry?.endTime || '--:--';
+            let t_dur = taskHistEntry?.duration ? formatDurationPrecise(taskHistEntry.duration) : '-';
+
+            if (t_start !== '--:--' && t_start.split(':').length >= 3) {
+              t_start = t_start.split(':').slice(0, 2).join(':');
+            }
+            if (t_end !== '--:--' && t_end.split(':').length >= 3) {
+              t_end = t_end.split(':').slice(0, 2).join(':');
+            }
+
+            if (t_status === '쉬는요일') {
+              t_start = '--:--';
+              t_end = '--:--';
+              t_dur = '-';
+            }
+
+            const t_type = aliveTask ? (
+              aliveTask.taskType === TaskType.TIME_INDEPENDENT ? '시간무관루틴' :
+              aliveTask.taskType === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'
+            ) : '-';
+
+            const t_target = (aliveTask && aliveTask.targetDuration) ? `${aliveTask.targetDuration}분` : '-';
+
+            csvRows.push([
+              dateStr,
+              g_name,
+              g_start,
+              g_end,
+              g_dur,
+              g_completion_status,
+              t_name,
+              t_start,
+              t_end,
+              t_type,
+              t_target,
+              t_dur,
+              t_status
+            ]);
+          });
+        }
+      });
+    });
+
+    const escapeCSV = (val: string): string => {
+      if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    };
+
+    const csvContent = "\uFEFF" + csvRows.map(row => row.map(escapeCSV).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const dateStr = formatDate(now).replace(/-/g, '');
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+    const fileName = `danharu_routine_data_${dateStr}_${timeStr}.csv`;
+
+    const file = new File([blob], fileName, { type: 'text/csv' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: '단하루 루틴 데이터 CSV',
+          text: '내보낸 루틴 기록 CSV 파일입니다.'
+        });
+        setDeletionMessage('CSV 데이터 내보내기가 완료되었습니다.');
+      } catch (err) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setDeletionMessage('CSV 데이터가 파일로 다운로드되었습니다.');
+      }
+    } else {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      setDeletionMessage('CSV 데이터가 파일로 다운로드되었습니다.');
+    }
+  };
+
   const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -7699,7 +8086,7 @@ export default function App() {
 
                       <div className="space-y-4 pt-1">
                         <button 
-                          onClick={() => {}}
+                          onClick={handleExportCSV}
                           className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
                         >
                           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-blue-200 transition-colors">
@@ -7712,7 +8099,7 @@ export default function App() {
                         </button>
 
                         <button 
-                          onClick={() => {}}
+                          onClick={handleExportCSV}
                           className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-emerald-50 hover:border-emerald-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
                         >
                           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-emerald-200 transition-colors">
@@ -7720,7 +8107,7 @@ export default function App() {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-sm font-black text-slate-700">엑셀 데이터 내보내기</span>
-                            <span className="text-[12px] font-bold text-slate-400 leading-tight">선택한 기간의 루틴 데이터를 엑셀로 내보냅니다.</span>
+                            <span className="text-[12px] font-bold text-slate-400 leading-tight">선택한 기간의 루틴 데이터를 엑셀(CSV)로 내보냅니다.</span>
                           </div>
                         </button>
 
