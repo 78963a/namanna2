@@ -1,5 +1,5 @@
 import React from 'react';
-import { RoutineChunk, UserData, TaskStatus } from '../../types';
+import { RoutineChunk, UserData } from '../../types';
 import { formatDate, isTaskScheduledToday } from '../../utils';
 
 interface MonthlyHeatmapProps {
@@ -12,7 +12,7 @@ interface MonthlyHeatmapProps {
 export const MonthlyHeatmap: React.FC<MonthlyHeatmapProps> = ({
   chunk,
   userData,
-  currentTime,
+  currentTime: _currentTime,
   effectiveDate,
 }) => {
   // Get all dates for current month
@@ -33,7 +33,6 @@ export const MonthlyHeatmap: React.FC<MonthlyHeatmapProps> = ({
     if (dateStr > todayStr) return { type: 'future' as const };
 
     // Check if scheduled
-    const isScheduled = isTaskScheduledToday(chunk.tasks[0] || {} as any, chunk, date, userData) || chunk.scheduledDays.includes(date.getDay());
     // Wait, isTaskScheduledToday checks individual tasks. For group, we should use isChunkScheduledToday from utils.
     // Let's re-import or use common logic.
     const isChunkScheduled = chunk.scheduledDays.includes(date.getDay());

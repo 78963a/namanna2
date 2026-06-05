@@ -132,7 +132,7 @@ class VoiceService {
     // e.g. "task이/가" -> "루틴이" or "커피가"
     // Single particles like "task가" will be output as is (e.g. "루틴가") as requested.
     const josaRegex = /(name|task)(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이야\/야|이다\/다)/g;
-    msg = msg.replace(josaRegex, (match, variable, p1) => {
+    msg = msg.replace(josaRegex, (_, variable, p1) => {
       const val = variable === 'name' ? name : task;
       return val + getJosa(val, p1 as any);
     });

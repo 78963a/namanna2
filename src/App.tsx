@@ -23,10 +23,8 @@ import {
   ChevronLeft,
   BarChart3,
   Home,
-  Calendar,
   Edit2,
   AlertCircle,
-  XCircle,
   Bell,
   BellOff,
   Play,
@@ -35,9 +33,7 @@ import {
   X,
   GripVertical,
   RotateCcw,
-  Target,
   ChevronDown,
-  Zap,
   PlusCircle,
   Hourglass,
   BrickWall,
@@ -52,10 +48,9 @@ import {
   ArrowUpDown,
   Globe,
   ArrowBigRightDash,
-  FileSpreadsheet,
   FileText,
 } from 'lucide-react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import {
   DndContext, 
@@ -75,32 +70,18 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// TimeBar 색상 정의
-const ACTIVITY_COLORS = {
-  base: '#e2e8f0',           // 기본 회색 (미지나감) - slate-200
-  past: '#1e293b',           // 지나감 (검은색) - slate-800
-  active: '#fbbf24',         // 접속중, 타이머X (노란색) - amber-400
-  routine: '#f97316',        // 백그라운드, 타이머O (주황색) - orange-500
-  'active-routine': '#ef4444' // 접속중, 타이머O (빨간색) - red-500
-};
-
 // Internal Types & Constants
 import { 
   TaskType, 
   ChecklistItem, 
   Task, 
   RoutineChunk, 
-  WakeUpRecord, 
   UserData, 
   SettingsSubView,
   TaskStatus,
-  StatsTab,
   WakeUpTimeHistoryEntry,
   RoutineGroupHistoryEntry,
   TaskHistoryEntry,
-  HeaderBoxProps,
-  HomeViewProps,
-  StatsViewProps,
   ExecutionViewProps,
   NaggingSettings,
   SoundEffectSettings
@@ -112,15 +93,12 @@ import {
   STORAGE_KEY 
 } from './constants';
 import { 
-  timeToMinutes, 
-  minutesToTime,
   isChunkScheduledToday, 
   isTaskScheduledToday, 
   isTaskTargetForStats,
   formatDate, 
   getEffectiveDate,
   getEffectiveDateObject,
-  getAverageWakeUpTime,
   getDaysBetween,
   formatDurationPrecise,
   getJosa,
@@ -139,7 +117,6 @@ import { StatsView } from './components/views/StatsView';
 // import { ExecutionView } from './components/views/ExecutionView';
 // import { AddRoutineGroupView } from './components/views/AddRoutineGroupView';
 import { ConfirmModal } from './components/common/ConfirmModal';
-import { CelebrationModal } from './components/common/CelebrationModal';
 import { RoutineTitleLine } from './components/routine/RoutineTitleLine';
 import { MonthlyHeatmap } from './components/routine/MonthlyHeatmap';
 import { RoutineTitle } from './components/routine/RoutineTitle';
@@ -169,42 +146,7 @@ const DoubleCheckCircle = ({ className }: { className?: string }) => (
 
 
 
-const SlideToResetButton = ({ onReset }: { onReset: () => void }) => {
-  const [x, setX] = React.useState(0);
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const [isResetting, setIsResetting] = React.useState(false);
 
-  const handleDrag = (_: any, info: any) => {
-    if (isResetting) return;
-    setX(info.point.x);
-    const containerWidth = containerRef.current?.offsetWidth || 0;
-    if (info.point.x > containerWidth * 0.8) {
-      setIsResetting(true);
-      onReset();
-      setX(0);
-      setTimeout(() => setIsResetting(false), 1000);
-    }
-  };
-
-  return (
-    <div ref={containerRef} className="relative w-32 h-8 bg-white/10 rounded-full overflow-hidden border border-white/10">
-      <div className="absolute inset-0 flex items-center justify-start pl-8 pointer-events-none">
-        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Slide to Reset</span>
-      </div>
-      <motion.div
-        drag="x"
-        dragConstraints={{ left: 0, right: 100 }}
-        dragElastic={0.1}
-        onDrag={handleDrag}
-        onDragEnd={() => setX(0)}
-        animate={{ x: isResetting ? 100 : 0 }}
-        className="absolute top-1 left-1 w-6 h-6 bg-white/20 hover:bg-white/30 rounded-full cursor-grab active:cursor-grabbing flex items-center justify-center backdrop-blur-md border border-white/20"
-      >
-        <RotateCcw className="w-3 h-3 text-white" />
-      </motion.div>
-    </div>
-  );
-};
 
 const ExecutionView: React.FC<ExecutionViewProps> = ({
   userData,
@@ -218,7 +160,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   togglePauseTask,
   laterTask,
   skipTask,
-  startTask,
+  startTask: _startTask,
   onRestart,
   resetChunk,
   setSettingsSubView,
@@ -299,7 +241,7 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     }, 1800);
   };
 
-  const handlePressEnd = (e: React.MouseEvent | React.TouchEvent) => {
+  const handlePressEnd = (_e: React.MouseEvent | React.TouchEvent) => {
     if (longPressTimeoutRef.current) {
       clearTimeout(longPressTimeoutRef.current);
       longPressTimeoutRef.current = null;
@@ -456,8 +398,6 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
   if (!activeTask && isInitiallyUnstarted && scheduledTasks.length > 0 && !isAlreadyFinalized) {
     activeTask = scheduledTasks[0];
   }
-
-  const isNotStarted = tasks.every(t => !t.startTime && !t.completed);
 
   const allTasksDone = scheduledTasks.length > 0 && scheduledTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
   const wasDoneOnMount = useRef(allTasksDone);
@@ -924,14 +864,6 @@ const ExecutionView: React.FC<ExecutionViewProps> = ({
     </div>
     );
   }
-
-  const sortedTasks = [...scheduledTasks].sort((a, b) => {
-    if (a.completed && !b.completed) return 1;
-    if (!a.completed && b.completed) return -1;
-    return 0;
-  });
-
-  const isTriggerComplete = true; // Placeholder
 
   if (!chunk) return null;
 
@@ -1438,7 +1370,7 @@ border-transparent: 테두리를 투명하게(없앰) 처리--- */
                     chunkTasks={chunk.tasks}
                     onRestart={handleRestartTaskInternal}
                     onDoFirst={togglePauseTask}
-                    isLocked={!isTriggerComplete && task.id !== (scheduledTasks.length > 0 ? scheduledTasks[0].id : null)}
+                    isLocked={false}
                     activeTaskId={activeTask?.id}
                     isScheduledToday={isTaskScheduledToday(task, chunk, effectiveDate, userData)}
                     onActivate={handleActivateTaskInternal}
@@ -1582,233 +1514,7 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
   );
 };
 
-interface SortableTaskItemProps {
-  task: Task;
-  index: number;
-  editingTaskId: string | null;
-  setEditingTaskId: (id: string | null) => void;
-  editingTaskText: string;
-  setEditingTaskText: (text: string) => void;
-  editingTaskDuration: number;
-  setEditingTaskDuration: (duration: number) => void;
-  editingTaskType: TaskType;
-  setEditingTaskType: (type: TaskType) => void;
-  editingTaskScheduledDays: number[];
-  setEditingTaskScheduledDays: (days: number[]) => void;
-  updateTask: (taskId: string, newText: string, newDuration: number, newTaskType?: TaskType, newScheduledDays?: number[]) => void;
-  deleteTask: (id: string) => void;
-  chunkScheduledDays: number[];
-}
 
-const SortableTaskItem: React.FC<SortableTaskItemProps> = ({ 
-  task, 
-  index, 
-  editingTaskId, 
-  setEditingTaskId, 
-  editingTaskText, 
-  setEditingTaskText, 
-  editingTaskDuration,
-  setEditingTaskDuration,
-  editingTaskType,
-  setEditingTaskType,
-  editingTaskScheduledDays,
-  setEditingTaskScheduledDays,
-  updateTask, 
-  deleteTask,
-  chunkScheduledDays
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: task.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 100 : 'auto',
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const toggleDay = (day: number) => {
-    if (!chunkScheduledDays.includes(day)) return;
-    if (editingTaskScheduledDays.includes(day)) {
-      setEditingTaskScheduledDays(editingTaskScheduledDays.filter(d => d !== day));
-    } else {
-      setEditingTaskScheduledDays([...editingTaskScheduledDays, day].sort());
-    }
-  };
-
-  const days = ['일', '월', '화', '수', '목', '금', '토'];
-
-  return (
-    <div ref={setNodeRef} style={style} className="p-3 bg-white rounded-[10px] border border-slate-100 group shadow-sm">
-      {editingTaskId === task.id ? (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-400">{index + 1}.</span>
-        <input 
-                  type="text"
-                  value={editingTaskText}
-                  onChange={(e) => setEditingTaskText(e.target.value)}
-                  spellCheck={false}
-                  autoComplete="off"
-                  className="flex-grow bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  autoFocus
-                />
-          </div>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">루틴 유형</span>
-              <div className="flex items-center gap-1">
-                {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
-                  const colorClass = type === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : type === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600';
-                  const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
-                  return (
-                    <button 
-                      key={type}
-                      onClick={() => setEditingTaskType(type)}
-                      className={`flex-1 py-1.5 rounded-[10px] text-[9px] font-black transition-all flex items-center justify-center gap-1 ${editingTaskType === type ? `${colorClass} text-white shadow-md` : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
-                    >
-                      <Icon className="w-3 h-3" />
-                      {type}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className={`w-1 h-3 rounded-full ${editingTaskType === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600'}`} />
-                <span className={`text-[10px] font-bold uppercase ${
-                  editingTaskType === TaskType.TIME_INDEPENDENT ? 'text-sky-500' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'text-pink-500' : 'text-indigo-600'
-                }`}>소요 시간 (분)</span>
-              </div>
-              <input 
-                type="number"
-                value={editingTaskDuration || ''}
-                onChange={(e) => setEditingTaskDuration(e.target.value === '' ? 0 : parseInt(e.target.value))}
-                className={`w-full bg-slate-50 border rounded-[10px] px-2 py-1 text-xs font-bold focus:outline-none focus:ring-2 transition-colors ${
-                  editingTaskType === TaskType.TIME_INDEPENDENT ? 'border-sky-200 focus:ring-sky-500/20' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'border-pink-200 focus:ring-pink-500/20' : 'border-indigo-200 focus:ring-indigo-500/20'
-                }`}
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">실행 요일</span>
-            <div className="flex gap-1">
-              {[
-                { label: '월', value: 1 },
-                { label: '화', value: 2 },
-                { label: '수', value: 3 },
-                { label: '목', value: 4 },
-                { label: '금', value: 5 },
-                { label: '토', value: 6, color: 'bg-emerald-600' },
-                { label: '일', value: 0, color: 'bg-rose-600' }
-              ].map((dayObj) => {
-                const i = dayObj.value;
-                const isGroupScheduled = chunkScheduledDays.includes(i);
-                const isSelected = editingTaskScheduledDays.includes(i);
-                const selectedColor = dayObj.color || 'bg-indigo-500';
-                return (
-                  <button
-                    key={i}
-                    onClick={() => toggleDay(i)}
-                    disabled={!isGroupScheduled}
-                    className={`w-7 h-7 rounded-[10px] text-[10px] font-bold transition-all ${
-                      isSelected 
-                        ? `${selectedColor} text-white shadow-sm` 
-                        : isGroupScheduled
-                          ? 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                          : 'bg-slate-50 text-slate-200 cursor-not-allowed'
-                    }`}
-                  >
-                    {dayObj.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button 
-              onClick={() => updateTask(task.id, editingTaskText, editingTaskDuration, editingTaskType, editingTaskScheduledDays)}
-              className="flex-1 py-1.5 bg-indigo-600 text-white rounded-[10px] text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
-            >
-              저장
-            </button>
-            <button 
-              onClick={() => setEditingTaskId(null)}
-              className="flex-1 py-1.5 bg-slate-100 text-slate-500 rounded-[10px] text-xs font-bold hover:bg-slate-200 transition-colors"
-            >
-              취소
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-500">
-              <GripVertical className="w-4 h-4" />
-            </button>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-slate-700">
-                {index + 1}. {task.text}
-              </span>
-              <div className="flex items-center gap-2 mt-0.5">
-                <div className="flex items-center gap-1">
-                  {task.taskType === TaskType.TIME_INDEPENDENT ? (
-                    <Clock className="w-3 h-3 text-sky-500" />
-                  ) : task.taskType === TaskType.TIME_ACCUMULATED ? (
-                    <BrickWall className="w-3 h-3 text-pink-500" />
-                  ) : (
-                    <Hourglass className="w-3 h-3 text-indigo-600" />
-                  )}
-                  <span className="text-[10px] text-slate-500 font-bold">{task.targetDuration || 0}분</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 transition-opacity">
-            <div className="relative group/tooltip">
-              <button 
-                onClick={() => {
-                  setEditingTaskId(task.id);
-                  setEditingTaskText(task.text);
-                  setEditingTaskDuration(task.targetDuration || 10);
-                  setEditingTaskType(task.taskType || TaskType.TIME_LIMITED);
-                  setEditingTaskScheduledDays(task.scheduledDays || [0, 1, 2, 3, 4, 5, 6]);
-                }}
-                className="p-1.5 text-slate-300 hover:text-sky-500 transition-colors"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                변경
-              </div>
-            </div>
-            <div className="relative group/tooltip">
-              <button 
-                onClick={() => deleteTask(task.id)}
-                className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                삭제
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // --- Helper Components ---
 
@@ -2483,7 +2189,7 @@ const RoutineGroupFormView: React.FC<{
   activeTab?: string;
   mode?: 'add' | 'edit';
   onDirtyChange?: (isDirty) => void;
-}> = ({ addChunk, updateChunk, initialChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData, activeTab, mode = 'add', onDirtyChange }) => {
+}> = ({ addChunk, updateChunk, initialChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData: _userData, activeTab, mode = 'add', onDirtyChange }) => {
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState('');
   
@@ -3445,7 +3151,7 @@ const speakAsync = (message: string, isEnabled: boolean, variables?: any): Promi
       if (variables) {
         const { name = '', task = '', n = 0, m = 0, r = 0 } = variables;
         const josaRegex = /(name|task)(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이야\/야|이다\/다)/g;
-        msg = msg.replace(josaRegex, (match, variable, p1) => {
+        msg = msg.replace(josaRegex, (_match, variable, p1) => {
           const val = variable === 'name' ? name : task;
           return val + getJosa(val, p1 as any);
         });
@@ -3995,15 +3701,6 @@ export default function App() {
   }, [activeTab]);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
-  const [addGroupStep, setAddGroupStep] = useState(1);
-  const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupPurpose, setNewGroupPurpose] = useState('');
-  const [newTaskText, setNewTaskText] = useState('');
-  const [newTaskDuration, setNewTaskDuration] = useState(10);
-  const [newTaskType, setNewTaskType] = useState<TaskType>(TaskType.TIME_LIMITED);
-  const [newChunkName, setNewChunkName] = useState('');
-  const [activeChunkId, setActiveChunkId] = useState<string | null>(null);
   const [editingChunkId, setEditingChunkId] = useState<string | null>(null);
   const [editingChunkName, setEditingChunkName] = useState('');
   const [editingChunkPurpose, setEditingChunkPurpose] = useState('');
@@ -4011,13 +3708,6 @@ export default function App() {
   const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'groups'>('general');
   const [showPermissionGuide, setShowPermissionGuide] = useState(false);
   const [permissionNotificationMessage, setPermissionNotificationMessage] = useState<string | null>(null);
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editingTaskText, setEditingTaskText] = useState('');
-  const [editingTaskDuration, setEditingTaskDuration] = useState(10);
-  const [editingTaskType, setEditingTaskType] = useState<TaskType>(TaskType.TIME_LIMITED);
-  const [editingTaskScheduledDays, setEditingTaskScheduledDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
-  const [chunkTimeInputs, setChunkTimeInputs] = useState<Record<string, { s: string, d: number, e: string, alarm?: boolean }>>({});
-  const [chunkScheduleInputs, setChunkScheduleInputs] = useState<Record<string, { type: 'days' | 'weekly' | 'monthly' | 'yearly', days: number[], freq: number }>>({});
   const [lastCompletedTaskName, setLastCompletedTaskName] = useState<string | null>(null);
   const [activeAlarmChunk, setActiveAlarmChunk] = useState<RoutineChunk | null>(null);
   const [isResetTimeDropdownOpen, setIsResetTimeDropdownOpen] = useState(false);
@@ -4079,16 +3769,7 @@ export default function App() {
     }
   }, [groupAddedMessage]);
 
-  // Initialize/Sync chunk time inputs when settings open or routineChunks change
-  useEffect(() => {
-    if (isSettingsOpen) {
-      const initial: Record<string, { s: string, d: number, e: string, alarm?: boolean }> = {};
-      userData.routineChunks.forEach(c => {
-        initial[c.id] = { s: c.startTime || '', d: c.duration || 0, e: c.endTime || '', alarm: c.isAlarmEnabled };
-      });
-      setChunkTimeInputs(initial);
-    }
-  }, [isSettingsOpen, userData.routineChunks]);
+
   
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -4117,7 +3798,6 @@ export default function App() {
   useEffect(() => {
     const isModalOpen = 
       isSettingsOpen || 
-      isAddGroupModalOpen || 
       confirmModal.isOpen || 
       !!activeAlarmChunk || 
       showPerfectDay || 
@@ -4148,7 +3828,6 @@ export default function App() {
     };
   }, [
     isSettingsOpen, 
-    isAddGroupModalOpen, 
     confirmModal.isOpen, 
     activeAlarmChunk, 
     showPerfectDay, 
@@ -4610,7 +4289,6 @@ export default function App() {
     const chunkObj = userData.routineChunks.find(c => c.id === targetChunkId);
     let nextTaskObj: Task | undefined;
     if (chunkObj) {
-      const scheduledTasks = chunkObj.tasks.filter(t => isTaskScheduledToday(t, chunkObj, effectiveDate, userData));
       const updatedTasks = chunkObj.tasks.map(t => {
         if (t.id === id) {
           return {
@@ -4680,7 +4358,6 @@ export default function App() {
 
     // 4. Update the state
     setUserData(prev => {
-      let newlyCompletedGroup = false;
       const newChunks = prev.routineChunks.map(chunk => {
         if (chunk.id === targetChunkId) {
           const updatedTasks = chunk.tasks.map(t => {
@@ -4725,7 +4402,6 @@ export default function App() {
           let newCompletionDates = chunk.completionDates || [];
           if (allCompleted && !newCompletionDates.includes(todayStr)) {
             newCompletionDates = [...newCompletionDates, todayStr];
-            newlyCompletedGroup = true;
           }
 
           return {
@@ -5531,14 +5207,7 @@ export default function App() {
     return diffMinutes >= -earlyLimit && diffMinutes <= lateLimit;
   }, [userData.targetWakeUpTime, userData.lastCheckInDate, currentTime, todayStr, effectiveDate]);
 
-  const isLate = useMemo(() => {
-    const [targetH, targetM] = userData.targetWakeUpTime.split(':').map(Number);
-    const targetDate = new Date(effectiveDate);
-    targetDate.setHours(targetH, targetM, 0, 0);
-    // [코멘트] phrases.json의 lateWindowMinutes 설정을 사용해서 지각 여부 판단
-    const lateLimit = phrases.wakeUpCheckInSettings?.lateWindowMinutes || 10;
-    return currentTime.getTime() > targetDate.getTime() + (lateLimit * 60 * 1000);
-  }, [userData.targetWakeUpTime, currentTime, effectiveDate]);
+
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -5547,30 +5216,7 @@ export default function App() {
     })
   );
 
-  const handleDragEnd = (event: DragEndEvent, chunkId: string) => {
-    const { active, over } = event;
 
-    if (over && active.id !== over.id) {
-      setUserData((prev) => {
-        const chunk = prev.routineChunks.find((c) => c.id === chunkId);
-        if (!chunk) return prev;
-
-        const oldIndex = chunk.tasks.findIndex((t) => t.id === active.id);
-        const newIndex = chunk.tasks.findIndex((t) => t.id === over.id);
-
-        const newTasks = arrayMove(chunk.tasks, oldIndex, newIndex);
-
-        return {
-          ...prev,
-          routineChunks: prev.routineChunks.map((c) =>
-            c.id === chunkId ? { ...c, tasks: newTasks } : c
-          ),
-        };
-      });
-      // [가산 엔진 트리거]: 루틴(태스크) 드래그앤드롭 재정렬 시 기회 횟수 가산 (+1점)
-      addAvailableCheckCheckPoints(1, '루틴(태스크) 재정렬');
-    }
-  };
 
   const handleChunkDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -6044,16 +5690,6 @@ export default function App() {
     
     setUserData(prev => {
       const autoStart = prev.nextRoutineAutoStart;
-      // If there's a different active task, pause it
-      let activeTaskId: string | null = null;
-      for (const chunk of prev.routineChunks) {
-        const active = chunk.tasks.find(t => t.startTime && !t.isPaused && !t.completed && t.status !== TaskStatus.SKIP && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.PERFECT);
-        if (active && active.id !== taskId) {
-          activeTaskId = active.id;
-          break;
-        }
-      }
-
       const next = {
         ...prev,
         routineChunks: prev.routineChunks.map(chunk => {
@@ -6452,68 +6088,7 @@ export default function App() {
     }
   };
 
-  const addTask = (chunkId: string, scheduledDays: number[] = [0,1,2,3,4,5,6]) => {
-    if (!newTaskText.trim()) return;
-    const newTask: Task = {
-      id: Date.now().toString(),
-      text: newTaskText,
-      completed: false,
-      targetDuration: newTaskDuration || 1,
-      taskType: newTaskType,
-      scheduledDays
-    };
-    setUserData(prev => ({
-      ...prev,
-      routineChunks: prev.routineChunks.map(chunk => 
-        chunk.id === chunkId 
-          ? { ...chunk, tasks: [...chunk.tasks, newTask] }
-          : chunk
-      )
-    }));
-    // [가산 엔진 트리거]: 루틴(태스크) 추가 시 기회 횟수 가산 (+1점)
-    addAvailableCheckCheckPoints(1, '루틴(태스크) 추가');
-    setNewTaskText('');
-    setNewTaskDuration(10);
-    setNewTaskType(TaskType.TIME_LIMITED);
-  };
 
-  const deleteTask = (id: string) => {
-    setConfirmModal({
-      isOpen: true,
-      title: '루틴 삭제',
-      message: '이 루틴을 삭제하시겠습니까?',
-      onConfirm: () => {
-        setUserData(prev => ({
-          ...prev,
-          routineChunks: prev.routineChunks.map(chunk => ({
-            ...chunk,
-            tasks: chunk.tasks.filter(t => t.id !== id)
-          }))
-        }));
-        // [가산 엔진 트리거]: 루틴(태스크) 삭제 시 기회 횟수 가산 (+1점)
-        addAvailableCheckCheckPoints(1, '루틴(태스크) 삭제');
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-      }
-    });
-  };
-
-  const updateTask = (taskId: string, newText: string, newDuration: number, newTaskType?: TaskType, scheduledDays?: number[]) => {
-    if (!newText.trim()) return;
-    setUserData(prev => ({
-      ...prev,
-      routineChunks: prev.routineChunks.map(chunk => ({
-        ...chunk,
-        tasks: chunk.tasks.map(t => 
-          t.id === taskId 
-            ? { ...t, text: newText, targetDuration: newDuration || 1, taskType: newTaskType || t.taskType, scheduledDays: scheduledDays || t.scheduledDays } 
-            : t
-        )
-      }))
-    }));
-    // [가산 엔진 트리거]: 루틴(태스크) 수정 시 기회 횟수 가산 (+1점)
-    addAvailableCheckCheckPoints(1, '루틴(태스크) 수정');
-    setEditingTaskId(null);
-  };
 
   const deleteReview = (groupId: string, date: string) => {
     setConfirmModal({
@@ -6566,8 +6141,6 @@ export default function App() {
     // [가산 엔진 트리거]: 루틴 그룹(청크) 새로 생성/추가 시 기회 횟수 가산 (+1점)
     addAvailableCheckCheckPoints(1, '루틴 그룹 추가');
     setGroupAddedMessage(`'${name}' 루틴 그룹이 추가되었습니다`);
-    setNewChunkName('');
-    setNewGroupPurpose('');
     setIsAddRoutineDirty(false);
   };
 
@@ -6780,64 +6353,7 @@ export default function App() {
     });
   };
 
-  const updateChunkSchedule = (chunkId: string, type: 'days' | 'weekly' | 'monthly' | 'yearly', days: number[], freq: number) => {
-    setUserData(prev => ({
-      ...prev,
-      routineChunks: prev.routineChunks.map(c => 
-        c.id === chunkId ? { ...c, scheduleType: type, scheduledDays: days, frequency: freq } : c
-      )
-    }));
-    // [가산 엔진 트리거]: 루틴 그룹 스케줄/주기 요일 수정 시 기회 횟수 가산 (+1점)
-    addAvailableCheckCheckPoints(1, '루틴 그룹 스케줄 수정');
-  };
 
-  const applyChunkTimes = (chunkId: string, s: string, d: number, e: string, alarm?: boolean) => {
-    setUserData(prev => {
-      const chunk = prev.routineChunks.find(c => c.id === chunkId);
-      if (!chunk) return prev;
-
-      let finalS = s;
-      let finalD = d;
-      let finalE = e;
-
-      // Logic for automatic calculations
-      if (s && d > 0 && !e) {
-        // Start + Duration -> End
-        finalE = minutesToTime(timeToMinutes(s) + d);
-      } else if (!s && d > 0 && e) {
-        // End - Duration -> Start
-        finalS = minutesToTime(timeToMinutes(e) - d);
-      } else if (s && !d && e) {
-        // Start + End -> Duration
-        const diff = timeToMinutes(e) - timeToMinutes(s);
-        if (diff > 0) finalD = diff;
-      } else if (s && d > 0 && e) {
-        // All three set: Check for conflict
-        const calculatedEnd = timeToMinutes(s) + d;
-        const actualEnd = timeToMinutes(e);
-        if (calculatedEnd !== actualEnd) {
-          setConfirmModal({
-            isOpen: true,
-            title: '시간 설정 충돌',
-            message: `설정하신 시작 시각(${s}), 소요 시간(${d}분), 완료 시각(${e})이 일치하지 않습니다. (계산된 완료 시각: ${minutesToTime(calculatedEnd)})`,
-            onConfirm: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
-          });
-          return prev;
-        }
-      }
-
-      return {
-        ...prev,
-        routineChunks: prev.routineChunks.map(c => 
-          c.id === chunkId 
-            ? { ...c, startTime: finalS, duration: finalD, endTime: finalE, isAlarmEnabled: alarm }
-            : c
-        )
-      };
-    });
-    // [가산 엔진 트리거]: 루틴 그룹 시간 설정 적용 시 기회 횟수 가산 (+1점)
-    addAvailableCheckCheckPoints(1, '그룹 목표시간 설정');
-  };
 
   const updateUserName = (name: string) => {
     const trimmed = name.trim();
@@ -6904,12 +6420,7 @@ export default function App() {
 
   // --- 체크체크박스 (Check-Check Box) 로직 ---
   // 이 부분에서 캐릭터(체크체크)를 누를 수 있는 조건과 기회 횟수를 차감하고 관리합니다.
-  const checkCheckDiff = currentTime.getTime() - userData.lastCheckCheckTime;
-  const checkCheckIntervalMs = phrases.checkCheckSettings.intervalMinutes * 60 * 1000;
   
-  // [기존 설정]: 일정한 시간이 지나야 작동하도록 하는 클릭 제한 로직은 주석 처리합니다.
-  // const isCheckCheckAvailable = checkCheckDiff >= checkCheckIntervalMs;
-
   // [수정 설정]: 캐릭터를 누를 수 있는 기회(availableCheckCheckCount)가 0보다 클 때만 한정하여 누르기가 작동합니다.
   const isCheckCheckAvailable = (userData.availableCheckCheckCount !== undefined ? userData.availableCheckCheckCount : 5) > 0;
 
@@ -7188,6 +6699,7 @@ export default function App() {
 
     const headers = [
       '날짜',
+      '전체달성률',
       '루틴그룹 이름',
       '루틴그룹 시작시각',
       '루틴그룹 완료시각',
@@ -7205,6 +6717,9 @@ export default function App() {
     const csvRows: string[][] = [headers];
 
     allDatesSorted.forEach(dateStr => {
+      const dayRate = snapshot.dailyCompletionRate?.[dateStr];
+      const day_rate_display = (dayRate !== undefined && dayRate !== null) ? `${dayRate}%` : '';
+
       const aliveGroupsOnDate = (snapshot.routineChunks || []).filter(group => {
         const creationDate = getCreationDate(group.id, snapshot);
         return dateStr >= creationDate;
@@ -7377,6 +6892,7 @@ export default function App() {
         if (allTaskIds.length === 0) {
           csvRows.push([
             dateStr,
+            day_rate_display,
             g_name,
             g_start,
             g_end,
@@ -7453,6 +6969,7 @@ export default function App() {
 
             csvRows.push([
               dateStr,
+              day_rate_display,
               g_name,
               g_start,
               g_end,
@@ -7485,7 +7002,13 @@ export default function App() {
     const fileName = `danharu_routine_data_${dateStr}_${timeStr}.csv`;
 
     const file = new File([blob], fileName, { type: 'text/csv' });
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    const ua = navigator.userAgent;
+    const isWindows = /Windows/i.test(ua);
+    const isMac = /Macintosh/i.test(ua);
+    const isLinuxDesktop = /Linux/i.test(ua) && !/Android/i.test(ua);
+    const isDesktopOS = isWindows || isMac || isLinuxDesktop;
+
+    if (!isDesktopOS && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({
           files: [file],
@@ -8095,20 +7618,7 @@ export default function App() {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-sm font-black text-slate-700">CSV 데이터 내보내기</span>
-                            <span className="text-[12px] font-bold text-slate-400 leading-tight">선택한 기간의 루틴 데이터를 CSV 파일로 내보냅니다.</span>
-                          </div>
-                        </button>
-
-                        <button 
-                          onClick={handleExportCSV}
-                          className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-emerald-50 hover:border-emerald-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
-                        >
-                          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-emerald-200 transition-colors">
-                            <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-black text-slate-700">엑셀 데이터 내보내기</span>
-                            <span className="text-[12px] font-bold text-slate-400 leading-tight">선택한 기간의 루틴 데이터를 엑셀(CSV)로 내보냅니다.</span>
+                            <span className="text-[12px] font-bold text-slate-400 leading-tight">루틴 기록을 CSV 파일로 내보냅니다.</span>
                           </div>
                         </button>
 
@@ -8121,7 +7631,7 @@ export default function App() {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-sm font-black text-slate-700">데이터 백업하기</span>
-                            <span className="text-[12px] font-bold text-slate-400 leading-tight">현재 데이터를 JSON 파일로 다운로드합니다.</span>
+                            <span className="text-[12px] font-bold text-slate-400 leading-tight">현재 데이터를 JSON 파일로 다운로드합니다. 앱 전체를 백업할 수 있습니다. </span>
                           </div>
                         </button>
 

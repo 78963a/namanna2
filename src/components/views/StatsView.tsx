@@ -1,19 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  BarChart3, 
   Clock, 
   Calendar, 
   Target, 
-  Zap,
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Timer,
-  CheckCircle2,
-  AlertCircle,
-  TrendingUp,
   History,
   Hourglass,
   BrickWall,
@@ -26,13 +19,13 @@ import {
   CircleDot,
   X
 } from 'lucide-react';
-import { UserData, TaskStatus, TaskType } from '../../types';
+import { UserData, TaskType } from '../../types';
 import { timeToMinutes, minutesToTime, formatDate, formatDurationPrecise, isTaskScheduledToday, calculateTaskDuration, getCreationDate } from '../../utils';
 
 interface StatsViewProps {
   userData: UserData;
   currentTime: Date;
-  deleteReview: (groupId: string, date: string) => void;
+  deleteReview?: (groupId: string, date: string) => void;
   initialSelectedGroupId?: string | null;
   isSingleGroupStatsOnly?: boolean;
   onBackOverride?: () => void;
@@ -43,7 +36,7 @@ interface StatsViewProps {
 export const StatsView: React.FC<StatsViewProps> = ({ 
   userData,
   currentTime,
-  deleteReview,
+  deleteReview: _deleteReview,
   initialSelectedGroupId = null,
   isSingleGroupStatsOnly = false,
   onBackOverride,
@@ -64,9 +57,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
       setSelectedTaskId(initialSelectedTaskId);
     }
   }, [initialSelectedTaskId]);
-
-  const [calendarYear, setCalendarYear] = useState(currentTime.getFullYear());
-  const [calendarMonth, setCalendarMonth] = useState(currentTime.getMonth());
 
   const [activeTab, setActiveTab] = useState<'wake-up' | 'achievement' | 'usage'>('achievement');
   const [viewAllType, setViewAllType] = useState<'overall' | 'group' | 'task' | null>(null);
@@ -164,39 +154,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
       scrollableElements.forEach(el => {
         el.scrollTo({ top: 0, behavior: 'auto' });
       });
-
-      setCalendarYear(currentTime.getFullYear());
-      setCalendarMonth(currentTime.getMonth());
     }
   }, [selectedGroupId, selectedTaskId, viewAllType]);
-
-  const prevMonth = () => {
-    if (calendarMonth === 0) {
-      setCalendarYear(calendarYear - 1);
-      setCalendarMonth(11);
-    } else {
-      setCalendarMonth(calendarMonth - 1);
-    }
-  };
-  const nextMonth = () => {
-    if (calendarMonth === 11) {
-      setCalendarYear(calendarYear + 1);
-      setCalendarMonth(0);
-    } else {
-      setCalendarMonth(calendarMonth + 1);
-    }
-  };
-  const prevYear = () => setCalendarYear(calendarYear - 1);
-  const nextYear = () => setCalendarYear(calendarYear + 1);
-
-  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-  const firstDayOfMonth = new Date(calendarYear, calendarMonth, 1).getDay();
-  const calendarDays = useMemo(() => {
-    const days = [];
-    for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
-    for (let i = 1; i <= daysInMonth; i++) days.push(i);
-    return days;
-  }, [calendarYear, calendarMonth, firstDayOfMonth, daysInMonth]);
 
   const todayStr = formatDate(currentTime);
   
@@ -333,7 +292,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
     const groupStats = userData.routineChunks.map(group => {
       const groupHistory7 = (userData.routineGroupHistory || []).filter(h => h.groupId === group.id && last7Days.includes(h.date));
-      const groupHistory30 = (userData.routineGroupHistory || []).filter(h => h.groupId === group.id && last30Days.includes(h.date));
       
       const startTimes = groupHistory7.filter(h => h.firstTaskStartTime).map(h => timeToMinutes(h.firstTaskStartTime!));
       const avgStartMinutes = startTimes.length > 0 ? startTimes.reduce((a, b) => a + b, 0) / startTimes.length : null;

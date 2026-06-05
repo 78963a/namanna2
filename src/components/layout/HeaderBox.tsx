@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Calendar } from 'lucide-react';
 import { UserData, TaskStatus } from '../../types';
 import { isTaskScheduledToday, calculateTaskDuration, isTaskTargetForStats } from '../../utils';
 
@@ -30,7 +29,7 @@ const COLORS = {
  */
 export const HeaderBox: React.FC<HeaderBoxProps> = ({
   userData,
-  todayStr,
+  todayStr: _todayStr,
   formattedDate,
   challengeDays,
   successDays,
@@ -117,7 +116,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
           </div>
           <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
               <span>
-                {challengeDays}일째 도전중, {successDays}일째 성공중.6월4일11시48분
+                {challengeDays}일째 도전중, {successDays}일째 성공중.
                </span>
           </div>
         </div>

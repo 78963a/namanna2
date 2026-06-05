@@ -33,7 +33,7 @@ export const minutesToTime = (minutes: number): string => {
  * @param {UserData} userData - The current user data
  * @returns {boolean} True if scheduled, false otherwise
  */
-export const isChunkScheduledToday = (chunk: RoutineChunk, date: Date, userData: UserData): boolean => {
+export const isChunkScheduledToday = (chunk: RoutineChunk, date: Date, _userData: UserData): boolean => {
   const dateStr = formatDate(date);
   if (chunk.inactiveDates?.includes(dateStr)) return false;
   if (chunk.forcedActiveDates?.includes(dateStr)) return true;

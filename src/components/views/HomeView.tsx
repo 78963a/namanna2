@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { 
   CheckCircle2, 
   Clock, 
-  ChevronRight, 
   ChevronDown, 
   ChevronUp,
-  Circle,
   Bell,
   BellOff,
   X
 } from 'lucide-react';
-import { HomeViewProps, RoutineChunk, Task, TaskStatus } from '../../types';
+import { HomeViewProps, TaskStatus } from '../../types';
 import { timeToMinutes, isTaskScheduledToday } from '../../utils';
 import phrases from '../../phrases.json';
 import { RoutineTitle } from '../routine/RoutineTitle';
@@ -22,18 +19,18 @@ import { voiceService } from '../../services/voiceService';
 
 export const HomeView: React.FC<HomeViewProps> = ({ 
   userData, 
-  setUserData,
+  setUserData: _setUserData,
   currentTime, 
   effectiveDate,
   todayStr, 
   handleCheckIn, 
   handleLateCheckIn, 
-  setSelectedChunkId, 
-  setActiveTab, 
-  startTask,
+  setSelectedChunkId: _setSelectedChunkId, 
+  setActiveTab: _setActiveTab, 
+  startTask: _startTask,
   toggleInactive, 
   getChunkStatus, 
-  getStatusBadge, 
+  getStatusBadge: _getStatusBadge, 
   globalActiveTask, 
   setConfirmModal,
   onEnterExecution
@@ -43,46 +40,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const toggleExpand = (e: React.MouseEvent, chunkId: string) => {
     e.stopPropagation();
     setExpandedGroups(prev => ({ ...prev, [chunkId]: !prev[chunkId] }));
-  };
-
-  const getGroupStats = (chunk: RoutineChunk) => {
-    const tasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
-    let startTime = '';
-    let endTime = '';
-    let totalDurationSeconds = 0;
-    let totalTargetDurationMinutes = 0;
-
-    tasks.forEach(task => {
-      if (task.startTime && (!startTime || task.startTime < startTime)) {
-        startTime = task.startTime;
-      }
-      if (task.endTime && (!endTime || task.endTime > endTime)) {
-        endTime = task.endTime;
-      }
-      if (task.duration) {
-        totalDurationSeconds += task.duration;
-      }
-      if (task.targetDuration) {
-        totalTargetDurationMinutes += task.targetDuration;
-      }
-    });
-
-    const formatDuration = (totalSec: number) => {
-      const totalMin = Math.floor(totalSec / 60);
-      const h = Math.floor(totalMin / 60);
-      const m = totalMin % 60;
-      if (h > 0) return `${h}시간 ${m}분`;
-      return `${m}분`;
-    };
-
-    const actualDurationStr = formatDuration(totalDurationSeconds);
-    const targetDurationStr = formatDuration(totalTargetDurationMinutes * 60);
-
-    return {
-      startTime: startTime ? startTime.slice(0, 5) : '00:00',
-      endTime: endTime ? endTime.slice(0, 5) : '00:00',
-      duration: `${actualDurationStr}/${targetDurationStr}`
-    };
   };
 
   const todayCheckIn = userData.history.find(h => h.date === todayStr);
@@ -183,7 +140,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           .map(({ chunk, status }) => {
             const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
             const completedTasks = scheduledTasks.filter(t => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
-            const startedTasks = scheduledTasks.filter(t => t.startTime || t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
             const isFullyCompleted = status === '전체완료' || status === '완료' || status === '완벽';
             const isExpanded = expandedGroups[chunk.id];
             const isInactive = status === '비활성';

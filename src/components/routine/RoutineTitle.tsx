@@ -20,7 +20,7 @@ interface RoutineTitleProps {
 export const RoutineTitle: React.FC<RoutineTitleProps> = ({ 
   chunk, 
   status = '미실행',
-  nameClassName = "text-slate-900",
+  nameClassName: _nameClassName = "text-slate-900",
   selectedPhrase,
   userName,
   startTime,

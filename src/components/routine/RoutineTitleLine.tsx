@@ -2,7 +2,6 @@ import React from 'react';
 import { 
   Circle, 
   CheckCircle2, 
-  XCircle, 
   ArrowRightCircle, 
   PauseCircle, 
   CircleDot, 
@@ -16,7 +15,6 @@ import {
 } from 'lucide-react';
 import { Task, TaskType, TaskStatus } from '../../types';
 import { calculateTaskDuration } from '../../utils';
-import phrases from '../../phrases.json';
 
 import { voiceService } from '../../services/voiceService';
 
@@ -24,7 +22,7 @@ interface RoutineTitleLineProps {
   task: Task;
   index: number;
   currentTime: Date;
-  chunkTasks: Task[];
+  chunkTasks?: Task[];
   onRestart?: (id: string) => void;
   onDoFirst?: (id: string) => void;
   isLocked?: boolean;
@@ -46,7 +44,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   task, 
   index, 
   currentTime,
-  chunkTasks,
+  chunkTasks: _chunkTasks,
   onRestart,
   onDoFirst,
   isLocked,

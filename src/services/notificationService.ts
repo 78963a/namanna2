@@ -1,4 +1,4 @@
-import { UserData, RoutineChunk } from '../types';
+import { UserData } from '../types';
 
 /**
  * Service for handling browser notifications.
