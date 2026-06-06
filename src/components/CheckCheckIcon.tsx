@@ -32,76 +32,76 @@ export const CheckCheckIcon: React.FC<PixelArtProps> = ({ iconId, size = 32 }) =
   // 아이콘 데이터 (16x16)
   // ' ' 는 투명, 나머지는 색상 키
   const icons: Record<string, { pixels: string[], colors: Record<string, string> }> = {
-    egg: {
+egg: {
   pixels: [
-        "     RKKKKKG    ",
-        "    KKR  WGKG   ",
-        "   KR     WGKR  ",
-        "  KR        WKR ",
-        " KR          WK ",
-        " K           GRK",
-        "KW           BRK",
-        "KR            GK",
-        "KG           BGK",
-        "KG           BRK",
-        "KR          BGKK",
-        " KR        BRRK ",
-        " GKG      BGRKK ",
-        "  GKGBBBBBRRKK  ",
-        "   RKRGGRRKKK   ",
-        "     KKKKKK     "
+        "     ahhhha     ",
+        "    hhaaaahh H  ",
+        "   haaHHHHaahaH ",
+        "  hhaHHHHHHHah  ",
+        " ahaHHHHHHHHaha ",
+        " haHHHHHHH HHah ",
+        "ah HHHHHHHHHHaha",
+        "ahHHHHHHH HH Hha",
+        "ahHHHHHHHHHHHHha",
+        "ahHHHHHHHHH HHha",
+        "ah HHHHHHH HH ha",
+        "ahaHHHHHH HHHaha",
+        "HahHHHHH HHHahaH",
+        " HahaHH HHHahaa ",
+        " HHahhaaaaahaa  ",
+        "  Haahhhhhhaa   "
   ],
-  colors: { K: '#423d3d', W: '#b2e1de', R: '#83b1ce', G: '#bfd2e8', B: '#e6e6eb' }
+  colors: { H: '#F8FAFC', h: '#c7d3e0', a: '#eaf0f0' }
 },
 
 
 
 
 
+broken_egg: {
+  pixels: [
+        "     ahhhha     ",
+        "    hhaaaahh H  ",
+        "   haaHHHHaahaH ",
+        "  hhahHHHHHHah  ",
+        " ahahhaHHHHHaha ",
+        " haHHahHHH HHah ",
+        "ah HHhhaa HHHaha",
+        "ahHHHaHhh HH Hha",
+        "ahHahaHHhHHHHHha",
+        "ahHHhHHHahH HHha",
+        "ah HHHHHHH HH ha",
+        "ahaHHHHHH HHHaha",
+        "HahHHHHH HHHahaH",
+        " HahaHH HHHahaa ",
+        " HHahhaaaaahaa  ",
+        "  Haahhhhhhaa   "
+  ],
+  colors: { H: '#F8FAFC', h: '#c7d3e0', a: '#eaf0f0' }
+},
 
-    broken_egg: {
-      pixels: [
-        "    hhhh        ",
-        "  hhHHHHhh      ",
-        " hHHHHHHHHh     ",
-        "hHhHHHHHHHHh    ",
-        "hHHhHHHHHHHHHh  ",
-        "hHHHhhHHHHHHHh  ",
-        "hHHHHhHHhhHHHHHh",
-        "hHHHhHHHHHhHHHHh",
-        "hHHhHHHHHHHHHHHh",
-        "hHHHhHHHHHHHHHHh",
-        "hHHHHHHHHHHHHh  ",
-        "hHHHHHHHHHHHHh  ",
-        "hHHHHHHHHHHh    ",
-        " hHHHHHHHHh     ",
-        "  hhHHHHhh      ",
-        "    hhhh        "
-      ],
-      colors: { H: '#F8FAFC', h: '#CBD5E1' }
-    },
-
-    chick_in_shell: {
-      pixels: [
-        "     hhhhh      ",
-        "   hhHHHHHh     ",
-        "  hHHHHHHHHhh   ",
-        " hHHHHHHHHHHHh  ",
-        "hhhhhhhhhhhhh   ",
-        "  hyyyyyyyyh    ",
-        " hyyyEyyEyyyh   ",
-        " hyyyyByyyyyh   ",
+chick_in_shell: {
+  pixels: [
+        "     hhhhhhha   ",
+        "   hhaHHHH aha  ",
+        "  haaHHHHH   ha ",
+        " haaHHHHHHHaaaha",
+        "ahhhhhhhhhhhhhha",
+        " abyyyyyyyyybba ",
+        " byyyEyyEyyyybh ",
+        " byyyyByyyyyyyh ",
         "hhhhyhhhhyhhhhhh",
-        "hHHHhHHHHhHHhHHh",
-        "hHHHHHHHHHHHhHHh",
-        "hHHHHHHHHHHHhHHh",
-        " hHHHHHHHHHhHHh ",
-        " hHHHHHHHHHhHHh ",
-        "  hHHHHHHHhHHh  ",
-        "   hHHHHHHHHh   "
-      ],
-      colors: { H: '#F8FAFC', h: '#CBD5E1', y: '#FDE047', E: '#000000', B: '#F97316' }
-    },    
+        "hHHahaHHahaahaah",
+        "hHHHHHHHHHHHhaah",
+        "haHHHHHHHHHHhHah",
+        " haHHHHHHHHhHHh ",
+        " haaaaaHHH  Hah ",
+        "  haaaaaaH Hah  ",
+        "  ahhhhhhhhhha  "
+  ],
+  colors: { H: '#F8FAFC', h: '#CBD5E1', y: '#FDE047', E: '#000000', B: '#F97316', a: '#e7edf3', b: '#dfc95d' }
+},
+
 
     chick_hat_shell: {
       pixels: [
