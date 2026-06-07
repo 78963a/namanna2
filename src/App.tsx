@@ -56,7 +56,8 @@ import {
   DndContext, 
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent
@@ -1437,12 +1438,13 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
     transition,
     zIndex: isDragging ? 100 : 'auto',
     opacity: isDragging ? 0.5 : 1,
+    touchAction: 'none',
   };
 
   return (
     <div ref={setNodeRef} style={style} className="p-[15px] bg-slate-50 rounded-[10px] border border-slate-100 group flex items-center justify-between">
       <div className="flex items-center gap-3 flex-grow min-w-0">
-        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-500 flex-shrink-0">
+        <button {...attributes} {...listeners} style={{ touchAction: 'none' }} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-500 flex-shrink-0">
           <GripVertical className="w-5 h-5" />
         </button>
         
@@ -1548,6 +1550,7 @@ const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
     transition,
     zIndex: isDragging ? 1 : 0,
     opacity: isDragging ? 0.5 : 1,
+    touchAction: 'none' as const,
   };
 
   const handleEdit = () => {
@@ -1563,7 +1566,7 @@ const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
       style={style}
       className={`flex items-start gap-3 p-3 bg-slate-50 rounded-[10px] border border-slate-100 group transition-all ${isDragging ? 'shadow-lg ring-2 ring-indigo-500/20' : ''}`}
     >
-      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-400 transition-colors mt-0.5">
+      <div {...attributes} {...listeners} style={{ touchAction: 'none' }} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-400 transition-colors mt-0.5">
         <GripVertical className="w-4 h-4" />
       </div>
       
@@ -1652,9 +1655,15 @@ const ChecklistModal = ({
   }, [checklist.length]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -2035,6 +2044,7 @@ const SortableRoutineItem = ({
     transition,
     zIndex: isDragging ? 50 : 0,
     opacity: isDragging ? 0.5 : 1,
+    touchAction: 'none',
   };
 
   return (
@@ -2044,7 +2054,7 @@ const SortableRoutineItem = ({
       className="bg-white p-3 rounded-[10px] border border-slate-200 flex items-center justify-between shadow-none group"
     >
       <div className="flex items-center gap-3">
-        <div {...attributes} {...listeners} className="p-2 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
+        <div {...attributes} {...listeners} style={{ touchAction: 'none' }} className="p-2 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
           <GripVertical className="w-4 h-4" />
         </div>
         <div className="flex flex-col">
@@ -2343,7 +2353,17 @@ const RoutineGroupFormView: React.FC<{
   }, [isEditModalOpen, confirmModal.isOpen, isChecklistModalOpen]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -5210,7 +5230,17 @@ export default function App() {
 
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
