@@ -4896,6 +4896,27 @@ export default function App() {
     const nowTimeStr = `${String(nowH).padStart(2, '0')}:${String(nowM).padStart(2, '0')}`;
 
     userData.routineChunks.forEach(chunk => {
+      // 1-1. 1번 루틴그룹에 속한 루틴의 타이머가 포그라운드나 백그라운드에서 돌아가는 중인 경우
+      const isTimerRunning = chunk.tasks.some(t => t.startTime && !t.isPaused && !t.completed && t.status !== TaskStatus.SKIP && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.PERFECT);
+      // 1-2. 타이머가 돌아가고 있지 않더라도 현재 1번 루틴그룹의 실행화면에 진입해있어서 포그라운드일 때
+      const isCurrentlyDisplayed = activeTab === 'home' && selectedChunkId === chunk.id;
+      // 1-3. 이미 완료되었거나 오늘은 쉬어가기(또는 오늘 스케줄에 없음)된 경우
+      const isCompleted = chunk.completionDates?.includes(todayStr);
+      const isSkippedOrNotScheduled = chunk.inactiveDates?.includes(todayStr) || !isChunkScheduledToday(chunk, effectiveDate, userData);
+
+      if (isTimerRunning || isCurrentlyDisplayed || isCompleted || isSkippedOrNotScheduled) {
+        // 이미 트리거된 것으로 간주하여 조건이 풀렸을 때 같은 시간대에 중복 알람이 트리거되는 현상 차단
+        if (chunk.lastAlarmTriggeredDate !== todayStr) {
+          setUserData(prev => ({
+            ...prev,
+            routineChunks: prev.routineChunks.map(c => 
+              c.id === chunk.id ? { ...c, lastAlarmTriggeredDate: todayStr } : c
+            )
+          }));
+        }
+        return;
+      }
+
       if (chunk.isAlarmEnabled && chunk.startTime === nowTimeStr && chunk.lastAlarmTriggeredDate !== todayStr && !activeAlarmChunk) {
         if (isChunkScheduledToday(chunk, effectiveDate, userData)) {
           setActiveAlarmChunk(chunk);
@@ -4910,7 +4931,7 @@ export default function App() {
         }
       }
     });
-  }, [currentTime, userData.routineChunks, todayStr, activeAlarmChunk]);
+  }, [currentTime, userData.routineChunks, todayStr, activeAlarmChunk, activeTab, selectedChunkId]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -9035,9 +9056,27 @@ export default function App() {
                     onClick={() => {
                       voiceService.unlock();
                       soundService.unlock();
-                      if (globalActiveTask && globalActiveTask.task) {
-                        onRestart(globalActiveTask.task.id, false);
+                      
+                      // 3-1, 3-2. 알람 대상 그룹에서 시작할 수 있는 최적의 태스크를 식별 (이미 진행 이력이 있다면 그것을 이어 시작하도록)
+                      const targetTask = activeAlarmChunk.tasks.find(t => 
+                        !t.completed && 
+                        t.status !== TaskStatus.SKIP && 
+                        t.status !== TaskStatus.COMPLETED && 
+                        t.status !== TaskStatus.PERFECT &&
+                        (t.startTime || t.isPaused || t.status === TaskStatus.IN_PROGRESS || (t.accumulatedDuration || 0) > 0)
+                      ) || activeAlarmChunk.tasks.find(t => 
+                        !t.completed && 
+                        t.status !== TaskStatus.SKIP && 
+                        t.status !== TaskStatus.COMPLETED && 
+                        t.status !== TaskStatus.PERFECT
+                      );
+
+                      if (targetTask) {
+                        // togglePauseTask를 forceStart = true 로 호출하여 해당 태스크를 시작함.
+                        // 이 분기는 다른 그룹의 돌아가고 있던 타이머를 자동으로 일시정지시키고 시간을 보존하게 함.
+                        togglePauseTask(targetTask.id, true);
                       }
+
                       setSelectedChunkId(activeAlarmChunk.id);
                       setActiveTab('execution');
                       setActiveAlarmChunk(null);

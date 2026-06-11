@@ -57,7 +57,8 @@ class NotificationService {
     const dayOfWeek = currentTime.getDay();
 
     // 1. Check Wake-up Time
-    if (userData.isWakeUpAlarmEnabled !== false && userData.targetWakeUpTime === currentHM) {
+    const hasCheckedInToday = userData.lastCheckInDate === todayStr;
+    if (userData.isWakeUpAlarmEnabled !== false && userData.targetWakeUpTime === currentHM && !hasCheckedInToday) {
       const key = `wakeup-${todayStr}-${currentHM}`;
       if (!this.lastTriggered.has(key)) {
         this.showNotification('기상 시간입니다!', {
