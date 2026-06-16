@@ -1438,7 +1438,6 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
     transition,
     zIndex: isDragging ? 100 : 'auto',
     opacity: isDragging ? 0.5 : 1,
-    touchAction: 'none',
   };
 
   return (
@@ -1550,7 +1549,6 @@ const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({
     transition,
     zIndex: isDragging ? 1 : 0,
     opacity: isDragging ? 0.5 : 1,
-    touchAction: 'none' as const,
   };
 
   const handleEdit = () => {
@@ -2044,7 +2042,6 @@ const SortableRoutineItem = ({
     transition,
     zIndex: isDragging ? 50 : 0,
     opacity: isDragging ? 0.5 : 1,
-    touchAction: 'none',
   };
 
   return (
