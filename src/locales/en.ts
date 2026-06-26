@@ -181,12 +181,88 @@ export const en = {
     mediaAlbum: "Guide Voice"
   },
   nagging: {
-    overTimeTitle: "Routine Overtime Notification",
-    overTimeDesc: "Keep notifying even after the set duration has elapsed.",
-    overTimeTypes: "Apply by Routine Type",
-    overTimeInterval: "Set Notification Interval",
-    minutesEach: "minutes",
-    overTimeMessageLabel: "Set Message text"
+    cancelTitle: "Confirm Cancel",
+    cancelMessage: "Changes have not been saved. Are you sure you want to cancel?",
+    cancelConfirm: "Cancel and Exit",
+    cancelCancel: "Keep Editing",
+    saveSuccess: "Nagging settings have been saved",
+    backTitle: "Back",
+    title: "Nagging Settings",
+    varsTitle: "Available Variables",
+    varsName: "User Name",
+    varsTask: "Routine Title",
+    varsElapsed: "Minutes Elapsed",
+    varsRemaining: "Minutes Remaining",
+    varsOvertime: "Minutes Overtime",
+    josaCorrectionTitle: "Korean Particle Correction",
+    josaCorrectionDesc: "If you use Korean particles with a slash like '이/가' after 'name' or 'task', they will be automatically corrected based on whether the name/task has a final consonant. For example, 'task이/가 n분째 진행중입니다' will be formatted appropriately.",
+    josaSupported: "* Supported: 은/는, 이/가, 을/를, 으로/로, 이죠/죠, 이다/다",
+    startTitle: "Notification on Routine Start",
+    startDesc: "Notification when starting a routine.",
+    restartTitle: "Notification on Routine Resume",
+    restartDesc: "Send the same notification when resuming a paused or completed routine.",
+    textSetting: "Set Message text",
+    textPlaceholder: "e.g., Starting task",
+    ongoingTitle: "Notification during Routine",
+    ongoingDesc: "Notify periodically while a routine is in progress. If it overlaps with 'Before End' notification, only 'Before End' will be sent.",
+    targetTypes: "Apply by Routine Type",
+    intervalSetting: "Set Notification Interval",
+    everyMinutes: "minutes",
+    beforeEndTitle: "Notification Before Routine End",
+    beforeEndDesc: "Notification before the routine duration is over.",
+    beforeEndTiming: "Set Timing",
+    minutesBefore: "minutes before",
+    endTitle: "Notification on Routine End",
+    endDesc: "Notification when the routine's set duration is completed.",
+    overtimeTitle: "Routine Overtime Notification",
+    overtimeDesc: "Keep notifying periodically after the set duration has elapsed."
+  },
+  sound: {
+    cancelTitle: "Confirm Cancel",
+    cancelMessage: "Changes have not been saved. Are you sure you want to cancel?",
+    cancelConfirm: "Cancel and Exit",
+    cancelCancel: "Keep Editing",
+    saveSuccess: "Changes saved successfully",
+    backTitle: "Back",
+    title: "Sound Effects Settings",
+    levelUp: "Level Up",
+    trumpets: "Trumpets Fanfare",
+    levelWin: "Level Win",
+    fireworks: "Fireworks",
+    applause: "Applause Cheer",
+    duck: "Duck Quack",
+    dog: "Dog Bark",
+    beep: "Beep Sound",
+    selectSound: "Select Sound",
+    playTest: "Play Test",
+    wakeUpCheckIn: {
+      label: "1. Wake-up Check-in",
+      desc: "Sound played when morning wake-up check-in is successful."
+    },
+    triggerRoutineStart: {
+      label: "2. Trigger Routine Start",
+      desc: "Sound played when starting a routine group for the first time."
+    },
+    individualRoutineComplete: {
+      label: "3. Individual Routine Complete",
+      desc: "Sound played when an individual routine is completed."
+    },
+    routineGroupComplete: {
+      label: "4. Routine Group Complete",
+      desc: "Sound played when a routine group is completed."
+    },
+    todayEnd: {
+      label: "5. Today's Routines End",
+      desc: "Sound played when all routines for today are completed (but not a perfect day)."
+    },
+    allGroupsComplete: {
+      label: "6. Perfect Day Complete",
+      desc: "Sound played when all scheduled routine groups are completed."
+    },
+    chickSound: {
+      label: "7. Chick Sound",
+      desc: "Sound played when tapping the Chick character on the home tab."
+    }
   },
   taskType: {
     TIME_INDEPENDENT: "Time-Independent Routine",

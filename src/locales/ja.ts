@@ -181,12 +181,88 @@ export const ja = {
     mediaAlbum: "案内音声"
   },
   nagging: {
-    overTimeTitle: "ルーチン終了後の通知",
-    overTimeDesc: "設定時間が経過した後も継続して案内します。",
-    overTimeTypes: "ルーチンタイプ別適用",
-    overTimeInterval: "通知間隔設定",
-    minutesEach: "分ごと",
-    overTimeMessageLabel: "案内文設定"
+    cancelTitle: "変更キャンセルの確認",
+    cancelMessage: "変更内容が保存されていません。キャンセルしますか？",
+    cancelConfirm: "キャンセルして戻る",
+    cancelCancel: "編集を続ける",
+    saveSuccess: "小言（案内）設定が保存されました",
+    backTitle: "戻る",
+    title: "小言（案内）機能設定",
+    varsTitle: "利用可能な変数",
+    varsName: "ユーザー名",
+    varsTask: "ルーチン名",
+    varsElapsed: "経過時間（分）",
+    varsRemaining: "残り時間（分）",
+    varsOvertime: "超過時間（分）",
+    josaCorrectionTitle: "韓国語助詞自動補正",
+    josaCorrectionDesc: "nameやtaskの後に '이/가' のようにスラッシュ（/）で区切られた助詞を使用すると、パッチム（終声）の有無に応じて適切に補正されます。例えば「task이/가 n분째 진행중입니다」と入力すると、自動的に正しい助詞が出力されます。",
+    josaSupported: "* サポート助詞: 은/는, 이/가, 을/를, 으로/로, 이죠/죠, 이다/다",
+    startTitle: "ルーチン開始時の案内",
+    startDesc: "ルーチンを開始するときの案内音声を再生します。",
+    restartTitle: "ルーチン再開時の案内",
+    restartDesc: "一時停止中または完了したルーチンを再開するときにも、同じ案内音声を再生します。",
+    textSetting: "案内メッセージ設定",
+    textPlaceholder: "例：taskを開始します",
+    ongoingTitle: "ルーチン進行中の案内",
+    ongoingDesc: "ルーチン進行中に、定期的に案内音声を再生します。ただし、「ルーチン終了前の案内」と重なる場合は「ルーチン終了前の案内」のみが再生されます。",
+    targetTypes: "ルーチンタイプ別適用",
+    intervalSetting: "通知間隔設定",
+    everyMinutes: "分ごと",
+    beforeEndTitle: "ルーチン終了前の案内",
+    beforeEndDesc: "ルーチン時間が終了する前の案内です。",
+    beforeEndTiming: "通知時点の設定",
+    minutesBefore: "分前",
+    endTitle: "ルーチン終了案内",
+    endDesc: "設定した時間が終了したときの案内です。",
+    overtimeTitle: "ルーチン終了後の通知",
+    overtimeDesc: "設定時間が経過した後も、継続して案内を再生します。"
+  },
+  sound: {
+    cancelTitle: "変更キャンセルの確認",
+    cancelMessage: "変更内容が保存されていません。キャンセルしますか？",
+    cancelConfirm: "キャンセルして戻る",
+    cancelCancel: "編集を続ける",
+    saveSuccess: "変更内容が保存されました",
+    backTitle: "戻る",
+    title: "効果音設定",
+    levelUp: "Level Up (レベルアップ)",
+    trumpets: "Trumpets Fanfare (ファンファーレ)",
+    levelWin: "Level Win (成功祝音)",
+    fireworks: "Fireworks (花火効果音)",
+    applause: "Applause Cheer (歓声と拍手)",
+    duck: "Duck Quack (アヒルクワック)",
+    dog: "Dog Bark (犬ワンワン)",
+    beep: "Beep Sound (ビープ音)",
+    selectSound: "サウンド選択",
+    playTest: "再生テスト",
+    wakeUpCheckIn: {
+      label: "1. 起床チェックイン",
+      desc: "朝の起床チェックインに成功したときの効果音です。"
+    },
+    triggerRoutineStart: {
+      label: "2. トリガールーティン開始",
+      desc: "ルーティングループを最初に開始したときの効果音です。"
+    },
+    individualRoutineComplete: {
+      label: "3. 個別ルーティン完了",
+      desc: "個別ルーティンを完了したときの効果音です。"
+    },
+    routineGroupComplete: {
+      label: "4. ルーティングループ完了",
+      desc: "ルーティングループを完了したときの効果音です。"
+    },
+    todayEnd: {
+      label: "5. 今日のルーティン終了",
+      desc: "今日のルーティンを終えた（すべてのルーティングループが完了・非活性・スキップの状態だが完璧な一日ではない）ときの効果音です。"
+    },
+    allGroupsComplete: {
+      label: "6. 完璧な一日完了",
+      desc: "今日予定されていたすべてのルーティングループを完了したときの効果音です。"
+    },
+    chickSound: {
+      label: "7. ひよこの鳴き声",
+      desc: "ホームタブのキャラクター（ひよこ）をタップしたときの鳴き声です。"
+    }
   },
   taskType: {
     TIME_INDEPENDENT: "時間関係なしルーチン",

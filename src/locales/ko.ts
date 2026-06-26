@@ -181,12 +181,88 @@ export const ko = {
     mediaAlbum: "안내 음성"
   },
   nagging: {
-    overTimeTitle: "루틴 종료 후 알림",
-    overTimeDesc: "설정 시간이 경과한 후에도 지속적으로 안내합니다.",
-    overTimeTypes: "루틴 유형별 적용 여부",
-    overTimeInterval: "알림 간격 설정",
-    minutesEach: "분 마다",
-    overTimeMessageLabel: "안내 문구 설정"
+    cancelTitle: "변경 취소 확인",
+    cancelMessage: "변경 사항이 저장되지 않았습니다. 취소하시겠습니까?",
+    cancelConfirm: "취소하고 나가기",
+    cancelCancel: "계속 수정하기",
+    saveSuccess: "잔소리 설정이 저장되었습니다",
+    backTitle: "뒤로가기",
+    title: "잔소리 기능 설정",
+    varsTitle: "사용 가능한 변수",
+    varsName: "사용자 이름",
+    varsTask: "루틴 제목",
+    varsElapsed: "시작 후 경과 분",
+    varsRemaining: "종료 전 남은 분",
+    varsOvertime: "목표 초과 분",
+    josaCorrectionTitle: "한글 조사 자동 교정",
+    josaCorrectionDesc: "name이나 task 뒤에 '이/가'와 같이 슬래시(/)로 구분된 조사를 사용하면 받침 유무에 따라 알맞게 교정됩니다. 예를들어 \"task이/가 n분째 진행중입니다\"를 입력하시면, \"운동이 5분째 진행중입니다\" 또는 \"운동하기가 5분째 진행중입니다\"와 같이 적절한 조사가 출력됩니다.",
+    josaSupported: "* 지원: 은/는, 이/가, 을/를, 으로/로, 이죠/죠, 이다/다",
+    startTitle: "루틴 시작시 알림",
+    startDesc: "루틴을 시작할 때의 알림입니다.",
+    restartTitle: "루틴 재시작시 알림",
+    restartDesc: "일시정지 또는 완료한 루틴을 재시작할 때에도 같은 알림을 보냅니다.",
+    textSetting: "안내 문구 설정",
+    textPlaceholder: "예: task 시작합니다",
+    ongoingTitle: "루틴 진행 중 알림",
+    ongoingDesc: "루틴이 진행되는 동안 정기적으로 알림을 보냅니다. 단, '루틴 종료 전 알림'과 겹치는 경우 '루틴 종료 전 알림'만 내보냅니다.",
+    targetTypes: "루틴 유형별 적용 여부",
+    intervalSetting: "알림 간격 설정",
+    everyMinutes: "분 마다",
+    beforeEndTitle: "루틴 종료 전 알림",
+    beforeEndDesc: "루틴 시간이 종료되기 전의 알림입니다.",
+    beforeEndTiming: "알림 시점 설정",
+    minutesBefore: "분 전",
+    endTitle: "루틴 종료 알림",
+    endDesc: "사용자가 설정한 시간이 종료되었을 때의 알림입니다.",
+    overtimeTitle: "루틴 종료 후 알림",
+    overtimeDesc: "설정 시간이 경과한 후에도 지속적으로 안내합니다."
+  },
+  sound: {
+    cancelTitle: "변경 취소 확인",
+    cancelMessage: "변경 사항이 저장되지 않았습니다. 취소하시겠습니까?",
+    cancelConfirm: "취소하고 나가기",
+    cancelCancel: "계속 수정하기",
+    saveSuccess: "변경사항이 저장되었습니다",
+    backTitle: "뒤로가기",
+    title: "효과음 설정",
+    levelUp: "Level Up (레벨업)",
+    trumpets: "Trumpets Fanfare (트럼펫 팡파르)",
+    levelWin: "Level Win (성공 축하음)",
+    fireworks: "Fireworks (불꽃놀이 효과음)",
+    applause: "Applause Cheer (환호와 박수)",
+    duck: "Duck Quack (오리 꽥꽥)",
+    dog: "Dog Bark (강아지 멍멍)",
+    beep: "Beep (비프 안내음)",
+    selectSound: "사운드 선택",
+    playTest: "재생 테스트",
+    wakeUpCheckIn: {
+      label: "1. 기상 체크인",
+      desc: "아침 기상 체크인에 성공하면 나오는 효과음입니다."
+    },
+    triggerRoutineStart: {
+      label: "2. 트리거 루틴 시작",
+      desc: "루틴 그룹을 처음 시작할 때 나오는 효과음입니다."
+    },
+    individualRoutineComplete: {
+      label: "3. 개별 루틴 완료",
+      desc: "개별 루틴을 완료했을 때 나오는 효과음입니다."
+    },
+    routineGroupComplete: {
+      label: "4. 루틴 그룹 완료",
+      desc: "루틴 그룹을 완료했을 때 나오는 효과음입니다."
+    },
+    todayEnd: {
+      label: "5. 오늘 끝",
+      desc: "오늘의 루틴을 마치면(모든 루틴그룹이 완료/비활성/건너뜀 상태이면서 완벽한 하루는 아님) 나오는 효과음입니다."
+    },
+    allGroupsComplete: {
+      label: "6. 완벽한 하루 완료",
+      desc: "오늘 예정된 모든 루틴 그룹을 완료했을 때 나오는 효과음입니다."
+    },
+    chickSound: {
+      label: "7. 병아리 소리",
+      desc: "홈 아이콘줄의 체크체크 캐릭터를 누를 때 나는 소리입니다."
+    }
   },
   taskType: {
     TIME_INDEPENDENT: "시간무관루틴",
