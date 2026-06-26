@@ -197,6 +197,8 @@ export interface UserData {
   soundSettings?: SoundEffectSettings;
   hideAnytimeTimer?: boolean;
   autoNextAccumulatedRoutine?: boolean;
+  darkModeTheme?: 'light' | 'dark';
+  darkModeFollowSystem?: boolean;
 }
 
 /**

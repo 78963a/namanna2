@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Circle, 
   CheckCircle2, 
@@ -53,6 +54,8 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   onActivate,
   chunkScheduledDays = [0, 1, 2, 3, 4, 5, 6]
 }) => {
+  const { t } = useTranslation();
+
   /**
    * Formats a duration in seconds into a compact time string (m:ss).
    * 
@@ -129,11 +132,11 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
 
   let startResumeLabel = '';
   if (task.laterTimestamp || isSkip || (!task.startTime && !isTaskPausedWithDuration && !isActuallyCompleted)) {
-    startResumeLabel = '시작하기';
+    startResumeLabel = t('routine.start');
   } else if (isTaskPausedWithDuration || isActuallyCompleted) {
-    startResumeLabel = '이어하기';
+    startResumeLabel = t('routine.resume');
   } else {
-    startResumeLabel = '시작하기';
+    startResumeLabel = t('routine.start');
   }
 
   const targetDuration = task.targetDuration || task.duration || 0;
@@ -141,7 +144,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
   const currentTaskSchedule = task.scheduledDays || [0, 1, 2, 3, 4, 5, 6];
   const isScheduleDifferent = JSON.stringify([...currentTaskSchedule].sort()) !== JSON.stringify([...chunkScheduledDays].sort());
 
-  const days = ['월', '화', '수', '목', '금', '토', '일'];
+  const days = t('common.days', { returnObjects: true }) as string[] || ['월', '화', '수', '목', '금', '토', '일'];
   // Sunday is 0 in JS Date, but we list Mon-Sun. 
   // Map index 0->월(1), 1->화(2), 2->수(3), 3->목(4), 4->금(5), 5->토(6), 6->일(0)
   const dayOrder = [1, 2, 3, 4, 5, 6, 0];
@@ -181,13 +184,13 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
         <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
       )}
       {task.completed ? (
-        <span>{formatTime(task.duration || 0)} / {targetDuration}분</span>
+        <span>{formatTime(task.duration || 0)} / {t('home.minutes', { minutes: targetDuration })}</span>
       ) : isSkip ? (
-        <span>0 / {targetDuration}분</span>
+        <span>0 / {t('home.minutes', { minutes: targetDuration })}</span>
       ) : (task.startTime || isTaskPausedWithDuration) ? (
-        <span>{formatTime(calculateCurrentDuration(task))} / {targetDuration}분</span>
+        <span>{formatTime(calculateCurrentDuration(task))} / {t('home.minutes', { minutes: targetDuration })}</span>
       ) : (
-        <span>{targetDuration}분</span>
+        <span>{t('home.minutes', { minutes: targetDuration })}</span>
       )}
     </div>
   );
@@ -203,7 +206,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
           }}
           className="flex-shrink-0 px-2 py-1 bg-amber-50 text-amber-600 rounded-md text-[10px] font-black hover:bg-amber-100 transition-all"
         >
-          활성화하기
+          {t('home.activate')}
         </button>
       )}
 
@@ -229,7 +232,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
           }}
           className="flex-shrink-0 px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-black hover:bg-indigo-100 transition-all"
         >
-          다시하기
+          {t('routine.restart')}
         </button>
       )}
     </div>
@@ -254,7 +257,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
             {task.checklist && task.checklist.length > 0 && (
               <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter flex-shrink-0">
                 <CheckCircle2 className="w-2 h-2" />
-                <span>체크리스트</span>
+                <span>{t('routine.checklist')}</span>
               </div>
             )}
           </div>
@@ -288,7 +291,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
             {task.checklist && task.checklist.length > 0 && (
               <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter flex-shrink-0">
                 <CheckCircle2 className="w-2 h-2" />
-                <span>체크리스트</span>
+                <span>{t('routine.checklist')}</span>
               </div>
             )}
 

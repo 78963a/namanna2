@@ -1,4 +1,5 @@
 import { getJosa } from "../utils";
+import i18n from "../i18n";
 
 /**
  * Service for handling Text-to-Speech (TTS) notifications.
@@ -8,7 +9,6 @@ class VoiceService {
   private lastTriggeredId: string | null = null;
   private isUnlocked: boolean = false;
   private isUnlocking: boolean = false;
-  private voice: SpeechSynthesisVoice | null = null;
 
   constructor() {
     this.initVoices();
@@ -18,11 +18,7 @@ class VoiceService {
     if (!this.synth) return;
     
     const loadVoices = () => {
-      const voices = this.synth!.getVoices();
-      if (voices.length > 0) {
-        // Try to find a Korean voice, or use default
-        this.voice = voices.find(v => v.lang === 'ko-KR') || voices[0];
-      }
+      this.synth!.getVoices();
     };
 
     loadVoices();
@@ -69,18 +65,18 @@ class VoiceService {
     this.synth.cancel();
 
     const utterance = new SpeechSynthesisUtterance(message);
-    utterance.lang = 'ko-KR';
+    const currentLang = i18n.language || 'ko';
+    const langCode = currentLang.startsWith('ja') ? 'ja-JP' : currentLang.startsWith('en') ? 'en-US' : 'ko-KR';
+    utterance.lang = langCode;
     utterance.rate = 1.0;
     
-    if (!this.voice) {
-      const voices = this.synth.getVoices();
-      if (voices.length > 0) {
-        this.voice = voices.find(v => v.lang === 'ko-KR' || v.lang.startsWith('ko')) || voices[0];
-      }
-    }
+    const voices = this.synth.getVoices();
+    const matchingVoice = voices.find(v => v.lang === langCode || v.lang.startsWith(langCode.slice(0, 2))) ||
+                          voices.find(v => v.lang.startsWith('ko')) ||
+                          voices[0];
     
-    if (this.voice) {
-      utterance.voice = this.voice;
+    if (matchingVoice) {
+      utterance.voice = matchingVoice;
     }
 
     // Media Session Support: Signals to the OS that audio is playing.
@@ -88,9 +84,9 @@ class VoiceService {
     if ('mediaSession' in navigator) {
       try {
         navigator.mediaSession.metadata = new MediaMetadata({
-          title: '루틴 안내',
-          artist: '내 루틴 앱',
-          album: '안내 음성'
+          title: i18n.t('voice.mediaTitle'),
+          artist: i18n.t('voice.mediaArtist'),
+          album: i18n.t('voice.mediaAlbum')
         });
         navigator.mediaSession.playbackState = 'playing';
       } catch (e) {

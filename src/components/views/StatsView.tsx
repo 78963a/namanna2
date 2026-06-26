@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Clock, 
@@ -43,6 +44,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
   initialSelectedTaskId = null,
   isSingleTaskStatsOnly = false
 }) => {
+  const { t } = useTranslation();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(initialSelectedGroupId);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialSelectedTaskId);
 
@@ -101,7 +103,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           }`}
         >
           <Clock className={`w-3.5 h-3.5 ${activeTab === 'wake-up' ? 'text-indigo-500' : 'text-slate-300'}`} />
-          기상시각 통계
+          {t('stats.wakeUpStats')}
           {activeTab === 'wake-up' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
         </button>
 
@@ -119,7 +121,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           }`}
         >
           <Target className={`w-3.5 h-3.5 ${activeTab === 'achievement' ? 'text-violet-500' : 'text-slate-300'}`} />
-          달성률 통계
+          {t('stats.achievementStats')}
           {activeTab === 'achievement' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
         </button>
 
@@ -137,7 +139,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           }`}
         >
           <Timer className={`w-3.5 h-3.5 ${activeTab === 'usage' ? 'text-emerald-500' : 'text-slate-300'}`} />
-          사용시간 통계
+          {t('stats.usageStats')}
           {activeTab === 'usage' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
         </button>
       </div>
@@ -2122,17 +2124,17 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <div className="bg-indigo-50 p-2.5 rounded-[12px]">
                       <Clock className="w-5 h-5 text-indigo-600" />
                     </div>
-                    <h2 className="text-lg font-black text-slate-800">기상 시각 통계</h2>
+                    <h2 className="text-lg font-black text-slate-800">{t('stats.wakeUpStats')}</h2>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 py-4">
                     <div className="text-center space-y-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('stats.avg7')}</p>
                       <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
                       <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{wakeUpStats.avgTime7}</h3>
                     </div>
                     <div className="text-center space-y-1 border-l border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('stats.avg30')}</p>
                       <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
                       <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{wakeUpStats.avgTime30}</h3>
                     </div>
@@ -2144,17 +2146,17 @@ export const StatsView: React.FC<StatsViewProps> = ({
                         <div className="p-4 bg-slate-50 border-b border-slate-100">
                           <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-indigo-500" />
-                            {year}년 기록
+                            {t('stats.historyYear', { year })}
                           </h3>
                         </div>
                         <div className="overflow-x-auto">
                           <table className="w-full text-left text-xs">
                             <thead>
                               <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                                <th className="px-2 py-2">날짜</th>
-                                <th className="px-2 py-2">목표 시각</th>
-                                <th className="px-2 py-2 font-black text-indigo-600">기상 시각</th>
-                                <th className="px-2 py-2 text-right">상태</th>
+                                <th className="px-2 py-2">{t('stats.date')}</th>
+                                <th className="px-2 py-2">{t('stats.targetTime')}</th>
+                                <th className="px-2 py-2 font-black text-indigo-600">{t('stats.wakeUpTime')}</th>
+                                <th className="px-2 py-2 text-right">{t('stats.status')}</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -2169,7 +2171,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                       h.status === '지각' ? 'bg-rose-100 text-rose-600' : 
                                       'bg-slate-200 text-slate-400'
                                     }`}>
-                                      {h.status}
+                                      {h.status === '달성' ? t('status.달성') : h.status === '지각' ? t('status.지각') : t('status.미기록')}
                                     </span>
                                   </td>
                                 </tr>
@@ -2181,7 +2183,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     ))}
                     {Object.keys(wakeUpStats.historyByYear).length === 0 && (
                       <div className="bg-white rounded-[15px] border border-slate-100 p-8 text-center text-slate-400 font-bold">
-                        기록이 없습니다.
+                        {t('stats.noRecords')}
                       </div>
                     )}
                   </div>
@@ -2202,28 +2204,28 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <div className="bg-violet-50 p-2.5 rounded-[12px]">
                       <Target className="w-5 h-5 text-violet-600" />
                     </div>
-                    <h2 className="text-lg font-black text-slate-800">달성률 통계</h2>
+                    <h2 className="text-lg font-black text-slate-800">{t('stats.achievementStats')}</h2>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 py-4">
                     <div className="text-center space-y-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균 달성률</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('stats.avgAchievement7')}</p>
                       <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
                       <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate7}{achievementStats.avgTotalRate7 !== '-' ? '%' : ''}</h3>
                       <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                         <div>{achievementStats.avgStart7} ~ {achievementStats.avgEnd7}</div>
-                        <div className="text-slate-400">(평균 {achievementStats.avgDuration7})</div>
-                        <div className="text-slate-400">(누적 {achievementStats.totalDuration7})</div>
+                        <div className="text-slate-400">({t('stats.avgDuration')}: {achievementStats.avgDuration7})</div>
+                        <div className="text-slate-400">({t('stats.sum')}: {achievementStats.totalDuration7})</div>
                       </div>
                     </div>
                     <div className="text-center space-y-1 border-l border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균 달성률</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('stats.avgAchievement30')}</p>
                       <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
                       <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{achievementStats.avgTotalRate30}{achievementStats.avgTotalRate30 !== '-' ? '%' : ''}</h3>
                       <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                         <div>{achievementStats.avgStart30} ~ {achievementStats.avgEnd30}</div>
-                        <div className="text-slate-400">(평균 {achievementStats.avgDuration30})</div>
-                        <div className="text-slate-400">(누적 {achievementStats.totalDuration30})</div>
+                        <div className="text-slate-400">({t('stats.avgDuration')}: {achievementStats.avgDuration30})</div>
+                        <div className="text-slate-400">({t('stats.sum')}: {achievementStats.totalDuration30})</div>
                       </div>
                     </div>
                   </div>
@@ -2232,27 +2234,22 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <div className="p-4 bg-slate-50 border-b border-slate-100">
                       <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
                         <History className="w-4 h-4 text-violet-500" />
-                        최근 7일 기록
+                        {t('stats.historyRecent7')}
                       </h3>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-[12px]">
                         <thead>
                           <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                            <th className="px-2 py-2">날짜</th>
-                            <th className="px-2 py-2">달성률</th>
+                            <th className="px-2 py-2">{t('stats.date')}</th>
+                            <th className="px-2 py-2">{t('stats.achievementRate')}</th>
                             <th className="px-2 py-2 md:whitespace-nowrap">
-                              루틴<span className="block md:inline">(미완료/스킵/완료)</span>
+                              {t('stats.routineBreakdown')}
                             </th>
                             <th className="px-2 py-2 text-center">
-                              <span className="hidden md:inline">시작 ~ 종료</span>
-                              <span className="md:hidden">시작</span>
-                              <br className="md:hidden" />
-                              <span className="md:hidden">~</span>
-                              <br className="md:hidden" />
-                              <span className="md:hidden">종료</span>
+                              <span>{t('stats.startEnd')}</span>
                             </th>
-                            <th className="px-2 py-2 text-right">합계</th>
+                            <th className="px-2 py-2 text-right">{t('stats.sum')}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -2281,7 +2278,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                         onClick={() => setViewAllType('overall')}
                         className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-400 hover:text-indigo-600 transition-colors py-2"
                       >
-                        모든 기록 확인
+                        {t('stats.allRecords')}
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -2299,8 +2296,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
                       <Target className="w-5 h-5 text-violet-600" />
                     </div>
                     <div className="flex flex-col">
-                      <h2 className="text-lg font-black text-slate-800">루틴 그룹별 통계</h2>
-                      <p className="text-[10px] font-bold text-slate-400">※ 7일간 루틴 그룹 전체를 완료한 일수 비중</p>
+                      <h2 className="text-lg font-black text-slate-800">{t('stats.groupStats')}</h2>
+                      <p className="text-[10px] font-bold text-slate-400">{t('stats.groupStatsDesc')}</p>
                     </div>
                   </div>
 
@@ -2318,19 +2315,19 @@ export const StatsView: React.FC<StatsViewProps> = ({
                           </div>
                           <div className="grid grid-cols-4 gap-2">
                             <div className="space-y-0.5">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 시작 시각</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{t('stats.avgStartTime')}</p>
                               <p className="text-xs font-black text-slate-700">{group.avgStartTime}</p>
                             </div>
                             <div className="space-y-0.5">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 완료 시각</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{t('stats.avgEndTime')}</p>
                               <p className="text-xs font-black text-slate-700">{group.avgEndTime}</p>
                             </div>
                             <div className="space-y-0.5">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">평균 소요 시간</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{t('stats.avgDuration')}</p>
                               <p className="text-xs font-black text-slate-700">{group.avgDuration7}</p>
                             </div>
                             <div className="space-y-0.5">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">달성률</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{t('stats.achievementRate')}</p>
                               <p className="text-xs font-black text-emerald-600">{group.rate}{group.rate !== '-' ? '%' : ''}</p>
                             </div>
                           </div>
@@ -2355,14 +2352,10 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <div className="bg-emerald-50 p-2.5 rounded-[12px]">
                       <Timer className="w-5 h-5 text-emerald-600" />
                     </div>
-                    <h2 className="text-lg font-black text-slate-800">사용 시간 통계</h2>
+                    <h2 className="text-lg font-black text-slate-800">{t('stats.usageTimeStats')}</h2>
                   </div>
                   <div className="bg-emerald-50/50 p-4 rounded-[15px] border border-emerald-100/50">
-                    <p className="text-[12px] font-bold text-emerald-700 leading-relaxed">
-                      ※ 시간 바는 00:00부터 24:00까지의 앱 사용 현황을 보여줍니다.<br/>
-                      ※ 검은 색은 앱을 사용하지 않은 시간, 노란 색은 앱을 사용하였으나 타이머가 작동하지 않은 시간, 주황색은 백그라운드에서 타이머가 작동한 시간, 빨간색은 앱을 열어두고 있으면서 타이머가 작동한 시간을 표시합니다.  <br/>
-                      ※ 소요 시간은 해당 날짜에 루틴 타이머가 작동한 총 합계입니다.
-                    </p>
+                    <p className="text-[12px] font-bold text-emerald-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: t('stats.usageStatsDesc') }} />
                   </div>
 
                   <div className="space-y-6">
@@ -2371,7 +2364,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                         <div className="p-4 bg-slate-50 border-b border-slate-100">
                           <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
                             <History className="w-4 h-4 text-emerald-500" />
-                            {year}년
+                            {t('stats.yearTitle', { year })}
                           </h3>
                         </div>
                         
@@ -2386,11 +2379,12 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                 <div 
                                   className="absolute inset-0 transition-opacity duration-300"
                                   style={{ backgroundImage: day.gradient }}
+                                  title={day.date}
                                 />
                               </div>
                               
                               <div className="w-9 text-right text-[11px] font-black text-indigo-600 tabular-nums">
-                                {day.totalMinutes}분
+                                {t('home.minutes', { minutes: day.totalMinutes })}
                               </div>
                             </div>
                           ))}
@@ -2400,7 +2394,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     {Object.keys(usageStatsGroups).length === 0 && (
                       <div className="bg-white rounded-[15px] border border-slate-100 p-20 text-center space-y-3 shadow-sm text-slate-400 font-bold">
                          <Hourglass className="w-12 h-12 text-slate-200 mx-auto animate-pulse" />
-                         <p className="text-sm font-bold text-slate-300">기록된 사용 시간이 없습니다</p>
+                         <p className="text-sm font-bold text-slate-300">{t('stats.noUsageRecords')}</p>
                       </div>
                     )}
                   </div>

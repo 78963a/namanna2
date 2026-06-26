@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { Sparkles, Flower, Star } from 'lucide-react';
 import { soundService } from './services/soundService';
-
 import { SoundEffectSettings } from './types';
 
 interface PerfectDayAnimationProps {
@@ -30,6 +30,7 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
   isSoundEnabled,
   soundSettings
 }) => {
+  const { t, i18n } = useTranslation();
   const [stage, setStage] = useState<'boxes' | 'flowers' | 'explosion' | 'text' | 'none'>('none');
 
   useEffect(() => {
@@ -224,20 +225,23 @@ export const PerfectDayAnimation: React.FC<PerfectDayAnimationProps> = ({
                   <div className="text-lg md:text-xl font-black text-violet-100 mb-1 md:mb-2 uppercase tracking-wider whitespace-nowrap opacity-90"
                     style={{ textShadow: "-1px 0px indigo, 0px 1px indigo, 1px 0px indigo, 0px -1px indigo" }}
                   >
-                    {new Date().toLocaleDateString('ko-KR', { 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric', 
-                      weekday: 'long' 
-                    })}
+                    {new Date().toLocaleDateString(
+                      i18n.language.startsWith('ja') ? 'ja-JP' : i18n.language.startsWith('en') ? 'en-US' : 'ko-KR', 
+                      { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric', 
+                        weekday: 'long' 
+                      }
+                    )}
                   </div>
                   <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-sky-400 tracking-tighter leading-tight whitespace-nowrap"
                    style={{ textShadow: "-1px 0px indigo, 0px 1px indigo, 1px 0px indigo, 0px -1px indigo" }}> 
-                   완벽한 하루 
+                    {t('animation.perfectDayTitle')}
                   </h1>
                   <p className="text-sm md:text-xl lg:text-xl font-black text-blue-300 mt-2 md:mt-3 uppercase tracking-widest whitespace-nowrap"
                    style={{ textShadow: "-1px 0px indigo, 0px 1px indigo, 1px 0px indigo, 0px -1px indigo" }}>
-                    모든 루틴을 완료했습니다!
+                    {t('animation.perfectDaySub')}
                   </p>
                   
                   <div className="mt-8 flex gap-3 justify-center">

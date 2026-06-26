@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   CheckCircle2, 
   Clock, 
@@ -35,6 +36,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   setConfirmModal,
   onEnterExecution
 }) => {
+  const { t } = useTranslation();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   const toggleExpand = (e: React.MouseEvent, chunkId: string) => {
@@ -64,44 +66,45 @@ export const HomeView: React.FC<HomeViewProps> = ({
     <div className="space-y-[10px]">
       <div className="flex gap-[10px] items-stretch">
         {/* Wake up Check-in */}
-        <section className="flex-grow bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[10px] p-[15px] text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
+        <section className="flex-grow bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[10px] p-[15px] text-white relative overflow-hidden">
           <div className="relative z-10 flex items-center justify-between gap-4 h-full">
             <div className="flex flex-col justify-center">
-              <p className="text-indigo-100 text-[9px] font-bold uppercase tracking-wider leading-none mb-1">목표 기상 시간</p>
+              <p className="text-indigo-100 text-[9px] font-bold uppercase tracking-wider leading-none mb-1">{t('home.targetWakeUpTime')}</p>
               <h2 className="text-lg font-black tracking-tight leading-none">{todayTargetWakeUpTime}</h2>
             </div>
 
-            <div className="flex-grow max-w-[120px] flex items-center">
+            <div className="flex-grow max-w-[140px] flex items-center">
               {todayCheckIn ? (
                 <div className="w-full bg-white/10 backdrop-blur-md rounded-[10px] py-1.5 px-2 flex items-center justify-center gap-1.5 border border-white/20">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="font-bold text-[12px] whitespace-nowrap">
+                  <span className="font-bold text-[11px] whitespace-nowrap">
                     {(() => {
                       const checkInDiff = timeToMinutes(todayCheckIn.time) - timeToMinutes(todayTargetWakeUpTime);
+                      const timeStr = todayCheckIn.time.slice(0, 5);
                       // 체크인 성공 판정 시에도 설정된 유예 시간 로직 적용
                       return checkInDiff >= -earlyLimit && checkInDiff <= lateLimit 
-                        ? `성공 ! (${todayCheckIn.time.slice(0, 5)})` 
-                        : `지각 ${todayCheckIn.time.slice(0, 5)}`;
+                        ? t('home.successWithTime', { time: timeStr }) 
+                        : t('home.lateWithTime', { time: timeStr });
                     })()}
                   </span>
                 </div>
               ) : isTooEarly ? (
                 <div className="w-full bg-white/10 backdrop-blur-md rounded-[10px] py-1.5 px-2 flex items-center justify-center gap-1.5 border border-white/20">
-                  <span className="font-bold text-[9px] text-indigo-100/70 whitespace-nowrap">대기 중</span>
+                  <span className="font-bold text-[10px] text-indigo-100/70 whitespace-nowrap">{t('home.waiting')}</span>
                 </div>
               ) : isWithinWindow ? (
                 <button
                   onClick={handleCheckIn}
-                  className="w-full py-1.5 bg-white text-indigo-600 rounded-[10px] font-bold text-[9px] shadow-lg transition-all transform active:scale-95 hover:bg-indigo-50"
+                  className="w-full py-1.5 px-2 bg-white text-indigo-600 rounded-[10px] font-bold text-[10px] shadow-lg transition-all transform active:scale-95 hover:bg-indigo-50"
                 >
-                  체크인
+                  {t('home.checkIn')}
                 </button>
               ) : (
                 <button
                   onClick={handleLateCheckIn}
-                  className="w-full py-1.5 bg-rose-500 text-white rounded-[10px] font-bold text-[9px] shadow-lg transition-all transform active:scale-95 hover:bg-rose-600"
+                  className="w-full py-1.5 px-2 bg-rose-500 text-white rounded-[10px] font-bold text-[10px] shadow-lg transition-all transform active:scale-95 hover:bg-rose-600"
                 >
-                  지각 ㅜㅜ
+                  {t('home.lateCheckIn')}
                 </button>
               )}
             </div>
@@ -177,8 +180,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 if (globalActiveTask && globalActiveTask.chunkId !== chunk.id) {
                   setConfirmModal({
                     isOpen: true,
-                    title: '진행 중인 루틴 있음',
-                    message: `현재 '${globalActiveTask.task.text}' 루틴이 진행 중입니다. 해당 루틴을 일시정지하거나 완료한 후 다른 루틴을 시작할 수 있습니다.`,
+                    title: t('home.activeRoutineExistsTitle'),
+                    message: t('home.activeRoutineExistsMsg', { task: globalActiveTask.task.text }),
                     showCancel: false,
                     onConfirm: () => setConfirmModal((prev: any) => ({ ...prev, isOpen: false }))
                   });
@@ -202,7 +205,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-[10px] ${statusColor}`}>
-                      {displayStatus} ({completedTasks.length}/{scheduledTasks.length})
+                      {t('status.' + displayStatus, displayStatus)} ({completedTasks.length}/{scheduledTasks.length})
                     </span>
                   </div>
                   {!isFullyCompleted && (
@@ -217,7 +220,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                       }`}
                     >
-                      {isInactive ? '활성화하기' : '오늘은 건너뛰기'}
+                      {isInactive ? t('home.activate') : t('home.skipToday')}
                     </button>
                   )}
                 </div>
@@ -258,7 +261,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       {/* Active Days */}
                       <div className="flex items-center gap-1">
                         {[1, 2, 3, 4, 5, 6, 0].map((dayNum, i) => {
-                          const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+                          const dayNames = t('common.days', { returnObjects: true }) as string[] || ['월', '화', '수', '목', '금', '토', '일'];
                           const isScheduled = chunk.scheduledDays.includes(dayNum);
                           return (
                             <div 
@@ -283,7 +286,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-[8px] text-slate-600 text-[10px] font-black">
                           <Clock className="w-3 h-3" />
                           <span>
-                            {chunk.startType === 'time' && chunk.startTime ? chunk.startTime.replace(/시/g, '') : (chunk.situation || '언제든')}
+                            {chunk.startType === 'time' && chunk.startTime ? chunk.startTime.replace(/시/g, '') : (chunk.situation || t('home.anytime'))}
                           </span>
                           {chunk.startType === 'time' && (
                             chunk.isAlarmEnabled ? (
@@ -294,7 +297,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           )}
                         </div>
                         <div className="flex items-center px-2 py-1 bg-slate-100 rounded-[8px] text-slate-600 text-[10px] font-black">
-                          <span>총 {chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0)}분</span>
+                          <span>{t('home.totalDuration', { minutes: chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0) })}</span>
                         </div>
                       </div>
                     </div>
@@ -325,7 +328,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           const endTime = entry?.completedAt ? entry.completedAt.slice(0, 5) : '--:--';
                           const totalDurationSeconds = entry?.totalDuration || scheduledTasks.reduce((acc, t) => acc + (t.duration || 0), 0);
                           const totalMin = Math.floor(totalDurationSeconds / 60);
-                          return `${startTime}~${endTime}, ${totalMin}분`;
+                          return `${startTime}~${endTime}, ${t('home.minutes', { minutes: totalMin })}`;
                         })()}</span>
                       </div>
                     </div>

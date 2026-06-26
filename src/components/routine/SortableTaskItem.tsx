@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Clock, Hourglass, BrickWall, Edit2, Trash2 } from 'lucide-react';
@@ -46,6 +47,7 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
   deleteTask,
   chunkScheduledDays
 }) => {
+  const { t } = useTranslation();
   const {
     attributes,
     listeners,
@@ -71,7 +73,15 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
     }
   };
 
-  const daysLabels = ['일', '월', '화', '수', '목', '금', '토'];
+  const daysLabels = [
+    t('days.sun'),
+    t('days.mon'),
+    t('days.tue'),
+    t('days.wed'),
+    t('days.thu'),
+    t('days.fri'),
+    t('days.sat')
+  ];
 
   return (
     <div ref={setNodeRef} style={style} className="p-3 bg-white rounded-[10px] border border-slate-100 group shadow-sm">
@@ -89,7 +99,7 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
           </div>
           <div className="space-y-3">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">루틴 유형</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">{t('routine.taskType')}</span>
               <div className="flex items-center gap-1">
                 {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                   const colorClass = type === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : type === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600';
@@ -101,7 +111,8 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                       className={`flex-1 py-1.5 rounded-[10px] text-[9px] font-black transition-all flex items-center justify-center gap-1 ${editingTaskType === type ? `${colorClass} text-white shadow-md` : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
                     >
                       <Icon className="w-3 h-3" />
-                      {type}
+                      {type === TaskType.TIME_INDEPENDENT ? t('taskType.TIME_INDEPENDENT') : 
+                       type === TaskType.TIME_LIMITED ? t('taskType.TIME_LIMITED') : t('taskType.TIME_ACCUMULATED')}
                     </button>
                   );
                 })}
@@ -113,7 +124,7 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                 <div className={`w-1 h-3 rounded-full ${editingTaskType === TaskType.TIME_INDEPENDENT ? 'bg-sky-500' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'bg-pink-500' : 'bg-indigo-600'}`} />
                 <span className={`text-[10px] font-bold uppercase ${
                   editingTaskType === TaskType.TIME_INDEPENDENT ? 'text-sky-500' : editingTaskType === TaskType.TIME_ACCUMULATED ? 'text-pink-500' : 'text-indigo-600'
-                }`}>소요 시간 (분)</span>
+                }`}>{t('routine.durationInMinutes')}</span>
               </div>
               <input 
                 type="number"
@@ -127,7 +138,7 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
           </div>
           
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">실행 요일</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase">{t('routine.scheduledDays')}</span>
             <div className="flex gap-1">
               {daysLabels.map((day, i) => {
                 const isGroupScheduled = chunkScheduledDays.includes(i);
@@ -157,13 +168,13 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
               onClick={() => updateTask(task.id, editingTaskText, editingTaskDuration, editingTaskType, editingTaskScheduledDays)}
               className="flex-1 py-1.5 bg-indigo-600 text-white rounded-[10px] text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
             >
-              저장
+              {t('common.save')}
             </button>
             <button 
               onClick={() => setEditingTaskId(null)}
               className="flex-1 py-1.5 bg-slate-100 text-slate-500 rounded-[10px] text-xs font-bold hover:bg-slate-200 transition-colors"
             >
-              취소
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -186,7 +197,7 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                   ) : (
                     <Hourglass className="w-3 h-3 text-indigo-600" />
                   )}
-                  <span className="text-[10px] text-slate-500 font-bold">{task.targetDuration || 0}분</span>
+                  <span className="text-[10px] text-slate-500 font-bold">{t('routine.minutes', { count: task.targetDuration || 0 })}</span>
                 </div>
               </div>
             </div>
@@ -206,7 +217,7 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                 <Edit2 className="w-4 h-4" />
               </button>
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                변경
+                {t('common.edit')}
               </div>
             </div>
             <div className="relative group/tooltip">
@@ -217,7 +228,7 @@ export const SortableTaskItem: React.FC<SortableTaskItemProps> = ({
                 <Trash2 className="w-4 h-4" />
               </button>
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                삭제
+                {t('common.delete')}
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { Star } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -18,6 +19,8 @@ export const TodayEndAnimation: React.FC<TodayEndAnimationProps> = ({
   isSoundEnabled,
   soundSettings
 }) => {
+  const { t } = useTranslation();
+
   useEffect(() => {
     if (isOpen) {
       // 재생할 효과음 설정 가져오기 (디폴트는 Level Win)
@@ -109,7 +112,7 @@ export const TodayEndAnimation: React.FC<TodayEndAnimationProps> = ({
               transition={{ delay: 0.5 }}
               className="text-2xl font-bold text-indigo-800 mt-2 text-center"
             >
-              오늘 하루도 수고하셨어요!
+              {t('animation.todayEndSub')}
             </motion.p>
           </motion.div>
         </motion.div>

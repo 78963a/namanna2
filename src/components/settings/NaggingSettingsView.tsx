@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Volume2, AlertCircle, Clock, BrickWall, Hourglass } from 'lucide-react';
 import { NaggingSettings, UserData, TaskType } from '../../types';
 
@@ -25,6 +26,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
   setNaggingSuccessMessage,
   setSettingsSubView,
 }) => {
+  const { t } = useTranslation();
   const defaultSettings: NaggingSettings = {
     startEnabled: false,
     restartEnabled: false,
@@ -63,10 +65,10 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
     if (isNaggingDirty) {
       setConfirmModal({
         isOpen: true,
-        title: '변경 취소 확인',
-        message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
-        confirmLabel: '취소하고 나가기',
-        cancelLabel: '계속 수정하기',
+        title: t('nagging.cancelTitle'),
+        message: t('nagging.cancelMessage'),
+        confirmLabel: t('nagging.cancelConfirm'),
+        cancelLabel: t('nagging.cancelCancel'),
         confirmColor: 'indigo',
         showCancel: true,
         onConfirm: () => {
@@ -88,7 +90,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
         naggingSettings: localNaggingSettings
       }));
       setIsNaggingDirty(false);
-      setNaggingSuccessMessage('잔소리 설정이 저장되었습니다');
+      setNaggingSuccessMessage(t('nagging.saveSuccess'));
     }
   };
 
@@ -98,11 +100,11 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
         <button 
           onClick={handleNaggingBack}
           className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors shadow-sm cursor-pointer"
-          title="일반설정으로 돌아가기"
+          title={t('nagging.backTitle')}
         >
           <Volume2 className="w-5 h-5 text-indigo-600" />
         </button>
-        <h2 className="text-lg font-black text-slate-800">잔소리 기능 설정</h2>
+        <h2 className="text-lg font-black text-slate-800">{t('nagging.title')}</h2>
       </div>
 
       <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-grow pb-4">
@@ -110,25 +112,24 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
         <div className="p-4 bg-indigo-50 rounded-2xl space-y-3 border border-indigo-100">
           <div className="space-y-1.5">
             <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
-              <AlertCircle className="w-4 h-4 text-indigo-600" /> 사용 가능한 변수
+              <AlertCircle className="w-4 h-4 text-indigo-600" /> {t('nagging.varsTitle')}
             </h3>
             <div className="grid grid-cols-2 gap-2 text-[11px] font-bold text-indigo-700">
-              <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">name</span>: 사용자 이름</div>
-              <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">task</span>: 루틴 제목</div>
-              <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">n</span>: 시작 후 경과 분</div>
-              <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">r</span>: 종료 전 남은 분</div>
-              <div className="bg-white/50 p-2 rounded-lg col-span-2"><span className="text-indigo-900">m</span>: 목표 초과 분</div>
+              <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">name</span>: {t('nagging.varsName')}</div>
+              <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">task</span>: {t('nagging.varsTask')}</div>
+              <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">n</span>: {t('nagging.varsElapsed')}</div>
+              <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">r</span>: {t('nagging.varsRemaining')}</div>
+              <div className="bg-white/50 p-2 rounded-lg col-span-2"><span className="text-indigo-900">m</span>: {t('nagging.varsOvertime')}</div>
             </div>
           </div>
 
           <div className="space-y-1.5 pt-1 border-t border-indigo-200/50">
             <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
-              <AlertCircle className="w-4 h-4 text-indigo-600" /> 한글 조사 자동 교정
+              <AlertCircle className="w-4 h-4 text-indigo-600" /> {t('nagging.josaCorrectionTitle')}
             </h3>
             <div className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
-              <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">name</span>이나 <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">task</span> 뒤에 <span className="font-black text-indigo-800">'이/가'</span>와 같이 슬래시(/)로 구분된 조사를 사용하면 받침 유무에 따라 알맞게 교정됩니다. 
-              예를들어 "task이/가 n분째 진행중입니다"를 입력하시면, "운동이 5분째 진행중입니다" 또는 "운동하기가 5분째 진행중입니다"와 같이 적절한 조사가 출력됩니다. 
-              <p className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">* 지원: 은/는, 이/가, 을/를, 으로/로, 이죠/죠, 이다/다</p>
+              {t('nagging.josaCorrectionDesc')}
+              <p className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">{t('nagging.josaSupported')}</p>
             </div>
           </div>
         </div>
@@ -137,8 +138,8 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
         <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm border border-slate-50">
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1 pr-4">
-              <h3 className="text-base font-black text-slate-800">루틴 시작시 알림</h3>
-              <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴을 시작할 때의 알림입니다.</p>
+              <h3 className="text-base font-black text-slate-800">{t('nagging.startTitle')}</h3>
+              <p className="text-[11px] font-bold text-slate-400 leading-tight">{t('nagging.startDesc')}</p>
             </div>
             <button 
               onClick={() => updateNagging('startEnabled', !settings.startEnabled)}
@@ -151,8 +152,8 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
             <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
               <div className="flex items-center justify-between py-2 border-b border-slate-100">
                 <div className="flex flex-col gap-1 pr-4">
-                  <h3 className="text-base font-black text-slate-800">루틴 재시작시 알림</h3>
-                  <p className="text-[11px] font-bold text-slate-400 leading-tight">일시정지 또는 완료한 루틴을 재시작할 때에도 같은 알림을 보냅니다.</p>
+                  <h3 className="text-base font-black text-slate-800">{t('nagging.restartTitle')}</h3>
+                  <p className="text-[11px] font-bold text-slate-400 leading-tight">{t('nagging.restartDesc')}</p>
                 </div>
                 <button 
                   onClick={() => updateNagging('restartEnabled', !settings.restartEnabled)}
@@ -162,12 +163,12 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                 </button>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.textSetting')}</label>
                 <input 
                   type="text"
                   value={settings.startMessage}
                   onChange={(e) => updateNagging('startMessage', e.target.value)}
-                  placeholder="예: task 시작합니다"
+                  placeholder={t('nagging.textPlaceholder')}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
@@ -179,8 +180,8 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
         <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm border border-slate-50">
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1 pr-4">
-              <h3 className="text-base font-black text-slate-800">루틴 진행 중 알림</h3>
-              <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴이 진행되는 동안 정기적으로 알림을 보냅니다. 단, '루틴 종료 전 알림'과 겹치는 경우 '루틴 종료 전 알림'만 내보냅니다.</p>
+              <h3 className="text-base font-black text-slate-800">{t('nagging.ongoingTitle')}</h3>
+              <p className="text-[11px] font-bold text-slate-400 leading-tight">{t('nagging.ongoingDesc')}</p>
             </div>
             <button 
               onClick={() => updateNagging('ongoingEnabled', !settings.ongoingEnabled)}
@@ -192,7 +193,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
           {settings.ongoingEnabled && (
             <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
               <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.targetTypes')}</label>
                 <div className="flex gap-2">
                   {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                     const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
@@ -215,18 +216,18 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                         }`}
                       >
                         <Icon className="w-3 h-3" />
-                        {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
-                         type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
+                        {type === TaskType.TIME_INDEPENDENT ? t('taskType.TIME_INDEPENDENT') : 
+                         type === TaskType.TIME_LIMITED ? t('taskType.TIME_LIMITED') : t('taskType.TIME_ACCUMULATED')}
                       </button>
                     );
                   })}
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">알림 간격 설정</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.intervalSetting')}</label>
                 <div className="flex items-center gap-2">
                   <input 
-                    type="number"
+                     type="number"
                     min="1"
                     max="60"
                     value={settings.ongoingInterval || ''}
@@ -238,11 +239,11 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                     }}
                     className="w-16 text-center text-sm font-black p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   />
-                  <span className="text-xs font-black text-slate-400">분 마다</span>
+                  <span className="text-xs font-black text-slate-400">{t('nagging.everyMinutes')}</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.textSetting')}</label>
                 <input 
                   type="text"
                   value={settings.ongoingMessage}
@@ -258,8 +259,8 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
         <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm border border-slate-50">
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1 pr-4">
-              <h3 className="text-base font-black text-slate-800">루틴 종료 전 알림</h3>
-              <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴 시간이 종료되기 전의 알림입니다.</p>
+              <h3 className="text-base font-black text-slate-800">{t('nagging.beforeEndTitle')}</h3>
+              <p className="text-[11px] font-bold text-slate-400 leading-tight">{t('nagging.beforeEndDesc')}</p>
             </div>
             <button 
               onClick={() => updateNagging('beforeEndEnabled', !settings.beforeEndEnabled)}
@@ -271,7 +272,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
           {settings.beforeEndEnabled && (
             <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
               <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.targetTypes')}</label>
                 <div className="flex gap-2">
                   {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                     const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
@@ -294,27 +295,27 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                         }`}
                       >
                         <Icon className="w-3 h-3" />
-                        {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
-                         type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
+                        {type === TaskType.TIME_INDEPENDENT ? t('taskType.TIME_INDEPENDENT') : 
+                         type === TaskType.TIME_LIMITED ? t('taskType.TIME_LIMITED') : t('taskType.TIME_ACCUMULATED')}
                       </button>
                     );
                   })}
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">알림 시점 설정</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.beforeEndTiming')}</label>
                 <select 
                   value={settings.beforeEndTime}
                   onChange={(e) => updateNagging('beforeEndTime', parseInt(e.target.value))}
                   className="w-32 text-sm font-black p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
                 >
                   {[1,2,3,4,5,6,7,8,9,10].map(m => (
-                    <option key={m} value={m}>{m}분 전</option>
+                    <option key={m} value={m}>{m}{t('nagging.minutesBefore')}</option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.textSetting')}</label>
                 <input 
                   type="text"
                   value={settings.beforeEndMessage}
@@ -330,8 +331,8 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
         <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm border border-slate-50">
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1 pr-4">
-              <h3 className="text-base font-black text-slate-800">루틴 종료 알림</h3>
-              <p className="text-[11px] font-bold text-slate-400 leading-tight">사용자가 설정한 시간이 종료되었을 때의 알림입니다.</p>
+              <h3 className="text-base font-black text-slate-800">{t('nagging.endTitle')}</h3>
+              <p className="text-[11px] font-bold text-slate-400 leading-tight">{t('nagging.endDesc')}</p>
             </div>
             <button 
               onClick={() => updateNagging('endEnabled', !settings.endEnabled)}
@@ -343,7 +344,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
           {settings.endEnabled && (
             <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
               <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.targetTypes')}</label>
                 <div className="flex gap-2">
                   {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                     const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
@@ -366,15 +367,15 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                         }`}
                       >
                         <Icon className="w-3 h-3" />
-                        {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
-                         type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
+                        {type === TaskType.TIME_INDEPENDENT ? t('taskType.TIME_INDEPENDENT') : 
+                         type === TaskType.TIME_LIMITED ? t('taskType.TIME_LIMITED') : t('taskType.TIME_ACCUMULATED')}
                       </button>
                     );
                   })}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.textSetting')}</label>
                 <input 
                   type="text"
                   value={settings.endMessage}
@@ -390,8 +391,8 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
         <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm border border-slate-50">
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1 pr-4">
-              <h3 className="text-base font-black text-slate-800">루틴 종료 후 알림</h3>
-              <p className="text-[11px] font-bold text-slate-400 leading-tight">설정 시간이 경과한 후에도 지속적으로 안내합니다. </p>
+              <h3 className="text-base font-black text-slate-800">{t('nagging.overtimeTitle')}</h3>
+              <p className="text-[11px] font-bold text-slate-400 leading-tight">{t('nagging.overtimeDesc')}</p>
             </div>
             <button 
               onClick={() => updateNagging('overTimeEnabled', !settings.overTimeEnabled)}
@@ -403,7 +404,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
           {settings.overTimeEnabled && (
             <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
               <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.targetTypes')}</label>
                 <div className="flex gap-2">
                   {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                     const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
@@ -426,15 +427,15 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                         }`}
                       >
                         <Icon className="w-3 h-3" />
-                        {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
-                         type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
+                        {type === TaskType.TIME_INDEPENDENT ? t('taskType.TIME_INDEPENDENT') : 
+                         type === TaskType.TIME_LIMITED ? t('taskType.TIME_LIMITED') : t('taskType.TIME_ACCUMULATED')}
                       </button>
                     );
                   })}
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">알림 간격 설정</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.intervalSetting')}</label>
                 <div className="flex items-center gap-2">
                   <input 
                     type="number"
@@ -449,11 +450,11 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                     }}
                     className="w-16 text-center text-sm font-black p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   />
-                  <span className="text-xs font-black text-slate-400">분 마다</span>
+                  <span className="text-xs font-black text-slate-400">{t('nagging.everyMinutes')}</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.textSetting')}</label>
                 <input 
                   type="text"
                   value={settings.overTimeMessage}
@@ -471,13 +472,13 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
           onClick={handleNaggingBack}
           className="flex-1 bg-slate-100 text-slate-600 font-bold py-3.5 rounded-[15px] hover:bg-slate-200 transition-all cursor-pointer text-sm"
         >
-          취소
+          {t('common.cancel')}
         </button>
         <button 
           onClick={handleNaggingSave}
           className="flex-[2] bg-indigo-600 text-white font-black py-3.5 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 cursor-pointer text-sm"
         >
-          저장
+          {t('common.save')}
         </button>
       </div>
     </div>

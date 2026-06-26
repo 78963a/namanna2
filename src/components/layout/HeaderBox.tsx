@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { UserData, TaskStatus } from '../../types';
 import { isTaskScheduledToday, calculateTaskDuration, isTaskTargetForStats } from '../../utils';
@@ -36,6 +37,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
   currentTime,
   activityLog
 }) => {
+  const { t } = useTranslation();
   const totalCompleted = userData.routineChunks.reduce((acc, chunk) => 
     acc + chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, currentTime, userData) && (t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT)).length, 0
   );
@@ -92,7 +94,8 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
 
   const last7Days = useMemo(() => {
     const days = [];
-    const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayNames = t('common.days', { returnObjects: true }) as string[] || ['월', '화', '수', '목', '금', '토', '일'];
+    const weekDays = [dayNames[6], dayNames[0], dayNames[1], dayNames[2], dayNames[3], dayNames[4], dayNames[5]];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(currentTime);
       d.setDate(d.getDate() - i);
@@ -102,7 +105,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
       days.push({ date: dStr, score, dayOfWeek });
     }
     return days;
-  }, [userData.dailyCompletionRate, currentTime]);
+  }, [userData.dailyCompletionRate, currentTime, t]);
 
   return (
     <section className="bg-white p-[15px] rounded-[10px] shadow-sm border border-slate-100 space-y-2">
@@ -116,7 +119,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
           </div>
           <div className="text-indigo-600 font-black text-sm leading-tight flex items-center gap-1">
               <span>
-                {challengeDays}일째 도전중, {successDays}일째 성공중. 터치문제해결
+                {t('header.status', { challengeDays, successDays })}
                </span>
           </div>
         </div>
@@ -175,7 +178,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
             className="text-[12px] font-black tabular-nums transition-colors whitespace-nowrap"
             style={{ color: '#ff0033' }}
           >
-            {totalDurationMinutes}분
+            {t('home.minutes', { minutes: totalDurationMinutes })}
           </div>
         </div>
       </div>

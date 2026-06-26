@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Bell, Volume2 } from 'lucide-react';
 import { SoundEffectSettings, UserData } from '../../types';
 
@@ -27,6 +28,7 @@ export const SoundSettingsView: React.FC<SoundSettingsViewProps> = ({
   setSettingsSubView,
   soundService,
 }) => {
+  const { t } = useTranslation();
   const defaultSettings: SoundEffectSettings = {
     wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
     triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
@@ -64,10 +66,10 @@ export const SoundSettingsView: React.FC<SoundSettingsViewProps> = ({
     if (isSoundSettingsDirty) {
       setConfirmModal({
         isOpen: true,
-        title: '변경 취소 확인',
-        message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
-        confirmLabel: '취소하고 나가기',
-        cancelLabel: '계속 수정하기',
+        title: t('sound.cancelTitle'),
+        message: t('sound.cancelMessage'),
+        confirmLabel: t('sound.cancelConfirm'),
+        cancelLabel: t('sound.cancelCancel'),
         confirmColor: 'indigo',
         showCancel: true,
         onConfirm: () => {
@@ -88,28 +90,28 @@ export const SoundSettingsView: React.FC<SoundSettingsViewProps> = ({
       soundSettings: settings
     }));
     setIsSoundSettingsDirty(false);
-    setSoundSuccessMessage('변경사항이 저장되었습니다');
+    setSoundSuccessMessage(t('sound.saveSuccess'));
   };
 
   const AVAILABLE_SOUNDS = [
-    { name: 'Level Up (레벨업)', file: '/sounds/tithuh-level-up-523624.mp3' },
-    { name: 'Trumpets Fanfare (트럼펫 팡파르)', file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
-    { name: 'Level Win (성공 축하음)', file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-    { name: 'Fireworks (불꽃놀이 효과음)', file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-    { name: 'Applause Cheer (환호와 박수)', file: '/sounds/driken5482-applause-cheer-236786.mp3' },
-    { name: 'Duck Quack (오리 꽥꽥)', file: '/sounds/freesound_community-075176_duck-quack-40345.mp3' },
-    { name: 'Dog Bark (강아지 멍멍)', file: '/sounds/dragon-studio-dog-bark-382732.mp3' },
-    { name: 'Beep (비프 안내음)', file: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' }
+    { name: t('sound.levelUp'), file: '/sounds/tithuh-level-up-523624.mp3' },
+    { name: t('sound.trumpets'), file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+    { name: t('sound.levelWin'), file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+    { name: t('sound.fireworks'), file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+    { name: t('sound.applause'), file: '/sounds/driken5482-applause-cheer-236786.mp3' },
+    { name: t('sound.duck'), file: '/sounds/freesound_community-075176_duck-quack-40345.mp3' },
+    { name: t('sound.dog'), file: '/sounds/dragon-studio-dog-bark-382732.mp3' },
+    { name: t('sound.beep'), file: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' }
   ];
 
   const soundItemsDetail: { key: keyof SoundEffectSettings; label: string; desc: string; defaultFile: string }[] = [
-    { key: 'wakeUpCheckIn', label: '1. 기상 체크인', desc: '아침 기상 체크인에 성공하면 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
-    { key: 'triggerRoutineStart', label: '2. 트리거 루틴 시작', desc: '루틴 그룹을 처음 시작할 때 나오는 효과음입니다.', defaultFile: '/sounds/driken5482-applause-cheer-236786.mp3' },
-    { key: 'individualRoutineComplete', label: '3. 개별 루틴 완료', desc: '개별 루틴을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/tithuh-level-up-523624.mp3' },
-    { key: 'routineGroupComplete', label: '4. 루틴 그룹 완료', desc: '루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-    { key: 'todayEnd', label: '5. 오늘 끝', desc: '오늘 예정된 모든 루틴 그룹을 완료 또는 건너뛰기 했을 때 나오는 효과음입니다. ', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-    { key: 'allGroupsComplete', label: '6. 완벽한 하루', desc: '오늘 예정된 모든 루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-    { key: 'chickSound', label: '7. 병아리 소리', desc: '화면 상단 메뉴의 캐릭터를 누를 때 나는 소리입니다.', defaultFile: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
+    { key: 'wakeUpCheckIn', label: t('sound.wakeUpCheckIn.label'), desc: t('sound.wakeUpCheckIn.desc'), defaultFile: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+    { key: 'triggerRoutineStart', label: t('sound.triggerRoutineStart.label'), desc: t('sound.triggerRoutineStart.desc'), defaultFile: '/sounds/driken5482-applause-cheer-236786.mp3' },
+    { key: 'individualRoutineComplete', label: t('sound.individualRoutineComplete.label'), desc: t('sound.individualRoutineComplete.desc'), defaultFile: '/sounds/tithuh-level-up-523624.mp3' },
+    { key: 'routineGroupComplete', label: t('sound.routineGroupComplete.label'), desc: t('sound.routineGroupComplete.desc'), defaultFile: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+    { key: 'todayEnd', label: t('sound.todayEnd.label'), desc: t('sound.todayEnd.desc'), defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+    { key: 'allGroupsComplete', label: t('sound.allGroupsComplete.label'), desc: t('sound.allGroupsComplete.desc'), defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+    { key: 'chickSound', label: t('sound.chickSound.label'), desc: t('sound.chickSound.desc'), defaultFile: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
   ];
 
   return (
@@ -118,11 +120,11 @@ export const SoundSettingsView: React.FC<SoundSettingsViewProps> = ({
         <button 
           onClick={handleSoundBack}
           className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors shadow-sm cursor-pointer"
-          title="일반설정으로 돌아가기"
+          title={t('sound.backTitle')}
         >
           <Bell className="w-5 h-5 text-indigo-600" />
         </button>
-        <h2 className="text-lg font-black text-slate-800">효과음 설정</h2>
+        <h2 className="text-lg font-black text-slate-800">{t('sound.title')}</h2>
       </div>
 
       <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-4 pb-2">
@@ -148,7 +150,7 @@ export const SoundSettingsView: React.FC<SoundSettingsViewProps> = ({
               {item.enabled && key !== 'chickSound' && (
                 <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-top-2">
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">사운드 선택</label>
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">{t('sound.selectSound')}</label>
                     <div className="flex gap-2">
                       <select 
                         value={currentFile}
@@ -168,7 +170,7 @@ export const SoundSettingsView: React.FC<SoundSettingsViewProps> = ({
                       <button 
                         onClick={() => handleSoundPlayTest(currentFile)}
                         className="bg-indigo-50 text-indigo-600 p-3 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors flex items-center gap-1 cursor-pointer"
-                        title="재생 테스트"
+                        title={t('sound.playTest')}
                       >
                         <Volume2 className="w-4 h-4" />
                       </button>
@@ -186,13 +188,13 @@ export const SoundSettingsView: React.FC<SoundSettingsViewProps> = ({
           onClick={handleSoundBack}
           className="flex-1 bg-slate-100 text-slate-600 font-bold py-3.5 rounded-[15px] hover:bg-slate-200 transition-all cursor-pointer text-sm"
         >
-          취소
+          {t('common.cancel')}
         </button>
         <button 
           onClick={handleSoundSave}
           className="flex-[2] bg-indigo-600 text-white font-black py-3.5 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 cursor-pointer text-sm"
         >
-          저장
+          {t('common.save')}
         </button>
       </div>
     </div>

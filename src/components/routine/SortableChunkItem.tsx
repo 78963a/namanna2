@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Settings, Trash2 } from 'lucide-react';
@@ -36,6 +37,7 @@ export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
   editingChunkPurpose,
   setEditingChunkPurpose,
 }) => {
+  const { t } = useTranslation();
   const {
     attributes,
     listeners,
@@ -65,7 +67,7 @@ export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
               type="text"
               value={editingChunkName}
               onChange={(e) => setEditingChunkName(e.target.value)}
-              placeholder="그룹 이름"
+              placeholder={t('routine.groupNamePlaceholder')}
               className="w-full bg-white border border-slate-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               autoFocus
             />
@@ -74,7 +76,7 @@ export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
                 type="text"
                 value={editingChunkPurpose}
                 onChange={(e) => setEditingChunkPurpose(e.target.value)}
-                placeholder="그룹 목적"
+                placeholder={t('routine.groupPurposePlaceholder')}
                 className="flex-grow bg-white border border-slate-200 rounded-[10px] px-2 py-1 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose);
@@ -85,7 +87,7 @@ export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
                 onClick={() => onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose)}
                 className="text-xs font-bold text-indigo-600 whitespace-nowrap"
               >
-                저장
+                {t('common.save')}
               </button>
             </div>
           </div>
@@ -101,7 +103,7 @@ export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
               <div className="relative group/tooltip flex-shrink-0">
                 <Settings className="w-4 h-4 text-slate-300 group-hover/title:text-indigo-400 transition-colors" />
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                  상세설정
+                  {t('routine.detailSettings')}
                 </div>
               </div>
             </button>
@@ -113,7 +115,7 @@ export const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
         <button 
           onClick={() => onDelete(chunk.id)}
           className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
-          title="그룹 삭제"
+          title={t('routine.deleteGroup')}
         >
           <Trash2 className="w-4 h-4" />
         </button>

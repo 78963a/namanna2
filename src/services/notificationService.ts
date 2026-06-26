@@ -1,4 +1,5 @@
 import { UserData } from '../types';
+import i18n from '../i18n';
 
 /**
  * Service for handling browser notifications.
@@ -19,7 +20,7 @@ class NotificationService {
     if (permission === 'granted') {
       console.log('Notification permission granted.');
       // Optional: Show a test notification
-      // this.showNotification('알림 설정 완료', { body: '이제 루틴 시작 시간에 알림을 보내드릴게요!' });
+      // this.showNotification(i18n.t('notification.setupTitle'), { body: i18n.t('notification.setupBody') });
     }
     return permission;
   }
@@ -61,8 +62,8 @@ class NotificationService {
     if (userData.isWakeUpAlarmEnabled !== false && userData.targetWakeUpTime === currentHM && !hasCheckedInToday) {
       const key = `wakeup-${todayStr}-${currentHM}`;
       if (!this.lastTriggered.has(key)) {
-        this.showNotification('기상 시간입니다!', {
-          body: '상쾌한 하루를 위해 지금 일어나보세요!',
+        this.showNotification(i18n.t('notification.wakeupTitle'), {
+          body: i18n.t('notification.wakeupBody'),
           tag: 'wakeup-alarm'
         });
         this.lastTriggered.add(key);
@@ -85,8 +86,8 @@ class NotificationService {
       if (startHM === currentHM) {
         const key = `chunk-${chunk.id}-${todayStr}-${currentHM}`;
         if (!this.lastTriggered.has(key)) {
-          this.showNotification(`루틴 시작: ${chunk.name}`, {
-            body: chunk.purpose || '루틴을 시작할 시간입니다.',
+          this.showNotification(i18n.t('notification.routineStart', { name: chunk.name }), {
+            body: chunk.purpose || i18n.t('notification.routineStartBody'),
             tag: `alarm-${chunk.id}`
           });
           this.lastTriggered.add(key);

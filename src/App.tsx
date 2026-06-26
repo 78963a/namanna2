@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import localForage from 'localforage';
 import { 
   Sun,
@@ -12,23 +13,19 @@ import {
   Circle, 
   CircleDot,
   PauseCircle,
-  ArrowRightCircle,
   User,
   Settings, 
   Sliders,
-  Plus, 
   Trash2, 
   Clock,
   ChevronRight,
   ChevronLeft,
   BarChart3,
   Home,
-  Edit2,
   AlertCircle,
   Bell,
   BellOff,
   Play,
-  Pause,
   Timer,
   X,
   GripVertical,
@@ -74,7 +71,6 @@ import { CSS } from '@dnd-kit/utilities';
 // Internal Types & Constants
 import { 
   TaskType, 
-  ChecklistItem, 
   Task, 
   RoutineChunk, 
   UserData, 
@@ -83,7 +79,6 @@ import {
   WakeUpTimeHistoryEntry,
   RoutineGroupHistoryEntry,
   TaskHistoryEntry,
-  ExecutionViewProps,
   NaggingSettings,
   SoundEffectSettings
 } from './types';
@@ -107,6 +102,7 @@ import {
   getCreationDate
 } from './utils';
 import { CheckCheckIcon } from './components/CheckCheckIcon';
+import { useCheckCheckBox } from './hooks/useCheckCheckBox';
 import { voiceService } from './services/voiceService';
 import { soundService } from './services/soundService';
 import { notificationService } from './services/notificationService';
@@ -115,12 +111,10 @@ import { notificationService } from './services/notificationService';
 import { HeaderBox } from './components/layout/HeaderBox';
 import { HomeView } from './components/views/HomeView';
 import { StatsView } from './components/views/StatsView';
-// import { ExecutionView } from './components/views/ExecutionView';
+import { ExecutionView } from './components/common/ExecutionView';
+import { RoutineGroupFormView } from './components/common/RoutineGroupFormView';
 // import { AddRoutineGroupView } from './components/views/AddRoutineGroupView';
 import { ConfirmModal } from './components/common/ConfirmModal';
-import { RoutineTitleLine } from './components/routine/RoutineTitleLine';
-import { MonthlyHeatmap } from './components/routine/MonthlyHeatmap';
-import { RoutineTitle } from './components/routine/RoutineTitle';
 import { PerfectDayAnimation } from './PerfectDayAnimation';
 import { TodayEndAnimation } from './TodayEndAnimation';
 // import { TaskInputSection } from './components/routine/TaskInputSection';
@@ -129,12 +123,7 @@ import { TodayEndAnimation } from './TodayEndAnimation';
 // import { SortableChecklistItem } from './components/routine/SortableChecklistItem';
 // --- Components ---
 
-const DoubleCheckCircle = ({ className }: { className?: string }) => (
-  <div className={`relative flex items-center justify-center ${className}`}>
-    <Circle className="w-full h-full" />
-    <CheckCheck className="absolute w-[60%] h-[60%]" strokeWidth={3} />
-  </div>
-);
+
 
 
 
@@ -149,1255 +138,10 @@ const DoubleCheckCircle = ({ className }: { className?: string }) => (
 
 
 
-const ExecutionView: React.FC<ExecutionViewProps> = ({
-  userData,
-  setUserData,
-  selectedChunkId,
-  setActiveTab,
-  currentTime,
-  effectiveDate,
-  todayStr,
-  toggleTask,
-  togglePauseTask,
-  laterTask,
-  skipTask,
-  startTask: _startTask,
-  onRestart,
-  resetChunk,
-  setSettingsSubView,
-  setIsSettingsOpen,
-  setSelectedChunkId,
-  handleCheckCheckClick,
-  isCheckCheckAvailable,
-  setConfirmModal,
-  setStatsKey,
-  setSelectedTaskForStats
-}) => {
-  // --- [Hook declarations FIRST to comply with React rules] ---
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [animationStage, setAnimationStage] = useState<'none' | 'whiteout' | 'rising' | 'title' | 'fireworks' | 'final'>('none');
-  const [visibleTasksCount, setVisibleTasksCount] = useState(0);
-  const [shakingTaskId, setShakingTaskId] = useState<string | null>(null);
-
-  const [isPressing, setIsPressing] = useState(false);
-  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const pressStartTimeRef = useRef<number>(0);
-  const rollbackTriggeredRef = useRef<boolean>(false);
-  const isTouchActiveRef = useRef<boolean>(false);
-
-  const activeTaskRef = useRef<HTMLDivElement>(null);
-  const scrollBottomRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const rollbackTimer = (taskId: string) => {
-    setUserData(prev => {
-      return {
-        ...prev,
-        routineChunks: prev.routineChunks.map(chunk => {
-          if (!chunk.tasks.some(t => t.id === taskId)) return chunk;
-          return {
-            ...chunk,
-            tasks: chunk.tasks.map(t => {
-              if (t.id === taskId) {
-                return {
-                  ...t,
-                  startTime: undefined,
-                  accumulatedDuration: 0,
-                  isPaused: false,
-                  status: TaskStatus.NOT_STARTED
-                };
-              }
-              return t;
-            })
-          };
-        })
-      };
-    });
-  };
-
-  const handlePressStart = (e: React.MouseEvent | React.TouchEvent) => {
-    if ('button' in e && e.button !== 0) return;
-    if (!activeTask) return;
-
-    setIsPressing(true);
-    rollbackTriggeredRef.current = false;
-    pressStartTimeRef.current = Date.now();
-
-    if (longPressTimeoutRef.current) {
-      clearTimeout(longPressTimeoutRef.current);
-    }
-
-    longPressTimeoutRef.current = setTimeout(() => {
-      rollbackTimer(activeTask.id);
-      rollbackTriggeredRef.current = true;
-      setIsPressing(false);
-      
-      if (navigator.vibrate) {
-        try {
-          navigator.vibrate(100);
-        } catch (err) {
-          // ignore potential iframe permission blocks
-        }
-      }
-    }, 1800);
-  };
-
-  const handlePressEnd = (_e: React.MouseEvent | React.TouchEvent) => {
-    if (longPressTimeoutRef.current) {
-      clearTimeout(longPressTimeoutRef.current);
-      longPressTimeoutRef.current = null;
-    }
-
-    setIsPressing(false);
-
-    if (rollbackTriggeredRef.current) {
-      rollbackTriggeredRef.current = false;
-      return;
-    }
-
-    if (!activeTask) return;
-
-    const pressDuration = Date.now() - pressStartTimeRef.current;
-    if (pressDuration < 400) {
-      togglePauseTask(activeTask.id, true);
-    }
-  };
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    isTouchActiveRef.current = true;
-    handlePressStart(e);
-  };
-
-  const onTouchEnd = (e: React.TouchEvent) => {
-    handlePressEnd(e);
-  };
-
-  const onTouchCancel = () => {
-    if (longPressTimeoutRef.current) {
-      clearTimeout(longPressTimeoutRef.current);
-      longPressTimeoutRef.current = null;
-    }
-    setIsPressing(false);
-  };
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (isTouchActiveRef.current) return;
-    handlePressStart(e);
-  };
-
-  const onMouseUp = (e: React.MouseEvent) => {
-    if (isTouchActiveRef.current) {
-      isTouchActiveRef.current = false;
-      return;
-    }
-    handlePressEnd(e);
-  };
-
-  const onMouseLeave = () => {
-    if (longPressTimeoutRef.current) {
-      clearTimeout(longPressTimeoutRef.current);
-      longPressTimeoutRef.current = null;
-    }
-    setIsPressing(false);
-  };
-
-  const isAlreadyFinalized = useMemo(() => {
-    if (!selectedChunkId) return false;
-    const history = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === selectedChunkId);
-    return !!history?.selectedPhrase;
-  }, [userData.routineGroupHistory, todayStr, selectedChunkId]);
-
-  // --- [Data derivation] ---
-  const chunk = userData.routineChunks.find(c => c.id === selectedChunkId);
-  const tasks = chunk ? chunk.tasks : [];
-  const scheduledTasks = tasks.filter(t => chunk ? isTaskScheduledToday(t, chunk, effectiveDate, userData) : false);
-
-  const handleActivateTaskInternal = (taskId: string) => {
-    if (!chunk) return;
-    setConfirmModal({
-      isOpen: true,
-      title: '루틴 활성화',
-      message: '오늘은 쉬는 요일입니다. 활성화하시겠습니까?',
-      onConfirm: () => {
-        setUserData(prev => ({
-          ...prev,
-          forcedActiveTasks: {
-            ...prev.forcedActiveTasks,
-            [todayStr]: {
-              ...(prev.forcedActiveTasks?.[todayStr] || {}),
-              [taskId]: true
-            }
-          }
-        }));
-        setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
-      }
-    });
-  };
-
-  const handleRestartTaskInternal = (taskId: string) => {
-    setConfirmModal({
-      isOpen: true,
-      title: '다시 시작하시겠습니까?',
-      message: '타이머가 0부터 다시 시작됩니다. 다시 시작하시겠습니까?',
-      confirmLabel: '다시하기',
-      cancelLabel: '취소',
-      onConfirm: () => {
-        onRestart(taskId);
-        setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
-      }
-    });
-  };
-  
-  // 체크체크박스 아이콘 결정 로직
-  // 사용자가 설정한 리셋 시각에 하루 분량으로 리셋되도록 오늘 누른 횟수만을 기준으로 결정합니다.
-  const checkCheckIconId = (() => {
-    // 오늘의 캐릭터 클릭 횟수를 구합니다.
-    const totalCount = (userData.dailyCheckCheckCounts?.[todayStr]) || 0;
-    const stages = phrases.checkCheckSettings.evolutionStages;
-    
-    // 캐릭터가 다음 단계로 진화하기 위해 필요한 누름 횟수 간격입니다. (현재 20회로 설정됨, 수정 가능)
-    const clicksPerEvolution = 20;
-    
-    // 누름 횟수를 간격(20회)으로 나누어 현재 진화 단계의 인덱스를 계산합니다.
-    const stageIndex = Math.floor(totalCount / clicksPerEvolution);
-    
-    // 단계 배열 인덱스를 벗어나지 않도록 하고, 최종 진화 단계를 구합니다.
-    const currentStage = stages[Math.min(stageIndex, stages.length - 1)] || stages[0];
-    
-    return currentStage.iconId;
-  })();
-
-  // 20.3. 현재 루틴(Current Task) 선정 우선순위 로직
-  // 0순위: 기록된 activeTaskId가 있고, 오늘 수행 대상이며 완료되지 않은 경우
-  let activeTask = chunk?.activeTaskId ? scheduledTasks.find(t => t.id === chunk.activeTaskId && !t.completed && t.status !== TaskStatus.SKIP) : undefined;
-  
-  // 1순위: '현재 루틴'으로 마킹되어 있거나 타이머가 돌아가고 있는 루틴
-  if (!activeTask) {
-    activeTask = scheduledTasks.find(t => t.status === TaskStatus.IN_PROGRESS && !t.completed);
-  }
-  
-  // 2순위: 타이머가 돌아가고 있다면 (비정상 상태 방어)
-  if (!activeTask) {
-    activeTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !t.completed);
-  }
-  
-  // 3순위: 일시정지 상태거나 기록이 있는 태스크 (상태 소실 방어)
-  if (!activeTask) {
-    activeTask = scheduledTasks.find(t => (t.isPaused || (t.accumulatedDuration || 0) > 0) && !t.completed);
-  }
-  
-  // 20.2. 트리거 루틴 (미실행 그룹인 경우 첫 번째 루틴을 현재 루틴으로 자동 선정)
-  // '미실행' 판단: 모든 루틴이 시작되지 않았고, 완료/스킵/나중에 된 것이 없음
-  const isInitiallyUnstarted = scheduledTasks.every(t => 
-    (!t.status || t.status === TaskStatus.NOT_STARTED) && 
-    !t.completed && 
-    !t.laterTimestamp && 
-    (t.accumulatedDuration || 0) === 0 &&
-    !t.startTime
-  );
-
-  if (!activeTask && isInitiallyUnstarted && scheduledTasks.length > 0 && !isAlreadyFinalized) {
-    activeTask = scheduledTasks[0];
-  }
-
-  const allTasksDone = scheduledTasks.length > 0 && scheduledTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
-  const wasDoneOnMount = useRef(allTasksDone);
-
-  useEffect(() => {
-    if (activeTask?.id) {
-      // Short delay to allow animations/layout to stabilize
-      const timer = setTimeout(() => {
-        if (activeTaskRef.current && typeof activeTaskRef.current.getBoundingClientRect === 'function') {
-          const headerHeight = 64; // Menu icon row height + padding
-          const rect = activeTaskRef.current.getBoundingClientRect();
-          if (rect) {
-            const elementPosition = rect.top + window.pageYOffset;
-            window.scrollTo({
-              top: elementPosition - headerHeight,
-              behavior: 'smooth'
-            });
-          }
-        }
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [activeTask?.id]);
-
-  useEffect(() => {
-    if (!allTasksDone) {
-      wasDoneOnMount.current = false;
-    }
-  }, [allTasksDone]);
-
-  useEffect(() => {
-    if (allTasksDone && !wasDoneOnMount.current && !isCompleted && !isAlreadyFinalized) {
-      // Start completion sequence immediately to lock the state
-      setIsCompleted(true);
-    }
-  }, [allTasksDone, isCompleted, isAlreadyFinalized]);
-
-  useEffect(() => {
-    if (isCompleted && animationStage === 'none' && !isAlreadyFinalized) {
-      soundService.unlock();
-      const groupCompleteFile = userData.soundSettings?.routineGroupComplete?.file || '/sounds/dragon-studio-fireworks-02-419019.mp3';
-      soundService.refresh(groupCompleteFile);
-      const timer = setTimeout(() => {
-        setAnimationStage('whiteout');
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isCompleted, animationStage, isAlreadyFinalized, userData.soundSettings?.routineGroupComplete]);
-
-  useEffect(() => {
-    if (animationStage === 'whiteout') {
-      const timer = setTimeout(() => {
-        setAnimationStage('rising');
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [animationStage]);
-
-  useEffect(() => {
-    if (animationStage === 'rising') {
-      if (visibleTasksCount < scheduledTasks.length) {
-        const timer = setTimeout(() => {
-          const nextTask = scheduledTasks[visibleTasksCount];
-          setVisibleTasksCount(prev => prev + 1);
-          setShakingTaskId(nextTask.id);
-          setTimeout(() => setShakingTaskId(null), 500);
-        }, 600); // Delay between each task rising
-        return () => clearTimeout(timer);
-      } else {
-        // All tasks risen, show title
-        setTimeout(() => {
-          setAnimationStage('title');
-        }, 500);
-      }
-    }
-  }, [animationStage, visibleTasksCount, scheduledTasks.length]);
-
-  useEffect(() => {
-    if (animationStage === 'title') {
-      const groupCompleteConfig = userData.soundSettings?.routineGroupComplete;
-      const groupCompleteEnabled = groupCompleteConfig ? groupCompleteConfig.enabled : true;
-      const groupCompleteFile = groupCompleteConfig?.file || '/sounds/dragon-studio-fireworks-02-419019.mp3';
-      soundService.play(groupCompleteFile, groupCompleteEnabled);
-      const timer = setTimeout(() => {
-        setAnimationStage('fireworks');
-        
-        // 루틴그룹완료축하애니메이션: 폭죽
-        const duration = 3 * 1000;
-        const animationEnd = Date.now() + duration;
-        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
-
-        const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-        const interval: any = setInterval(function() {
-          const timeLeft = animationEnd - Date.now();
-
-          if (timeLeft <= 0) {
-            clearInterval(interval);
-            setAnimationStage('final');
-            return;
-          }
-
-          const particleCount = 100 * (timeLeft / duration);
-          if (typeof confetti === 'function') {
-            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.4, 0.6), y: Math.random() - 0.1 } });
-            
-            if (timeLeft < duration * 0.5) {
-              confetti({ ...defaults, particleCount: particleCount * 0.5, origin: { x: randomInRange(0.2, 0.8), y: Math.random() } });
-            }
-          }
-        }, 150);
-
-        return () => clearInterval(interval);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [animationStage]);
-
-  useEffect(() => {
-    if (animationStage === 'rising' && scrollBottomRef.current) {
-      // [수정] 앵커 포인트를 사용하여 스크롤을 끝으로 부드럽게 유도 (setTimeout 소폭 증가로 안정성 확보)
-      const timer = setTimeout(() => {
-        if (scrollBottomRef.current) {
-          scrollBottomRef.current.scrollIntoView({
-            behavior: 'smooth',
-            block: 'end'
-          });
-        }
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  }, [visibleTasksCount, animationStage]);
-
-  useEffect(() => {
-    if ((animationStage === 'title' || animationStage === 'final') && scrollBottomRef.current) {
-      const timer = setTimeout(() => {
-        if (scrollBottomRef.current) {
-          scrollBottomRef.current.scrollIntoView({
-            behavior: 'smooth',
-            block: 'end'
-          });
-        }
-      }, animationStage === 'final' ? 400 : 100);
-      return () => clearTimeout(timer);
-    }
-  }, [animationStage]);
-
-  const getElapsed = (task: Task) => {
-    return calculateTaskDuration(task, currentTime);
-  };
-
-  const getStageInfo = (task: Task) => {
-    const elapsed = getElapsed(task);
-    const target = (task.targetDuration || 0) * 60;
-    const progress = Math.min((elapsed / target) * 100, 100);
-    
-    /* 
-       [디자인 수정 구역 0: 타이머 채우기(Progress) 색상 로직]
-       - 루틴 타입에 따라 타이머 박스 내부가 채워지는 색상을 결정합니다.
-       - bg-sky-400, bg-indigo-500, bg-rose-400 등 Tailwind 색상 클래스를 변경하세요.
-    */
-    let color = "bg-sky-400";
-    let isFinished = elapsed >= target;
-
-    if (task.taskType === TaskType.TIME_ACCUMULATED) {
-      color = isFinished ? "bg-sky-400" : "bg-violet-400";
-    } else if (task.taskType === TaskType.TIME_LIMITED) {
-      color = isFinished ? "bg-violet-400" : "bg-sky-400";
-    } else {
-      // TIME_INDEPENDENT
-      color = isFinished ? "bg-sky-400" : "bg-sky-400";
-    }
-    
-    return { progress, color, isFinished };
-  };
-
-  const formatDuration = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const handleFinalSave = (phrase: string) => {
-    if (selectedChunkId) {
-      setUserData(prev => {
-        const newGroupHistory = [...(prev.routineGroupHistory || [])];
-        const entryIdx = newGroupHistory.findIndex(h => h.date === todayStr && h.groupId === selectedChunkId);
-        
-        if (entryIdx >= 0) {
-          newGroupHistory[entryIdx] = {
-            ...newGroupHistory[entryIdx],
-            selectedPhrase: phrase
-          };
-        } else {
-          // Entry should exist by this stage due to syncHistory or execution start, 
-          // but safety fallback
-          newGroupHistory.push({
-            date: todayStr,
-            groupId: selectedChunkId,
-            isActive: true,
-            firstTaskStartTime: null,
-            completionStatus: '전체완료',
-            completedAt: null,
-            totalDuration: 0,
-            selectedPhrase: phrase
-          });
-        }
-        
-        return {
-          ...prev,
-          routineGroupHistory: newGroupHistory
-        };
-      });
-    }
-    
-    // Reset states and go home
-    setIsCompleted(false);
-    setSelectedChunkId(null);
-    setActiveTab('home');
-    setAnimationStage('none');
-  };
-
-  if (isCompleted && animationStage !== 'none') {
-    // 루틴그룹완료화면 (Routine Group Completion Screen)
-    return (
-      <div className={`fixed inset-0 z-[300] flex flex-col ${animationStage === 'whiteout' ? 'bg-white' : 'bg-[#F7FEE7]'} transition-colors duration-500`}>
-        {/* 홈아이콘줄 (Sticky Header Box) - Replicated from Home Screen */}
-        {(animationStage === 'final') && (
-          <div className="sticky top-0 z-40 bg-[#F7FEE7]/80 backdrop-blur-md pt-2.5 pb-0 flex-shrink-0">
-            <div className="max-w-2xl mx-auto px-4">
-              <nav className="flex items-center gap-3">
-                <button 
-                  onClick={() => {
-                    setActiveTab('home');
-                    setSelectedChunkId(null);
-                  }}
-                  className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm`}
-                >
-                  <Home className="w-5 h-5" />
-                </button>
-                <button 
-                  onClick={() => {
-                    setActiveTab('settings');
-                    setSettingsSubView({ type: 'main' });
-                    setSelectedChunkId(null);
-                    setIsSettingsOpen(false);
-                  }}
-                  className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm`}
-                >
-                  <Settings className="w-5 h-5" />
-                </button>
-                <button 
-                  onClick={() => {
-                    setActiveTab('add');
-                    setSelectedChunkId(null);
-                    setIsSettingsOpen(false);
-                  }}
-                  className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm`}
-                >
-                  <PlusCircle className="w-5 h-5" />
-                </button>
-                <button 
-                  onClick={() => {
-                    setActiveTab('stats');
-                    setSelectedChunkId(null);
-                    setStatsKey?.(prev => prev + 1);
-                  }}
-                  className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] bg-white text-slate-400 hover:text-indigo-400 border border-slate-100 shadow-sm`}
-                >
-                  <BarChart3 className="w-5 h-5" />
-                </button>
-
-                {/* 음성안내아이콘 */}
-                <button 
-                  onClick={() => {
-                    soundService.unlock();
-                    voiceService.unlock();
-                    if (typeof window !== 'undefined' && window.speechSynthesis) {
-                      window.speechSynthesis.cancel();
-                    }
-                    setUserData(prev => ({ ...prev, isVoiceEnabled: !prev.isVoiceEnabled }));
-                  }}
-                  className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white border shadow-sm hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 ${
-                    userData.isVoiceEnabled 
-                      ? 'border-blue-400 text-blue-500 shadow-blue-50' 
-                      : 'border-slate-100 text-slate-400'
-                  }`}
-                >
-                  {userData.isVoiceEnabled ? <Volume2 className="w-5 h-5" strokeWidth={2.5} /> : <VolumeX className="w-5 h-5" />}
-                </button>
-
-                {/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}
-                <motion.button 
-                  onClick={handleCheckCheckClick}
-                  whileTap={isCheckCheckAvailable ? "tap" : undefined}
-                  variants={{
-                    tap: { scale: 0.94 }
-                  }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                  className={`transition-all w-16 h-10 flex items-center px-1.5 rounded-[10px] border shadow-sm relative overflow-hidden ${
-                    isCheckCheckAvailable 
-                      ? 'bg-white border-indigo-200 cursor-pointer hover:border-indigo-400' 
-                      : 'bg-white border-slate-100 cursor-default'
-                   }`}
-                >
-                  <motion.div 
-                    variants={{
-                      tap: { scaleX: 1.25, scaleY: 0.75 }
-                    }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                    className="flex-shrink-0 flex items-center justify-center w-9 origin-bottom"
-                  >
-                    <CheckCheckIcon iconId={checkCheckIconId} size={32} />
-                  </motion.div>
-                  <div className="flex-grow flex flex-col items-center justify-center ml-0.5 relative">
-                    <span className="text-[10px] font-black text-slate-500 leading-none" title="누를 수 있는 횟수">
-                      {(userData.availableCheckCheckCount !== undefined ? userData.availableCheckCheckCount : 5)}
-                    </span>
-                    {isCheckCheckAvailable && (
-                      <div className="mt-1">
-                        <span className="flex h-1.5 w-1.5">
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </motion.button>
-              </nav>
-            </div>
-          </div>
-        )}
-
-        <div 
-          ref={scrollContainerRef} 
-          className="flex-grow overflow-y-scroll pb-20"
-          style={{ scrollbarGutter: 'stable' }}
-        >
-          <div className="p-6 flex flex-col items-center">
-            {/* Rising Tasks List */}
-            <div className="w-full max-w-sm space-y-3 mt-8">
-            <AnimatePresence>
-              {scheduledTasks.slice(0, visibleTasksCount).map((task, idx) => (
-                <motion.div
-                  key={task.id}
-                  initial={{ y: 1000, opacity: 0 }}
-                  animate={{ 
-                    y: 0, 
-                    opacity: 1,
-                    scale: shakingTaskId === task.id ? [1, 1.05, 1] : 1
-                  }}
-                  transition={{ 
-                    y: { type: "tween", ease: "easeOut", duration: 0.8 },
-                    scale: { duration: 0.3 }
-                  }}
-                  className={`p-4 rounded-[15px] border-2 flex items-center justify-between bg-white shadow-sm ${shakingTaskId === task.id ? 'border-indigo-500 shadow-indigo-100' : 'border-slate-100'}`}
-                >
-                  <div className="flex flex-col">
-                    <span className="text-xs font-black text-slate-400">루틴 {idx + 1}</span>
-                    <span className="text-base font-black text-slate-900">{task.text}</span>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                      task.status === TaskStatus.PERFECT ? 'bg-indigo-100 text-indigo-600' :
-                      task.status === TaskStatus.COMPLETED ? 'bg-emerald-100 text-emerald-600' :
-                      'bg-rose-100 text-rose-600'
-                    }`}>
-                      {task.status === TaskStatus.PERFECT ? '완벽' : task.status === TaskStatus.COMPLETED ? '완료' : '스킵'}
-                    </span>
-                    <span className="text-xs font-bold text-slate-400 mt-1">{formatDuration(task.duration || 0)}</span>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-
-          {/* Completion Title */}
-          {(animationStage === 'title' || animationStage === 'fireworks' || animationStage === 'final') && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="mt-12 mb-8 text-center"
-            >
-              <h2 className="text-4xl font-black text-slate-900 leading-tight">
-                <span className="text-indigo-600">{chunk.name}</span><br />
-                완성!
-              </h2>
-            </motion.div>
-          )}
-
-          {/* Completion Phrase Selection (Final Stage) */}
-          {animationStage === 'final' && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-sm space-y-4 mt-8"
-            >
-              <h3 className="text-center text-lg font-black text-slate-700 mb-6">축하합니다! 문구를 선택해주세요.</h3>
-              
-              <div className="space-y-3">
-                {phrases.routine_messages.COMPLETION_SELECTION_TEMPLATES.map((template, idx) => {
-                  let storedPhrase = template;
-                  
-                  // stats for resolution
-                  const currentHistory = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
-                  const startTimeStr = currentHistory?.firstTaskStartTime || '--:--';
-                  const endTimeStr = currentTime.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
-                  const totalDurationSec = currentHistory?.totalDuration || 0;
-                  const durationStr = formatDurationPrecise(totalDurationSec);
-                  const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
-                  const totalTargetDurationStr = `${totalTargetMinutes}분`;
-
-                  // Resolve particles but keep the placeholder for RoutineTitle to style
-                  const resolveParticles = (msg: string, tag: string, value: string) => {
-                    if (!msg) return "";
-                    const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|야/이야|이야/야|다/이다|이다/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)`, 'g');
-                    return msg.replace(regex, (_, p1) => {
-                      return `{{${tag}}}` + getJosa(value, p1 as any);
-                    });
-                  };
-
-                  storedPhrase = resolveParticles(storedPhrase, 'title', chunk.name);
-                  storedPhrase = resolveParticles(storedPhrase, 'purpose', chunk.purpose || '목표');
-                  storedPhrase = resolveParticles(storedPhrase, 'userName', userData.userName || '나');
-
-                  // We preserve placeholders for startTime, endTime, userName, duration
-                  // so that RoutineTitle can style them based on phrases.json settings.
-                  
-                  // For the UI display in buttons, replace everything
-                  let displayPhrase = storedPhrase || '';
-                  if (displayPhrase) {
-                    displayPhrase = displayPhrase.replace(/\{\{userName\}\}/g, userData.userName || '나');
-                    displayPhrase = displayPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
-                    displayPhrase = displayPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);
-                    displayPhrase = displayPhrase.replace(/\{\{duration\}\}/g, durationStr);
-                    displayPhrase = displayPhrase.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationStr);
-                    displayPhrase = displayPhrase.replace(/\{\{title\}\}/g, chunk.name);
-                    displayPhrase = displayPhrase.replace(/\{\{purpose\}\}/g, chunk.purpose || '목표');
-                  }
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleFinalSave(storedPhrase)}
-                      className="w-full p-6 bg-white border-2 border-slate-100 rounded-[20px] text-left hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-100 transition-all active:scale-[0.98] group"
-                    >
-                      <p className="text-base font-black text-slate-700 group-hover:text-indigo-600 leading-relaxed">
-                        {displayPhrase}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-          
-          {/* [수정] 스크롤 고정을 위한 앵커 포인트를 최하단으로 이동 */}
-          <div ref={scrollBottomRef} className="h-px w-full" />
-        </div>
-      </div>
-    </div>
-    );
-  }
-
-  if (!chunk) return null;
-
-  return (
-    <div className="space-y-4 relative">
-      {/* 루틴그룹박스 (Routine Group Box) */}
-      <section className="bg-gradient-to-br from-indigo-500 to-violet-700 rounded-[10px] shadow-xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -ml-12 -mb-12" />
-        
-        {/* 월간 캘린더 히트맵 */}
-        <div className="relative z-20 px-2">
-          <MonthlyHeatmap 
-            chunk={chunk}
-            userData={userData}
-            currentTime={currentTime}
-            effectiveDate={effectiveDate}
-          />
-        </div>
-
-        <div className="p-4 relative z-10">
-          <div className="space-y-4">
-            {/* 첫번째줄: {목적}이 되기 위한 {제목} <아이콘> */}
-            <div className="mb-4">
-              <h2 className="text-lg font-black text-white tracking-tight leading-relaxed">
-                {/* [디자인 수정 구역 1: 제목 텍스트]
-                    - 글자 크기: text-lg, text-xl 등
-                    - 글자 색상: text-white, text-indigo-100 등
-                */}
-                {(() => {
-                  const entry = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
-                  return (
-                    <RoutineTitle 
-                      chunk={chunk} 
-                      isExecutionTitle={true}
-                      userName={userData.userName}
-                      startTime={entry?.firstTaskStartTime}
-                      endTime={entry?.completedAt}
-                      userData={userData}
-                      todayStr={todayStr}
-                    />
-                  );
-                })()}
-                
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSettingsSubView({ type: 'detail', chunkId: chunk.id });
-                    setIsSettingsOpen(true);
-                  }}
-                  className="inline-flex items-center justify-center p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-[10px] transition-all ml-1 align-middle"
-                >
-                  <Settings className="w-5 h-5" />
-                </button>
-              </h2>
-            </div>
-
-            {/* 두번째줄: 실행요일표시 + 시작상황/시각 + 오늘 목표시간 합산 */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-1">
-              {/* [디자인 수정 구역 2: 요일 표시 (동그라미)]
-                  - 동그라미 크기: w-7 h-7
-                  - 활성 배경색: bg-white/20, 테두리: border-white/40
-                  - 비활성 배경색: bg-black/10, 테두리: border-white/5
-                  - 글자 크기: text-xs
-              */}
-              <div className="flex items-center gap-1.5">
-                {[1, 2, 3, 4, 5, 6, 0].map((dayNum, i) => {
-                  const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
-                  const isScheduled = chunk.scheduledDays.includes(dayNum);
-                  return (
-                    <div 
-                      key={dayNum}
-                      className={`relative flex items-center justify-center w-7 h-7 rounded-full border-2 transition-all ${
-                        isScheduled 
-                          ? 'bg-white/20 border-white/40 text-white shadow-sm' 
-                          : 'bg-black/10 border-white/5 text-white/20'
-                      }`}
-                    >
-                      <span className="text-[11px] font-black z-10">{dayNames[i]}</span>
-                      {!isScheduled && (
-                        <X className="absolute w-[60%] h-[60%] text-white/5" strokeWidth={4} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* [디자인 수정 구역 3: 시작 정보 및 합산 시간]
-                  - 글자 크기: text-xs
-                  - 배경색: bg-white/10
-                  - 테두리: border-white/10
-              */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>
-                    {chunk.startType === 'time' && chunk.startTime ? chunk.startTime.replace(/시/g, '') : (chunk.situation || '언제든')}
-                  </span>
-                  {chunk.startType === 'time' && (
-                    chunk.isAlarmEnabled ? (
-                      <Bell className="w-3.5 h-3.5 ml-1 opacity-70" />
-                    ) : (
-                      <BellOff className="w-3.5 h-3.5 ml-1 opacity-40" />
-                    )
-                  )}
-                </div>
-                <div className="flex items-center px-3 py-1.5 bg-white/10 rounded-[10px] border border-white/10 text-white/90 text-xs font-black shadow-inner">
-                  <span>총 {scheduledTasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0)}분</span>
-                </div>
-
-
-
-
-
-
-
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSettingsSubView({ type: 'groupStats', chunkId: chunk.id });
-                    setIsSettingsOpen(true);
-                  }}
-                  className="inline-flex items-center justify-center p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-[10px] transition-all ml-1 align-middle"
-                >
-                  <BarChart3 className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* 세번째 줄: 프로그레스 바 */}
-            <div className="flex items-center gap-4 pt-3">
-              <div className="flex-grow h-2.5 bg-white/10 rounded-full overflow-hidden shadow-inner">
-                {/* [디자인 수정 구역 4: 프로그레스 바]
-                    - 바 높이: h-2.5
-                    - 바 채우기 색상: from-indigo-300 to-violet-300 (그라데이션)
-                */}
-                <motion.div 
-                  animate={{ width: `${scheduledTasks.length > 0 ? (scheduledTasks.filter(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT).length / scheduledTasks.length) * 100 : 0}%` }}
-                  className="h-full bg-gradient-to-r from-indigo-300 to-violet-300 rounded-full shadow-[0_0_10px_rgba(165,180,252,0.3)]"
-                />
-              </div>
-              <div className="text-xl font-black text-white tabular-nums leading-none tracking-tight">
-                {scheduledTasks.length > 0 ? Math.round((scheduledTasks.filter(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT).length / scheduledTasks.length) * 100) : 0}<span className="text-xs text-white/40 ml-0.5">%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="space-y-6">
-        <AnimatePresence mode="popLayout">
-          {/* 현재루틴박스 (Current Routine Box) */}
-          {activeTask && (
-            <motion.div
-              layout
-              ref={activeTaskRef}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ 
-                layout: { type: "spring", stiffness: 300, damping: 30 }
-              }}
-              key={activeTask.id}
-              className="bg-white rounded-[10px] p-6 shadow-2xl shadow-indigo-100 border-2 border-indigo-500 relative overflow-hidden mb-6"
-            >
-              <>
-                {/* [디자인 수정 구역 5: 현재 루틴 인디케이터] 
-                    - 배경색: bg-indigo-500
-                    - 글자색: text-white
-                */}
-                <div className="absolute top-0 right-0 bg-indigo-500 text-white px-4 py-1.5 rounded-bl-[10px] text-[10px] font-black uppercase tracking-widest">
-                  현재루틴
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    {/* [디자인 수정 구역 6: 루틴 제목 및 타입 배지] 
-                        - 제목 색상: text-slate-900
-                        - 배지 배경: bg-slate-100, 배지 글자: text-slate-500
-                    */}
-                    <h3 className="text-[32px] font-black text-slate-900 tracking-tight leading-tight">
-                      {chunk.tasks.findIndex(t => t.id === activeTask.id) + 1}. {activeTask.id === scheduledTasks[0]?.id && "⚡"}{activeTask.text}
-                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 px-3 py-1 rounded-[10px] font-bold text-xs ml-3 align-middle shrink-0">
-                        {activeTask.taskType === TaskType.TIME_INDEPENDENT ? (
-                          <Clock className="w-3.5 h-3.5 text-sky-500" />
-                        ) : activeTask.taskType === TaskType.TIME_ACCUMULATED ? (
-                          <BrickWall className="w-3.5 h-3.5 text-pink-500" />
-                        ) : (
-                          <Hourglass className="w-3.5 h-3.5 text-indigo-600" />
-                        )}
-                        <span>{activeTask.targetDuration}분</span>
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTaskForStats(activeTask.id);
-                        }}
-                        className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-[10px] transition-all ml-2 align-middle cursor-pointer"
-                        title="루틴 상세 통계 보기"
-                      >
-                        <BarChart3 className="w-5 h-5" />
-                      </button>
-                    </h3>
-                  </div>
-
-                  {/* [디자인 수정 구역 7: 타이머 박스 본체] 
-                      - 배경색(일시정지시): bg-slate-50
-                      - 배경색(진행시): bg-slate-100
-                      - 테두리: border-slate-200
-                  */}
-                  <div 
-                    className={`relative flex flex-col items-center justify-center py-6 rounded-[10px] overflow-hidden select-none ${activeTask.isPaused ? 'bg-slate-50' : 'bg-slate-100'} border border-slate-200`}
-                  >
-                    {/* [디자인 수정 구역 8: 타이머 채움 애니메이션 레이어] 
-                        - 투명도: opacity-0.2 ~ 0.4
-                        - 색상은 위쪽 'getStageInfo' 함수 내 'color' 값을 따릅니다. 
-                    */}
-                    {((userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT) || getElapsed(activeTask) > 0 || isPressing) && (
-                      <motion.div 
-                        initial={false}
-                        animate={
-                          isPressing
-                            ? { width: '0%', opacity: 0.2 }
-                            : (userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT) 
-                              ? { width: '100%', opacity: 0.4 } 
-                              : { 
-                                  width: `${getStageInfo(activeTask).progress}%`,
-                                  opacity: getStageInfo(activeTask).isFinished ? 0.4 : 0.2
-                                }
-                        }
-                        className={`absolute inset-y-0 left-0 ${getStageInfo(activeTask).color}`}
-                        transition={
-                          isPressing 
-                            ? { duration: 1.8, ease: 'linear' } 
-                            : { duration: 0.5 }
-                        }
-                      />
-                    )}
-                    
-                    <div className="relative z-10 flex flex-col items-center select-none">
-                      {/* [디자인 수정 구역 9: 타이머 내 날짜/시각 정보] 
-                          - 글자색: text-slate-500
-                      */}
-                      <div className="text-sm font-bold text-slate-500 mb-1 tabular-nums flex flex-col items-center select-none">
-                        <div>{`${currentTime.getFullYear()}-${(currentTime.getMonth() + 1).toString().padStart(2, '0')}-${currentTime.getDate().toString().padStart(2, '0')}`}</div>
-                        <div>{`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}</div>
-                      </div>
-                      
-    {/* [디자인 수정 구역 10: 타이머 숫자 (00:00)] 
-        - 진행중 색상: text-slate-900
-        - 일시정지 색상: text-slate-400
-        - 분 표시 색상: text-slate-400
-    */}
-    {(() => {
-      const isAnytimeHidden = userData.hideAnytimeTimer && activeTask.taskType === TaskType.TIME_INDEPENDENT;
-      return (
-        <div 
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-          onTouchCancel={onTouchCancel}
-          onMouseDown={onMouseDown}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseLeave}
-          className={`text-6xl font-black tabular-nums tracking-tighter select-none cursor-pointer touch-none active:scale-[0.97] transition-transform duration-150 py-2 px-4 rounded-[10px] ${
-            isAnytimeHidden 
-              ? 'text-transparent' 
-              : (!activeTask.startTime || activeTask.isPaused) 
-                ? 'text-slate-400' 
-                : 'text-slate-900'
-          }`}
-        >
-          {formatDuration(getElapsed(activeTask))}
-          <span className={`text-xl ml-2 select-none ${isAnytimeHidden ? 'text-transparent' : 'text-slate-400'}`}>/ {activeTask.targetDuration}분</span>
-        </div>
-      );
-    })()}
-                      
-                      {/* [디자인 수정 구역 11: 타이머 상태 텍스트 (Ready/Paused/In Progress)] 
-                          - 글자색: text-slate-400 ~ text-slate-500
-                      */}
-                      <div className="flex items-center gap-2 mt-2 select-none">
-                        <p className={`text-[10px] font-black uppercase tracking-[0.3em] select-none ${activeTask.isPaused || !activeTask.startTime ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {!activeTask.startTime ? 'Ready' : activeTask.isPaused ? 'Paused' : 'In Progress'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Checklist Section (Moved here) */}
-                  {activeTask.checklist && activeTask.checklist.length > 0 && (
-                    <div className="bg-slate-50 rounded-[10px] p-5 space-y-4 border-2 border-slate-100 shadow-inner mb-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-indigo-100 rounded-[10px] flex items-center justify-center">
-                            <CheckCircle2 className="w-4 h-4 text-indigo-600" />
-                          </div>
-                          <span className="text-sm font-black text-slate-700 uppercase tracking-tight">체크리스트</span>
-                        </div>
-                        <button 
-                          onClick={() => {
-                            setUserData(prev => ({
-                              ...prev,
-                              routineChunks: prev.routineChunks.map(c => ({
-                                ...c,
-                                tasks: c.tasks.map(t => t.id === activeTask.id ? {
-                                  ...t,
-                                  checklist: t.checklist?.map(item => ({ ...item, completed: false }))
-                                } : t)
-                              }))
-                            }));
-                          }}
-                          className="px-3 py-1.5 bg-white border border-slate-200 rounded-[10px] text-[10px] font-black text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
-                        >
-                          체크 전부 지우기
-                        </button>
-                      </div>
-                      <div className="space-y-2">
-                        {activeTask.checklist.map((item) => (
-                          <button
-                            key={item.id}
-                            onClick={() => {
-                              setUserData(prev => ({
-                                ...prev,
-                                routineChunks: prev.routineChunks.map(c => ({
-                                  ...c,
-                                  tasks: c.tasks.map(t => t.id === activeTask.id ? {
-                                    ...t,
-                                    checklist: t.checklist?.map(i => i.id === item.id ? { ...i, completed: !i.completed } : i)
-                                  } : t)
-                                }))
-                              }));
-                            }}
-                            className="w-full flex items-start gap-3 p-3.5 bg-white rounded-[10px] border border-slate-100 hover:border-indigo-200 transition-all group shadow-sm text-left"
-                          >
-                            <div className={`w-6 h-6 min-w-[24px] min-h-[24px] rounded-[10px] border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5 ${item.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-200 group-hover:border-indigo-300'}`}>
-                              {item.completed && <Check className="w-3.5 h-3.5 text-white" />}
-                            </div>
-                            <span className={`text-sm font-bold transition-all break-words ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                              {item.text}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* [디자인 수정 구역 12: 하단 보조 버튼들 (START/PAUSE, LATER, SKIP)] 
-                      - 각 버튼의 배경색(bg-...) 및 글자색(text-...)을 변경하세요.
-                  */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <button 
-                      onClick={() => togglePauseTask(activeTask.id, true)}
-                      className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
-                        activeTask.isPaused || !activeTask.startTime
-                          ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
-                          : 'bg-sky-500 text-white hover:bg-sky-600'
-                      }`}
-                    >
-                      {activeTask.isPaused || !activeTask.startTime ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
-                      {!activeTask.startTime ? 'START' : activeTask.isPaused ? 'RESUME' : 'PAUSE'}
-                    </button>
-                    <button 
-                      onClick={() => laterTask(activeTask.id)}
-                      disabled={activeTask.id === scheduledTasks[0]?.id}
-                      className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
-                        activeTask.id === scheduledTasks[0]?.id
-                          ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
-                          : 'bg-sky-500 text-white hover:bg-sky-600'
-                      }`}
-                    >
-                      <ArrowRightCircle className="w-5 h-5" />
-                      LATER
-                    </button>
-                    <button 
-                      onClick={() => skipTask(activeTask.id)}
-                      disabled={activeTask.id === scheduledTasks[0]?.id}
-                      className={`flex flex-col items-center justify-center gap-2 py-3 rounded-[10px] text-xs font-black transition-all ${
-                        activeTask.id === scheduledTasks[0]?.id
-                          ? 'bg-slate-50 text-slate-200 cursor-not-allowed'
-                          : 'bg-[#CC9900] text-white hover:opacity-90'
-                      }`}
-                    >
-                      <CircleMinus className="w-5 h-5" />
-                      SKIP
-                    </button>
-                  </div>
-
-                  {(() => {
-                    const elapsed = getElapsed(activeTask);
-                    const target = (activeTask.targetDuration || 0) * 60;
-                    const isFinished = elapsed >= target;
-                    
-                    let btnText = "실행 완료";
-                    /* 
-                       [디자인 수정 구역 13: 메인 완료 버튼 색상 설정]
-                    */
-                    let btnColor = "bg-indigo-600";
-                    
-                    if (activeTask.taskType === TaskType.TIME_LIMITED) {
-                      if (isFinished) {
-                        btnText = "완료";
-                        btnColor = "bg-violet-600";
-                      } else {
-                        btnText = "완벽";
-                        btnColor = "bg-indigo-600";
-                      }
-                    } else if (activeTask.taskType === TaskType.TIME_ACCUMULATED) {
-                      if (isFinished) {
-                        btnText = "완벽";
-                        btnColor = "bg-indigo-600";
-                      } else {
-                        btnText = "완료";
-                        btnColor = "bg-violet-600";
-                      }
-                    } else {
-                      // TIME_INDEPENDENT
-                      btnText = "완벽";
-                      btnColor = "bg-indigo-600";
-                    }
-
-                    return (
-                      <button 
-                        onClick={() => toggleTask(activeTask.id)}
-                        className={`w-full py-4 ${btnColor} text-white rounded-[10px] font-black text-lg shadow-xl shadow-indigo-200 hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-3`}
-                      >
-                        {btnText === "완벽" ? <DoubleCheckCircle className="w-6 h-6" /> : <CheckCircle2 className="w-6 h-6" />}
-                        {btnText}
-                      </button>
-                    );
-                  })()}
-                </div>
-              </>
-            </motion.div>
-          )}
-
-          {/* 나머지루틴목록 (Remaining Routines List) */}
-          {chunk.tasks.filter(t => activeTask ? t.id !== activeTask.id : true).length > 0 && (
-            <div className="space-y-3">
-              {[...chunk.tasks]
-                .filter(t => activeTask ? t.id !== activeTask.id : true)
-                .sort((a, b) => {
-                  // 이미 완료된 루틴그룹인 경우 사용자가 설정한 원래 순서(index)대로 표시
-                  if (allTasksDone || isAlreadyFinalized) {
-                    return chunk.tasks.indexOf(a) - chunk.tasks.indexOf(b);
-                  }
-                  
-                  const isScheduledA = isTaskScheduledToday(a, chunk, effectiveDate, userData);
-                  const isScheduledB = isTaskScheduledToday(b, chunk, effectiveDate, userData);
-                  if (isScheduledA && !isScheduledB) return -1;
-                  if (!isScheduledA && isScheduledB) return 1;
-                  
-                  const isFinishedTask = (t: Task) => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP;
-                  const isLaterTask = (t: Task) => !isFinishedTask(t) && !!t.laterTimestamp;
-                  const isPausedTask = (t: Task) => !isFinishedTask(t) && !isLaterTask(t) && (!!t.isPaused || (t.accumulatedDuration || 0) > 0 || !!t.startTime);
-                  const isUnstartedTask = (t: Task) => !isFinishedTask(t) && !isLaterTask(t) && !isPausedTask(t);
-
-                  const getPriority = (t: Task) => {
-                    if (isPausedTask(t)) return 1;
-                    if (isUnstartedTask(t)) return 2;
-                    if (isLaterTask(t)) return 3;
-                    if (isFinishedTask(t)) return 4;
-                    return 5;
-                  };
-
-                  const priorityDiff = getPriority(a) - getPriority(b);
-                  if (priorityDiff !== 0) {
-                    return priorityDiff;
-                  }
-                  
-                  return chunk.tasks.indexOf(a) - chunk.tasks.indexOf(b);
-                })
-                .map((task) => (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ 
-                    layout: { type: "spring", stiffness: 300, damping: 30 }
-                  }}
-                  key={task.id}
-                  className={`flex items-center gap-4 p-4 rounded-[10px] border transition-all ${
-
- /* /bg-: 배경색 (예: bg-blue-100)
-border-: 테두리 색상 (예: border-slate-200)
-border-transparent: 테두리를 투명하게(없앰) 처리--- */
-
-                    /* --- [실행화면 개별루틴 박스 스타일 수정 구역] --- */
-                    /* 1. 완료(Completed) 또는 완벽(Perfect) 상태 */
-                    task.completed || task.status === TaskStatus.COMPLETED || task.status === TaskStatus.PERFECT
-                      ? 'bg-slate-50/50 border-transparent' 
-                    /* 2. 포기(Given Up) 또는 스킵(Skip) 상태 */
-                      : task.status === TaskStatus.SKIP
-                        ? 'bg-rose-50/20 border-transparent'
-                    /* 3. 그 외 기본 상태 (미실행, 진행 중 등) */
-                        : 'bg-white border-slate-100 hover:border-indigo-200'
-                    /* ----------------------------------------------- */
-                  }`}
-                >
-                  <RoutineTitleLine 
-                    task={task} 
-                    index={chunk.tasks.findIndex(t => t.id === task.id)} 
-                    currentTime={currentTime}
-                    chunkTasks={chunk.tasks}
-                    onRestart={handleRestartTaskInternal}
-                    onDoFirst={togglePauseTask}
-                    isLocked={false}
-                    activeTaskId={activeTask?.id}
-                    isScheduledToday={isTaskScheduledToday(task, chunk, effectiveDate, userData)}
-                    onActivate={handleActivateTaskInternal}
-                    chunkScheduledDays={chunk.scheduledDays}
-                  />
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {(chunk.tasks.some(t => t.startTime !== undefined || t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.laterTimestamp || t.accumulatedDuration !== undefined)) && (
-        <div className="flex justify-center py-4">
-          <button 
-            onClick={() => resetChunk(chunk.id)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-full text-xs font-black shadow-sm hover:bg-slate-50 transition-all active:scale-[0.98]"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            루틴 초기화하기
-          </button>
-        </div>
-      )}
-    </div>
-  );
+export const OldExecutionView = () => {
+  return null;
 };
+
 
 interface SortableChunkItemProps {
   chunk: RoutineChunk;
@@ -1518,1528 +262,6 @@ const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
 
 
 // --- Helper Components ---
-
-interface SortableChecklistItemProps {
-  item: ChecklistItem;
-  onRemove: (id: string) => void;
-  onEdit: (id: string, newText: string) => void;
-  setConfirmModal: (modal: any) => void;
-}
-
-const SortableChecklistItem: React.FC<SortableChecklistItemProps> = ({ 
-  item, 
-  onRemove, 
-  onEdit,
-  setConfirmModal
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: item.id });
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(item.text);
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 1 : 0,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const handleEdit = () => {
-    if (editText.trim() && editText !== item.text) {
-      onEdit(item.id, editText);
-    }
-    setIsEditing(false);
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex items-start gap-3 p-3 bg-slate-50 rounded-[10px] border border-slate-100 group transition-all ${isDragging ? 'shadow-lg ring-2 ring-indigo-500/20' : ''}`}
-    >
-      <div {...attributes} {...listeners} style={{ touchAction: 'none' }} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-400 transition-colors mt-0.5">
-        <GripVertical className="w-4 h-4" />
-      </div>
-      
-      {isEditing ? (
-        <textarea
-          autoFocus
-          value={editText}
-          onChange={(e) => setEditText(e.target.value)}
-          onBlur={handleEdit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleEdit();
-            }
-          }}
-          className="flex-grow bg-white border border-indigo-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[40px] resize-none"
-        />
-      ) : (
-        <span className="flex-grow text-sm font-bold text-slate-700 whitespace-pre-wrap break-words">
-          {item.text}
-        </span>
-      )}
-
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => setIsEditing(true)}
-          className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
-        >
-          <Edit2 className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => {
-            setConfirmModal({
-              isOpen: true,
-              title: '항목 삭제',
-              message: '이 항목을 삭제하시겠습니까?',
-              onConfirm: () => {
-                onRemove(item.id);
-                setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
-              }
-            });
-          }}
-          className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const ChecklistModal = ({ 
-  isOpen, 
-  onClose, 
-  checklist, 
-  setChecklist,
-  setConfirmModal
-}: { 
-  isOpen: boolean, 
-  onClose: () => void, 
-  checklist: ChecklistItem[], 
-  setChecklist: (items: ChecklistItem[]) => void,
-  setConfirmModal: (modal: any) => void
-}) => {
-  const [newItemText, setNewItemText] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      const originalBodyStyle = window.getComputedStyle(document.body).overflow;
-      const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = originalBodyStyle;
-        document.documentElement.style.overflow = originalHtmlStyle;
-      };
-    }
-  }, [isOpen]);
-
-  // 자동 스크롤 하단 고정
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [checklist.length]);
-
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const addItem = () => {
-    if (!newItemText.trim()) return;
-    setChecklist([...checklist, { id: Date.now().toString(), text: newItemText, completed: false }]);
-    setNewItemText('');
-  };
-
-  const removeItem = (id: string) => {
-    setChecklist(checklist.filter(item => item.id !== id));
-  };
-
-  const editItem = (id: string, newText: string) => {
-    setChecklist(checklist.map(item => item.id === id ? { ...item, text: newText } : item));
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = checklist.findIndex((item) => item.id === active.id);
-      const newIndex = checklist.findIndex((item) => item.id === over.id);
-      setChecklist(arrayMove(checklist, oldIndex, newIndex));
-    }
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[180] flex items-center justify-center p-4 overflow-y-auto">
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
-          />
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-md bg-white rounded-[10px] shadow-2xl overflow-hidden flex flex-col h-[600px]"
-            style={{ maxHeight: '90vh' }}
-          >
-            <div className="p-6 flex flex-col flex-1 min-h-0">
-              <div className="flex items-center justify-between mb-6 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center">
-                    <CheckCircle2 className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <h3 className="text-xl font-black text-slate-900">체크리스트 만들기</h3>
-                </div>
-                <button 
-                  onClick={onClose}
-                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
-
-              <div className="flex gap-2 mb-6 flex-shrink-0">
-                <input 
-                  type="text"
-                  value={newItemText}
-                  onChange={(e) => setNewItemText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addItem()}
-                  placeholder="체크리스트 항목 입력..."
-                  className="flex-grow bg-slate-50 border border-slate-100 rounded-[10px] px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                />
-                <button 
-                  onClick={addItem}
-                  className="bg-indigo-600 text-white px-4 rounded-[10px] font-black text-sm hover:bg-indigo-700 transition-all active:scale-95"
-                >
-                  추가
-                </button>
-              </div>
-
-              <div 
-                ref={scrollRef}
-                className="flex-grow overflow-y-auto pr-2 -mr-2 space-y-2 min-h-0" 
-                style={{ overscrollBehavior: 'contain' }}
-              >
-                {checklist.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 py-10">
-                    <PlusCircle className="w-8 h-8 opacity-20" />
-                    <p className="text-xs font-bold">항목을 추가해보세요</p>
-                  </div>
-                ) : (
-                  <DndContext 
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <SortableContext 
-                      items={checklist.map(i => i.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="space-y-2">
-                        {checklist.map((item) => (
-                          <SortableChecklistItem 
-                            key={item.id} 
-                            item={item} 
-                            onRemove={removeItem}
-                            onEdit={editItem}
-                            setConfirmModal={setConfirmModal}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                )}
-              </div>
-
-              <div className="pt-4 flex-shrink-0">
-                <button 
-                  onClick={onClose}
-                  className="w-full py-4 bg-slate-900 text-white rounded-[10px] font-black text-base hover:bg-slate-800 transition-all active:scale-[0.98]"
-                >
-                  완료
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-// 루틴수정 팝업
-const TaskInputSection = ({ 
-  label, 
-  task, 
-  setTask, 
-  isTrigger = false, 
-  description,
-  onAdd,
-  onCancel,
-  isEditing = false,
-  onOpenChecklist,
-  groupScheduledDays = [0, 1, 2, 3, 4, 5, 6]
-}: { 
-  label: React.ReactNode, 
-  task: any, 
-  setTask: (t: any) => void, 
-  isTrigger?: boolean,
-  description?: string,
-  onAdd?: () => void,
-  onCancel?: () => void,
-  isEditing?: boolean,
-  onOpenChecklist?: () => void,
-  groupScheduledDays?: number[]
-}) => (
-  <div className="space-y-3">
-    <div className="flex flex-col gap-1">
-      <div className="text-[15px] font-bold text-slate-600 ml-1">{label}</div>
-      {description && <p className="text-[12px] font-bold text-slate-400 ml-1 leading-relaxed">{description}</p>}
-    </div>
-    <div className="bg-white p-3 rounded-[10px] border border-slate-200 space-y-4 shadow-none">
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <label className="text-[10px] font-bold text-slate-400 ml-1">루틴 제목</label>
-          {onOpenChecklist && (
-            <button 
-              onClick={onOpenChecklist}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-[10px] text-[10px] font-black transition-all ${task.checklist && task.checklist.length > 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
-            >
-              <CheckCircle2 className="w-3 h-3" />
-              {task.checklist && task.checklist.length > 0 ? `체크리스트 (${task.checklist.length})` : '체크리스트 만들기'}
-            </button>
-          )}
-        </div>
-        <input 
-          type="text"
-          value={task.text}
-          onChange={(e) => setTask({ ...task, text: e.target.value })}
-          placeholder={isTrigger ? "예: 침대에서 벗어나기" : "루틴 내용을 입력하세요"}
-          spellCheck={false}
-          autoComplete="off"
-          className="w-full bg-white border border-slate-200 rounded-[10px] px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-        />
-      </div>
-
-      {/* Routine Schedule Settings (Restored) */}
-      {!isTrigger && (
-        <div className="space-y-1.5">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">실행 요일 (그룹 일정 내)</span>
-          <div className="flex flex-wrap gap-1">
-            {[
-              { label: '월', value: 1 },
-              { label: '화', value: 2 },
-              { label: '수', value: 3 },
-              { label: '목', value: 4 },
-              { label: '금', value: 5 },
-              { label: '토', value: 6, color: 'bg-emerald-600' },
-              { label: '일', value: 0, color: 'bg-rose-600' }
-            ].map((dayObj) => {
-              const i = dayObj.value;
-              const isAvailable = groupScheduledDays.includes(i);
-              const isSelected = task.scheduledDays?.includes(i);
-              const selectedColor = dayObj.color || 'bg-indigo-600';
-              return (
-                <button
-                  key={i}
-                  disabled={!isAvailable}
-                  onClick={() => {
-                    const currentDays = task.scheduledDays || [];
-                    let nextDays;
-                    if (currentDays.includes(i)) {
-                      nextDays = currentDays.filter((d: number) => d !== i);
-                    } else {
-                      nextDays = [...currentDays, i].sort();
-                    }
-                    setTask({ ...task, scheduledDays: nextDays });
-                  }}
-                  className={`w-8 h-8 rounded-[10px] text-[10px] font-black transition-all ${
-                    isSelected 
-                      ? `${selectedColor} text-white shadow-none` 
-                      : isAvailable 
-                        ? 'bg-slate-50 text-slate-400 border border-slate-100' 
-                        : 'bg-slate-50 text-slate-200 border border-slate-50 cursor-not-allowed opacity-50'
-                  }`}
-                >
-                  {dayObj.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {!isTrigger && (
-        <div className="space-y-0">
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">루틴 유형</span>
-            <div className="flex gap-1 p-1 bg-slate-100 rounded-[10px]">
-              {[
-                { type: TaskType.TIME_INDEPENDENT, label: '시간무관루틴', icon: Clock },
-                { type: TaskType.TIME_LIMITED, label: '시간제한루틴', icon: Hourglass },
-                { type: TaskType.TIME_ACCUMULATED, label: '시간축적루틴', icon: BrickWall }
-              ].map((t) => (
-                <button
-                  key={t.type}
-                  onClick={() => setTask({ ...task, type: t.type })}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[10px] text-[10px] font-black transition-all ${task.type === t.type ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
-                >
-                  <t.icon className="w-3 h-3" />
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5 mt-[-1px]">
-            <div className="bg-white border border-slate-200 rounded-[10px] p-3">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
-                시간 (분)
-              </span>
-              <div className="flex items-center gap-2">
-                {task.type === TaskType.TIME_INDEPENDENT ? (
-                  <Clock className="w-4 h-4 text-sky-500" />
-                ) : task.type === TaskType.TIME_ACCUMULATED ? (
-                  <BrickWall className="w-4 h-4 text-pink-500" />
-                ) : (
-                  <Hourglass className="w-4 h-4 text-indigo-600" />
-                )}
-                <input 
-                  type="number"
-                  min="1"
-                  value={task.duration}
-                  onChange={(e) => {
-                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
-                    setTask({ ...task, duration: val });
-                  }}
-                  onBlur={() => {
-                    if (task.duration === '' || task.duration < 1) {
-                      setTask({ ...task, duration: 1 });
-                    }
-                  }}
-                  className="w-full bg-transparent border-none p-0 text-sm font-bold focus:ring-0"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isTrigger && (
-        <div className="space-y-1.5">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
-            시간 (최대 3분)
-          </span>
-          <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-[10px] px-4 py-2">
-            {task.type === TaskType.TIME_INDEPENDENT ? (
-              <Clock className="w-4 h-4 text-sky-500" />
-            ) : task.type === TaskType.TIME_ACCUMULATED ? (
-              <BrickWall className="w-4 h-4 text-pink-500" />
-            ) : (
-              <Hourglass className="w-4 h-4 text-indigo-600" />
-            )}
-            <input 
-              type="number"
-              min="1"
-              max={3}
-              value={task.duration}
-              onChange={(e) => {
-                let val: any = e.target.value === '' ? '' : parseInt(e.target.value);
-                if (typeof val === 'number') {
-                  val = Math.min(3, val);
-                }
-                setTask({ ...task, duration: val });
-              }}
-              onBlur={() => {
-                if (task.duration === '' || task.duration < 1) {
-                  setTask({ ...task, duration: 1 });
-                }
-              }}
-              className="w-full bg-transparent border-none p-0 text-sm font-bold focus:ring-0"
-            />
-          </div>
-        </div>
-      )}
-
-      {(onAdd || isEditing) && (
-        <div className="flex gap-2">
-          {isEditing && onCancel && (
-            <button 
-              onClick={onCancel}
-              className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-[10px] text-xs font-black hover:bg-slate-200 transition-colors"
-            >
-              취소
-            </button>
-          )}
-          {isEditing && (task as any).onDelete && (
-            <button 
-              onClick={(task as any).onDelete}
-              className="flex-1 py-3 bg-rose-50 text-rose-600 rounded-[10px] text-xs font-black hover:bg-rose-100 transition-colors"
-            >
-              루틴 삭제
-            </button>
-          )}
-          <button 
-            onClick={onAdd}
-            disabled={!task.text.trim()}
-            className="flex-[2] py-3 bg-indigo-600 text-white rounded-[10px] text-xs font-black hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {isEditing ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {isEditing ? '수정 완료' : '루틴 추가하기'}
-          </button>
-        </div>
-      )}
-    </div>
-  </div>
-);
-
-const SortableRoutineItem = ({ 
-  rt, 
-  idx, 
-  onEdit, 
-  onDelete,
-  groupScheduledDays
-}: any) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: rt.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 0,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      className="bg-white p-3 rounded-[10px] border border-slate-200 flex items-center justify-between shadow-none group"
-    >
-      <div className="flex items-center gap-3">
-        <div {...attributes} {...listeners} style={{ touchAction: 'none' }} className="p-2 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
-          <GripVertical className="w-4 h-4" />
-        </div>
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-700">{idx + 2}. {rt.text}</span>
-            {rt.checklist && rt.checklist.length > 0 && (
-              <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter flex-shrink-0">
-                <CheckCircle2 className="w-2 h-2" />
-                <span>체크리스트</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <div className="flex items-center gap-1">
-              {rt.type === TaskType.TIME_INDEPENDENT ? (
-                <Clock className="w-3 h-3 text-sky-500" />
-              ) : rt.type === TaskType.TIME_ACCUMULATED ? (
-                <BrickWall className="w-3 h-3 text-pink-500" />
-              ) : (
-                <Hourglass className="w-3 h-3 text-indigo-600" />
-              )}
-              <span className="text-[10px] font-bold text-slate-400">{rt.duration}분</span>
-            </div>
-            {(() => {
-              const isSameSchedule = JSON.stringify([...(rt.scheduledDays || [])].sort()) === JSON.stringify([...(groupScheduledDays || [])].sort());
-              if (!isSameSchedule) {
-                const dayOrder = [1, 2, 3, 4, 5, 6, 0];
-                const weekDays = ['월', '화', '수', '목', '금', '토', '일'];
-                return (
-                  <div className="flex items-center gap-1">
-                    {dayOrder.map((dayNum, i) => {
-                      const isScheduled = (rt.scheduledDays || []).includes(dayNum);
-                      return (
-                        <div 
-                          key={dayNum}
-                          className={`relative flex items-center justify-center w-[16px] h-[16px] rounded-full border transition-all ${
-                            isScheduled 
-                              ? 'bg-indigo-50 border-indigo-200 text-indigo-600' 
-                              : 'bg-slate-50 border-slate-100 text-slate-300'
-                          }`}
-                        >
-                          <span className="text-[8px] font-black z-10">{weekDays[i]}</span>
-                          {!isScheduled && (
-                            <X className="absolute w-full h-full text-slate-300/40" strokeWidth={5} />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              }
-              return null;
-            })()}
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center gap-1">
-        <button 
-          onClick={onEdit}
-          className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"
-        >
-          <Edit2 className="w-4 h-4" />
-        </button>
-        <button 
-          onClick={onDelete}
-          className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const RoutineEditModal = ({ 
-  isOpen, 
-  onClose, 
-  task, 
-  setTask, 
-  onSave, 
-  onOpenChecklist,
-  groupScheduledDays,
-  label
-}: any) => {
-  useEffect(() => {
-    if (isOpen) {
-      const originalBodyStyle = window.getComputedStyle(document.body).overflow;
-      const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = originalBodyStyle;
-        document.documentElement.style.overflow = originalHtmlStyle;
-      };
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-white rounded-[25px] w-full max-w-sm shadow-2xl overflow-hidden flex flex-col"
-        style={{ maxHeight: '90vh' }}
-      >
-        <div className="p-6 overflow-y-auto flex-1 min-h-0">
-          <TaskInputSection 
-            label={label}
-            task={task}
-            setTask={setTask}
-            onAdd={onSave}
-            onCancel={onClose}
-            isEditing={true}
-            onOpenChecklist={onOpenChecklist}
-            groupScheduledDays={groupScheduledDays}
-          />
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-// 새로운 루틴 그룹 만들기 제목 글꼴 및 배경색 설정
-const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-  /* Section Title Style: 배경색(bg-sky-100)이나 글자색(text-slate-700)을 여기서 직접 수정할 수 있습니다. */
-  <label className="inline-block px-2 py-0.5 bg-sky-100/70 rounded-md text-lg font-black text-slate-700 uppercase tracking-wider ml-1 mb-4 mt-6">
-    {children}
-  </label>
-);
-
-const RoutineGroupFormView: React.FC<{
-  addChunk: (name: string, purpose: string, tasks: Task[], scheduleType: 'days', scheduledDays: number[], startTime?: string, isAlarmEnabled?: boolean, startType?: 'anytime' | 'situation' | 'time', situation?: string) => void;
-  updateChunk?: (id: string, updatedData: Partial<RoutineChunk>) => void;
-  initialChunk?: RoutineChunk;
-  setActiveTab: (tab: any) => void;
-  setSettingsSubView: (view: any) => void;
-  setIsSettingsOpen: (open: boolean) => void;
-  userData: UserData;
-  activeTab?: string;
-  mode?: 'add' | 'edit';
-  onDirtyChange?: (isDirty) => void;
-}> = ({ addChunk, updateChunk, initialChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData: _userData, activeTab, mode = 'add', onDirtyChange }) => {
-  const [name, setName] = useState('');
-  const [purpose, setPurpose] = useState('');
-  
-  const [triggerTask, setTriggerTask] = useState({ text: '', duration: 1, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6], checklist: [] as any[] });
-  const [routineList, setRoutineList] = useState<Array<{ id: string, text: string, duration: number, type: TaskType, scheduledDays: number[], checklist: any[] }>>([]);
-  const [currentRoutineInput, setCurrentRoutineInput] = useState({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: [0, 1, 2, 3, 4, 5, 6], checklist: [] as any[] });
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-    onCancel?: () => void;
-    confirmLabel?: string;
-    cancelLabel?: string;
-    showCancel?: boolean;
-    validationValue?: string;
-    validationPlaceholder?: string;
-    confirmColor?: 'rose' | 'indigo';
-  }>({
-    isOpen: false,
-    title: '',
-    message: '',
-    confirmLabel: '확인',
-    cancelLabel: '취소',
-    showCancel: true,
-    onConfirm: () => {}
-  });
-  
-  const [scheduledDays, setScheduledDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
-  const prevScheduledDaysRef = React.useRef<number[]>(scheduledDays);
-
-  useEffect(() => {
-    if (initialChunk) {
-      setName(initialChunk.name);
-      setPurpose(initialChunk.purpose || '');
-      setScheduledDays(initialChunk.scheduledDays || [0, 1, 2, 3, 4, 5, 6]);
-      setStartTime(initialChunk.startTime || '07:00');
-      setStartType(initialChunk.startType || 'anytime');
-      setSituation(initialChunk.situation || '');
-      setIsAlarmEnabled(initialChunk.isAlarmEnabled || false);
-
-      const tasks = initialChunk.tasks || [];
-      if (tasks.length > 0) {
-        const first = tasks[0];
-        setTriggerTask({
-          text: first.text,
-          duration: first.targetDuration || 1,
-          type: first.taskType || TaskType.TIME_LIMITED,
-          scheduledDays: first.scheduledDays || [0, 1, 2, 3, 4, 5, 6],
-          checklist: (first as any).checklist || []
-        });
-
-        const middle = tasks.slice(1);
-        setRoutineList(middle.map(t => ({
-          id: t.id,
-          text: t.text,
-          duration: t.targetDuration || 1,
-          type: t.taskType || TaskType.TIME_LIMITED,
-          scheduledDays: t.scheduledDays || [0, 1, 2, 3, 4, 5, 6],
-          checklist: (t as any).checklist || []
-        })));
-      }
-    }
-  }, [initialChunk]);
-
-  // Intelligent Day Synchronization
-  useEffect(() => {
-    const prevDays = prevScheduledDaysRef.current;
-    const added = scheduledDays.filter(d => !prevDays.includes(d));
-    const removed = prevDays.filter(d => !scheduledDays.includes(d));
-
-    if (added.length > 0 || removed.length > 0) {
-      // 1. Trigger Task: Always follows group schedule
-      setTriggerTask(prev => ({ ...prev, scheduledDays: scheduledDays }));
-
-      // 2. Routine List: 
-      // - Add newly activated group days
-      // - Remove newly deactivated group days
-      // - Respect manual deactivations (added days are added, but existing ones are kept as is unless removed from group)
-      setRoutineList(prev => prev.map(t => {
-        let nextDays = t.scheduledDays || [];
-        // Add newly activated group days
-        if (added.length > 0) nextDays = [...nextDays, ...added];
-        // Remove newly deactivated group days
-        if (removed.length > 0) nextDays = nextDays.filter(d => !removed.includes(d));
-        return { ...t, scheduledDays: [...new Set(nextDays)].sort() };
-      }));
-
-      // 3. Current Input: Same logic as routine list
-      setCurrentRoutineInput(prev => {
-        let nextDays = prev.scheduledDays || [];
-        if (added.length > 0) nextDays = [...nextDays, ...added];
-        if (removed.length > 0) nextDays = nextDays.filter(d => !removed.includes(d));
-        return { ...prev, scheduledDays: [...new Set(nextDays)].sort() };
-      });
-
-      prevScheduledDaysRef.current = scheduledDays;
-    }
-  }, [scheduledDays]);
-
-  const [startTime, setStartTime] = useState('07:00');
-  const [startType, setStartType] = useState<'anytime' | 'situation' | 'time'>('anytime');
-  const [situation, setSituation] = useState('');
-  const [isAlarmEnabled, setIsAlarmEnabled] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [editingRoutineIndex, setEditingRoutineIndex] = useState<number | null>(null);
-
-  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
-  const [activeChecklistTarget, setActiveChecklistTarget] = useState<'trigger' | 'current' | null>(null);
-  const [routineAddedMessage, setRoutineAddedMessage] = useState<string | null>(null);
-  const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
-  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
-  const [groupAddedMessage, setGroupAddedMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (routineAddedMessage) {
-      const timer = setTimeout(() => setRoutineAddedMessage(null), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [routineAddedMessage]);
-
-  useEffect(() => {
-    if (deletionMessage) {
-      const timer = setTimeout(() => setDeletionMessage(null), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [deletionMessage]);
-
-  useEffect(() => {
-    if (groupAddedMessage) {
-      const timer = setTimeout(() => setGroupAddedMessage(null), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [groupAddedMessage]);
-
-  // Prevent background scrolling when local modals inside group form are open
-  useEffect(() => {
-    const isLocalModalOpen = isEditModalOpen || confirmModal.isOpen || isChecklistModalOpen;
-    if (isLocalModalOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.overscrollBehavior = 'none';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.overscrollBehavior = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.overscrollBehavior = '';
-    };
-  }, [isEditModalOpen, confirmModal.isOpen, isChecklistModalOpen]);
-
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  useEffect(() => {
-    if (mode === 'add') {
-      const hasTriggerChecklist = (triggerTask as any).checklist && (triggerTask as any).checklist.length > 0;
-      const hasRoutineChecklist = routineList.some(r => (r as any).checklist && (r as any).checklist.length > 0);
-      const hasCurrentInput = currentRoutineInput.text.trim() !== '' || (currentRoutineInput.checklist && (currentRoutineInput.checklist as any[]).length > 0);
-      const isDirty = name.trim() !== '' || purpose.trim() !== '' || triggerTask.text.trim() !== '' || routineList.length > 0 || hasTriggerChecklist || hasRoutineChecklist || hasCurrentInput;
-      onDirtyChange?.(isDirty);
-    } else if (mode === 'edit' && initialChunk) {
-      // Comparison logic for edit mode
-      const isNameNew = name !== initialChunk.name;
-      const isPurposeNew = purpose !== (initialChunk.purpose || '');
-      const isDaysNew = JSON.stringify([...scheduledDays].sort()) !== JSON.stringify([...initialChunk.scheduledDays].sort());
-      const isStartTimeNew = (startType === 'time' ? startTime : '') !== (initialChunk.startTime || '');
-      const isStartTypeNew = startType !== (initialChunk.startType || 'anytime');
-      const isSituationNew = situation !== (initialChunk.situation || '');
-      const isAlarmNew = isAlarmEnabled !== (initialChunk.isAlarmEnabled || false);
-
-      // Tasks comparison
-      const initialTasks = initialChunk.tasks || [];
-      const isTriggerNew = initialTasks.length === 0 || 
-        triggerTask.text !== initialTasks[0].text || 
-        triggerTask.duration !== initialTasks[0].targetDuration || 
-        triggerTask.type !== initialTasks[0].taskType ||
-        JSON.stringify((triggerTask as any).checklist || []) !== JSON.stringify((initialTasks[0] as any).checklist || []);
-      
-      const currentRoutineListTasks = routineList;
-      const initialRoutineListTasks = initialTasks.slice(1);
-      
-      let isRoutineListNew = currentRoutineListTasks.length !== initialRoutineListTasks.length;
-      if (!isRoutineListNew) {
-        for (let i = 0; i < currentRoutineListTasks.length; i++) {
-          if (currentRoutineListTasks[i].text !== initialRoutineListTasks[i].text || 
-              currentRoutineListTasks[i].duration !== initialRoutineListTasks[i].targetDuration || 
-              currentRoutineListTasks[i].type !== initialRoutineListTasks[i].taskType ||
-              JSON.stringify((currentRoutineListTasks[i] as any).checklist || []) !== JSON.stringify((initialRoutineListTasks[i] as any).checklist || [])) {
-            isRoutineListNew = true;
-            break;
-          }
-        }
-      }
-
-      const hasCurrentInput = currentRoutineInput.text.trim() !== '' || (currentRoutineInput.checklist && (currentRoutineInput.checklist as any[]).length > 0);
-      const isDirty = isNameNew || isPurposeNew || isDaysNew || isStartTimeNew || isStartTypeNew || isSituationNew || isAlarmNew || isTriggerNew || isRoutineListNew || hasCurrentInput;
-      onDirtyChange?.(isDirty);
-    }
-  }, [name, purpose, triggerTask, routineList, scheduledDays, startTime, startType, situation, isAlarmEnabled, mode, initialChunk, onDirtyChange]);
-
-  const addRoutineToList = () => {
-    if (!currentRoutineInput.text.trim()) return;
-    
-    const taskToSave = { 
-      ...currentRoutineInput, 
-      duration: Number(currentRoutineInput.duration) || 1 
-    };
-
-    if (editingRoutineIndex !== null) {
-      const newList = [...routineList];
-      newList[editingRoutineIndex] = { ...newList[editingRoutineIndex], ...taskToSave };
-      setRoutineList(newList);
-      setEditingRoutineIndex(null);
-      setIsEditModalOpen(false);
-    } else {
-      setRoutineList([...routineList, { ...taskToSave, id: `new-rt-${Date.now()}` }]);
-      setRoutineAddedMessage(`'${taskToSave.text}' 루틴이 추가되었습니다`);
-    }
-    setCurrentRoutineInput({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
-  };
-
-  const startEditing = (idx: number) => {
-    setEditingRoutineIndex(idx);
-    const routine = routineList[idx];
-    setCurrentRoutineInput({
-      text: routine.text,
-      duration: routine.duration || 10,
-      type: routine.type,
-      scheduledDays: routine.scheduledDays || scheduledDays,
-      checklist: (routine as any).checklist || [],
-      onDelete: () => {
-        setConfirmModal({
-          isOpen: true,
-          title: '루틴 삭제',
-          message: `'${routine.text}' 루틴을 삭제하시겠습니까?`,
-          confirmLabel: '삭제',
-          confirmColor: 'rose',
-          onConfirm: () => {
-            setRoutineList(prev => prev.filter((_, i) => i !== idx));
-            setEditingRoutineIndex(null);
-            setIsEditModalOpen(false);
-            setConfirmModal(prev => ({ ...prev, isOpen: false }));
-            setDeletionMessage('루틴이 삭제되었습니다');
-          }
-        });
-      }
-    } as any);
-    setIsEditModalOpen(true);
-  };
-
-  const handleRoutineDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = routineList.findIndex((rt) => rt.id === active.id);
-      const newIndex = routineList.findIndex((rt) => rt.id === over.id);
-      setRoutineList(arrayMove(routineList, oldIndex, newIndex));
-    }
-  };
-
-  const handleSave = () => {
-    if (!name.trim()) {
-      setErrorMessage('루틴 그룹 이름을 입력해주세요.');
-      return;
-    }
-
-    if (!purpose.trim()) {
-      setErrorMessage('루틴 그룹 목적을 입력해주세요.');
-      return;
-    }
-    
-    const finalTasks: Task[] = [];
-    const now = Date.now();
-    
-    // Create a map of existing tasks to preserve their state (startTime, accumulatedDuration, status, etc.)
-    const existingTasksMap = new Map<string, Task>();
-    if (mode === 'edit' && initialChunk) {
-      initialChunk.tasks.forEach(t => existingTasksMap.set(t.id, t));
-    }
-
-    // 1. Trigger Task
-    const triggerId = mode === 'edit' && initialChunk?.tasks[0]?.id ? initialChunk.tasks[0].id : `trigger-${now}`;
-    const existingTrigger = existingTasksMap.get(triggerId);
-    finalTasks.push({
-      ...(existingTrigger || {}),
-      id: triggerId,
-      text: triggerTask.text || '트리거 루틴',
-      targetDuration: Math.min(3, Number(triggerTask.duration) || 1),
-      taskType: triggerTask.type,
-      scheduledDays: triggerTask.scheduledDays.filter(d => scheduledDays.includes(d)),
-      checklist: (triggerTask as any).checklist || [],
-      // Ensure basic state if it's a new task
-      completed: existingTrigger ? existingTrigger.completed : false,
-      status: existingTrigger ? existingTrigger.status : TaskStatus.NOT_STARTED
-    } as Task);
-    
-    // 2. Routine List
-    routineList.forEach((rt, idx) => {
-      const rtId = rt.id.startsWith('new-rt-') ? `routine-${idx}-${now}` : rt.id;
-      const existingRt = existingTasksMap.get(rtId);
-      finalTasks.push({
-        ...(existingRt || {}),
-        id: rtId,
-        text: rt.text,
-        targetDuration: Number(rt.duration) || 1,
-        taskType: rt.type,
-        scheduledDays: rt.scheduledDays.filter(d => scheduledDays.includes(d)),
-        checklist: (rt as any).checklist || [],
-        // Ensure basic state if it's a new task
-        completed: existingRt ? existingRt.completed : false,
-        status: existingRt ? existingRt.status : TaskStatus.NOT_STARTED
-      } as Task);
-    });
-
-    // 3. Current Input (if not empty)
-    if (currentRoutineInput.text.trim()) {
-      finalTasks.push({
-        id: `routine-last-${now}`,
-        text: currentRoutineInput.text,
-        completed: false,
-        status: TaskStatus.NOT_STARTED,
-        targetDuration: Number(currentRoutineInput.duration) || 1,
-        taskType: currentRoutineInput.type,
-        scheduledDays: currentRoutineInput.scheduledDays.filter(d => scheduledDays.includes(d)),
-        checklist: (currentRoutineInput as any).checklist || []
-      } as Task);
-    }
-    
-    if (finalTasks.length < 2) {
-      setErrorMessage('모든 루틴 그룹은 반드시 두 개 이상의 루틴이 들어가야 합니다. (트리거 + 개별 루틴)');
-      return;
-    }
-    setErrorMessage(null);
-
-    if (mode === 'edit' && initialChunk && updateChunk) {
-      updateChunk(initialChunk.id, {
-        name,
-        purpose,
-        tasks: finalTasks,
-        scheduledDays,
-        startTime: startType === 'time' ? startTime : '',
-        isAlarmEnabled,
-        startType,
-        situation
-      });
-      
-      setSaveSuccessMessage('변경사항이 저장되었습니다');
-      setTimeout(() => {
-        setSaveSuccessMessage(null);
-        // Only go back if it was opened from execution screen
-        if (activeTab === 'execution') {
-          setSettingsSubView({ type: 'main' });
-          setIsSettingsOpen(false);
-        } else {
-          setSettingsSubView({ type: 'main' });
-        }
-      }, 2000);
-    } else {
-      addChunk(name, purpose, finalTasks, 'days', scheduledDays, startType === 'time' ? startTime : '', isAlarmEnabled, startType, situation);
-      setActiveTab('home');
-    }
-  };
-
-  const openChecklistModal = (target: 'trigger' | 'current') => {
-    setActiveChecklistTarget(target);
-    setIsChecklistModalOpen(true);
-  };
-
-  return (
-    <div className="space-y-5 pb-20">
-      {/* 루틴 추가/삭제/수정 알림 팝업 */}
-      <AnimatePresence>
-        {(routineAddedMessage || deletionMessage || saveSuccessMessage || groupAddedMessage) && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 10 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[300] pointer-events-none"
-          >
-            <div className={`bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-[20px] shadow-2xl flex flex-col items-center gap-2 border border-white/10 min-w-[200px] ${deletionMessage ? 'border-rose-500/30' : (saveSuccessMessage ? 'border-indigo-500/30' : 'border-emerald-500/30')}`}>
-              <div className={`w-10 h-10 ${deletionMessage ? 'bg-rose-500/20' : (saveSuccessMessage ? 'bg-indigo-500/20' : 'bg-emerald-500/20')} rounded-full flex items-center justify-center mb-1`}>
-                {deletionMessage ? (
-                  <Trash2 className="w-6 h-6 text-rose-400" />
-                ) : (
-                  <Check className="w-6 h-6 text-emerald-400" />
-                )}
-              </div>
-              <span className="text-sm font-black tracking-tight text-center">
-                {deletionMessage || routineAddedMessage || saveSuccessMessage || groupAddedMessage}
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isEditModalOpen && (
-          <RoutineEditModal 
-            isOpen={isEditModalOpen}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              setEditingRoutineIndex(null);
-              setCurrentRoutineInput({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
-            }}
-            task={currentRoutineInput}
-            setTask={setCurrentRoutineInput}
-            onSave={addRoutineToList}
-            onOpenChecklist={() => openChecklistModal('current')}
-            groupScheduledDays={scheduledDays}
-            label={<div className="flex items-center gap-2"><Edit2 className="w-4 h-4" /> 루틴 수정</div>}
-          />
-        )}
-      </AnimatePresence>
-
-      <ChecklistModal 
-        isOpen={isChecklistModalOpen}
-        onClose={() => {
-          setIsChecklistModalOpen(false);
-          setActiveChecklistTarget(null);
-        }}
-        checklist={activeChecklistTarget === 'trigger' ? (triggerTask as any).checklist || [] : (currentRoutineInput as any).checklist || []}
-        setChecklist={(items) => {
-          if (activeChecklistTarget === 'trigger') {
-            setTriggerTask({ ...triggerTask, checklist: items } as any);
-          } else {
-            setCurrentRoutineInput({ ...currentRoutineInput, checklist: items } as any);
-          }
-        }}
-        setConfirmModal={setConfirmModal}
-      />
-      {/* 여백 조정 포인트: px-2.5 (기존 p-5에서 좌우 여백만 절반으로 축소) */}
-      <div className="bg-white border border-slate-200 rounded-[10px] px-2.5 py-5 shadow-none space-y-5">
-        <div className="space-y-1 mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-              {mode === 'edit' ? (
-                <Settings className="w-6 h-6 text-indigo-600" />
-              ) : (
-                <PlusCircle className="w-6 h-6 text-indigo-600" />
-              )}
-            </div>
-            <h2 className="text-xl font-black text-slate-900">{mode === 'edit' ? '루틴 그룹 수정' : '새로운 루틴 그룹 만들기'}</h2>
-          </div>
-        </div>
-        <div className="space-y-5">
-          {/* Name Input */}
-          <div className="space-y-3">
-            <SectionTitle>1. 루틴그룹 이름</SectionTitle>
-            <input 
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="예: 아침 루틴, 독서 루틴 등"
-              spellCheck={false}
-              autoComplete="off"
-              className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-base font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            />
-          </div>
-
-          {/* Purpose Input */}
-          <div className="space-y-3">
-            <SectionTitle>2. 목적</SectionTitle>
-            <p className="text-[12px] font-bold text-slate-400 -mt-3 ml-1 mb-2 leading-tight">
-              이 루틴을 성실하게 수행하는 사람은 어떤 사람일까요?
-            </p>
-
-            <input 
-              type="text"
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              placeholder="예: 아침시간을 낭비하지 않는 사람"
-              spellCheck={false}
-              autoComplete="off"
-              className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-base font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            />
-          </div>
-
-          {/* Schedule Settings */}
-          <div className="space-y-3">
-            <SectionTitle>3. 요일 설정</SectionTitle>
-            <p className="text-[12px] font-bold text-slate-400 -mt-3 ml-1 mb-2 leading-tight">
-              모든 요일을 해제하여 비정기적인 루틴을 수행할 수 있습니다
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: '월', value: 1 },
-                { label: '화', value: 2 },
-                { label: '수', value: 3 },
-                { label: '목', value: 4 },
-                { label: '금', value: 5 },
-                { label: '토', value: 6, color: 'bg-emerald-600' },
-                { label: '일', value: 0, color: 'bg-rose-600' }
-              ].map((dayObj) => {
-                const i = dayObj.value;
-                const isSelected = scheduledDays.includes(i);
-                const selectedColor = dayObj.color || 'bg-indigo-600';
-                return (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      if (scheduledDays.includes(i)) {
-                        setScheduledDays(scheduledDays.filter(d => d !== i));
-                      } else {
-                        setScheduledDays([...scheduledDays, i].sort());
-                      }
-                    }}
-                    className={`w-10 h-10 rounded-[10px] text-sm font-black transition-all ${isSelected ? `${selectedColor} text-white shadow-none` : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
-                  >
-                    {dayObj.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Start Situation or Time Setting */}
-          <div className="space-y-0">
-            <SectionTitle>4. 시작 상황 또는 시각 설정</SectionTitle>
-            
-            <div className="relative">
-              {/* Index-style Tabs */}
-              <div className="flex items-end gap-1 px-0 relative z-10">
-                {[
-                  { id: 'anytime', label: '아무때나' },
-                  { id: 'situation', label: '상황' },
-                  { id: 'time', label: '시각' }
-                ].map((tab) => {
-                  const isActive = startType === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => {
-                        setStartType(tab.id as any);
-                        if (tab.id !== 'time') setIsAlarmEnabled(false);
-                      }}
-                      className={`px-4 py-2 rounded-t-[10px] text-sm font-black transition-all border-x border-t ${
-                        isActive 
-                          ? 'bg-white border-slate-200 text-slate-700 -mb-px' 
-                          : 'bg-slate-100/50 border-transparent text-slate-400 hover:bg-slate-100'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Connected Content Area */}
-              <div className="bg-white border border-slate-200 rounded-[12px] rounded-tl-none px-4 py-4 min-h-[85px] flex flex-col justify-center">
-                <div className="animate-in fade-in duration-300">
-                  {startType === 'anytime' && (
-                    <div className="flex items-center justify-start">
-                      <p className="text-sm font-black text-slate-700 ml-1">
-                        아무때나 시작합니다
-                      </p>
-                    </div>
-                  )}
-
-                  {startType === 'situation' && (
-                    <div className="flex items-center justify-start w-full px-0">
-                      <input 
-                        type="text"
-                        value={situation}
-                        onChange={(e) => setSituation(e.target.value)}
-                        placeholder="상황을 입력하세요 (예: 나갔다와서)"
-                        spellCheck={false}
-                        autoComplete="off"
-                        className="w-full bg-slate-50 border border-slate-100 rounded-[10px] px-4 py-2 text-sm font-black text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all focus:bg-white"
-                      />
-                    </div>
-                  )}
-
-                  {startType === 'time' && (
-                    <div className="flex items-center justify-start gap-5">
-                      {/* Time Input: Single row layout returned */}
-                      <div className="flex items-center focus-within:ring-0 transition-all">
-                        <input 
-                          type="time" 
-                          value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
-                          spellCheck={false}
-                          autoComplete="off"
-                          className="text-lg font-black bg-transparent border-none focus:ring-0 p-0 text-slate-700 tabular-nums"
-                          style={{ width: '130px' }} 
-                        />
-                      </div>
-
-                      {/* Alarm Toggle */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[10px] font-black text-slate-700">
-                          {isAlarmEnabled ? '알람 ON' : '알람 OFF'}
-                        </span>
-                        <button 
-                          type="button"
-                          onClick={async () => {
-                            if (!isAlarmEnabled) {
-                              const status = await notificationService.requestPermission();
-                              if (status !== 'granted') {
-                                // show guide in parent? No, we need to pass a way.
-                                // Actually, I'll pass down a handler or just do it here if I have access to service.
-                                // But I can't easily show the modal from here without passing it down.
-                                // I'll use window alert as a fallback or if I can access the setter.
-                                (window as any).__showPermissionGuide?.();
-                                return;
-                              }
-                            }
-                            setIsAlarmEnabled(!isAlarmEnabled);
-                          }}
-                          className="w-10 h-5 rounded-full transition-all relative border-0 p-0 cursor-pointer shadow-none overflow-hidden"
-                          style={{ backgroundColor: isAlarmEnabled ? 'rgb(79 70 229)' : 'rgb(203 213 225)' }}
-                        >
-                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${isAlarmEnabled ? 'left-5.5' : 'left-0.5'}`} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tasks Section */}
-          <div className="space-y-5">
-            <TaskInputSection 
-              label={<SectionTitle>5. 첫번째 루틴 (트리거 루틴)</SectionTitle>}
-              task={triggerTask}
-              setTask={setTriggerTask}
-              isTrigger={true}
-              description="가벼운 주의 환기 행동으로 시작합니다. 아침 루틴을 위해서 침대에서 벗어나기, 독서를 위해서 책을 펼쳐놓기와 같이 3분이내 끝날 수 있는 행동을 설정해주세요"
-              onOpenChecklist={() => openChecklistModal('trigger')}
-              groupScheduledDays={scheduledDays}
-            />
-
-            <div className="space-y-3">
-              <SectionTitle>6. 루틴 추가</SectionTitle>
-              
-              {/* Added Routines List (Numbered 2, 3, 4...) */}
-              {routineList.length > 0 && (
-                <div className="space-y-3 mb-4">
-                  <DndContext 
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleRoutineDragEnd}
-                  >
-              <div className="space-y-4">
-                <SortableContext 
-                  items={routineList.map(rt => rt.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-2">
-                    {routineList.map((rt, idx) => (
-                      <SortableRoutineItem 
-                        key={rt.id} 
-                        rt={rt} 
-                        idx={idx} 
-                        onEdit={() => startEditing(idx)}
-                        onDelete={() => {
-                          setConfirmModal({
-                            isOpen: true,
-                            title: '루틴 삭제',
-                            message: `'${rt.text}' 루틴을 삭제하시겠습니까?`,
-                            confirmLabel: '삭제',
-                            confirmColor: 'rose',
-                            onConfirm: () => {
-                              setRoutineList(prev => prev.filter(item => item.id !== rt.id));
-                              setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                              setDeletionMessage('루틴이 삭제되었습니다');
-                            }
-                          });
-                        }}
-                        groupScheduledDays={scheduledDays}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </div>
-                  </DndContext>
-                </div>
-              )}
-
-              {/* New Routine Input Dialog */}
-              <div id="routine-input-section">
-                <TaskInputSection 
-                  label=""
-                  task={currentRoutineInput}
-                  setTask={setCurrentRoutineInput}
-                  onAdd={addRoutineToList}
-                  isEditing={editingRoutineIndex !== null}
-                  onCancel={() => {
-                    setEditingRoutineIndex(null);
-                    setCurrentRoutineInput({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
-                  }}
-                  onOpenChecklist={() => openChecklistModal('current')}
-                  groupScheduledDays={scheduledDays}
-                />
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="space-y-3">
-        {errorMessage && (
-          <div className="p-3 bg-rose-50 border border-rose-100 rounded-[10px] flex items-center gap-2 text-rose-600 text-xs font-bold">
-            <AlertCircle className="w-4 h-4" />
-            {errorMessage}
-          </div>
-        )}
-        <div className="flex gap-3">
-          <button 
-            onClick={() => {
-              const hasTriggerChecklist = (triggerTask as any).checklist && (triggerTask as any).checklist.length > 0;
-              const hasRoutineChecklist = routineList.some(r => (r as any).checklist && (r as any).checklist.length > 0);
-              const hasCurrentInput = currentRoutineInput.text.trim() !== '' || (currentRoutineInput.checklist && (currentRoutineInput.checklist as any[]).length > 0);
-              
-              if (mode === 'edit') {
-                const isNameNew = name !== initialChunk?.name;
-                const isPurposeNew = purpose !== (initialChunk?.purpose || '');
-                const isDaysNew = JSON.stringify([...scheduledDays].sort()) !== JSON.stringify([...(initialChunk?.scheduledDays || [])].sort());
-                const isStartTimeNew = (startType === 'time' ? startTime : '') !== (initialChunk?.startTime || '');
-                const isStartTypeNew = startType !== (initialChunk?.startType || 'anytime');
-                const isSituationNew = situation !== (initialChunk?.situation || '');
-                const isAlarmNew = isAlarmEnabled !== (initialChunk?.isAlarmEnabled || false);
-
-                const currentTasks = routineList;
-                const initialTasks = initialChunk?.tasks?.slice(1) || [];
-                let isRoutineListNew = currentTasks.length !== initialTasks.length;
-                if (!isRoutineListNew) {
-                  for (let i = 0; i < currentTasks.length; i++) {
-                    if (currentTasks[i].text !== initialTasks[i].text || 
-                        currentTasks[i].duration !== initialTasks[i].targetDuration || 
-                        currentTasks[i].type !== initialTasks[i].taskType ||
-                        JSON.stringify((currentTasks[i] as any).checklist || []) !== JSON.stringify((initialTasks[i] as any).checklist || [])) {
-                      isRoutineListNew = true;
-                      break;
-                    }
-                  }
-                }
-
-                const isTriggerNew = (initialChunk?.tasks?.length || 0) === 0 || 
-                  triggerTask.text !== initialChunk?.tasks[0].text || 
-                  triggerTask.duration !== initialChunk?.tasks[0].targetDuration || 
-                  triggerTask.type !== initialChunk?.tasks[0].taskType ||
-                  JSON.stringify((triggerTask as any).checklist || []) !== JSON.stringify((initialChunk?.tasks[0] as any).checklist || []);
-
-                const isDirty = isNameNew || isPurposeNew || isDaysNew || isStartTimeNew || isStartTypeNew || isSituationNew || isAlarmNew || isTriggerNew || isRoutineListNew || hasCurrentInput;
-
-                if (isDirty) {
-                  setConfirmModal({
-                    isOpen: true,
-                    title: '변경 취소 확인',
-                    message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
-                    confirmLabel: '취소하고 나가기',
-                    cancelLabel: '계속 수정하기',
-                    confirmColor: 'indigo',
-                    showCancel: true,
-                    onConfirm: () => {
-                      if (activeTab === 'execution' && setIsSettingsOpen) setIsSettingsOpen(false);
-                      if (setSettingsSubView) setSettingsSubView({ type: 'main' });
-                      setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                    }
-                  });
-                } else {
-                  if (activeTab === 'execution' && setIsSettingsOpen) setIsSettingsOpen(false);
-                  if (setSettingsSubView) setSettingsSubView({ type: 'main' });
-                }
-              } else {
-                const isDirty = name.trim() !== '' || purpose.trim() !== '' || triggerTask.text.trim() !== '' || routineList.length > 0 || hasTriggerChecklist || hasRoutineChecklist || hasCurrentInput;
-                if (isDirty) {
-                  setConfirmModal({
-                    isOpen: true,
-                    title: '입력 취소 확인',
-                    message: '작성 중인 내용이 있습니다. 저장하지 않고 나가시겠습니까?',
-                    confirmLabel: '저장하지 않고 나가기',
-                    cancelLabel: '계속 작성하기',
-                    confirmColor: 'indigo',
-                    showCancel: true,
-                    onConfirm: () => {
-                      onDirtyChange?.(false);
-                      setActiveTab('home');
-                      setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                    }
-                  });
-                } else {
-                  onDirtyChange?.(false);
-                  setActiveTab('home');
-                }
-              }
-            }}
-            className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-[10px] font-black text-lg hover:bg-slate-200 transition-all"
-          >
-            취소하기
-          </button>
-          <button 
-            onClick={handleSave}
-            className="flex-[2] py-4 bg-indigo-600 text-white rounded-[10px] font-black text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-[0.98]"
-          >
-            {mode === 'edit' ? '저장하기' : '루틴 그룹 만들기'}
-          </button>
-        </div>
-      </div>
-
-      {/* Confirmation Modal for routine deletion */}
-      <ConfirmModal 
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        onConfirm={confirmModal.onConfirm}
-        onCancel={() => {
-          if (confirmModal.onCancel) {
-            confirmModal.onCancel();
-          } else {
-            setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          }
-        }}
-        confirmLabel={confirmModal.confirmLabel}
-        cancelLabel={confirmModal.cancelLabel}
-        showCancel={confirmModal.showCancel}
-        validationValue={confirmModal.validationValue}
-        validationPlaceholder={confirmModal.validationPlaceholder}
-        confirmColor={confirmModal.confirmColor}
-      />
-    </div>
-  );
-};
 
 interface NextRoutineSuggestion {
   chunkId: string;
@@ -3197,6 +419,7 @@ const speakAsync = (message: string, isEnabled: boolean, variables?: any): Promi
 };
 
 export default function App() {
+  const { t, i18n } = useTranslation();
   // --- State ---
   const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
   const [statsKey, setStatsKey] = useState(0);
@@ -3294,6 +517,8 @@ export default function App() {
     nextRoutineGroupGuidanceEnabled: false,
     hideAnytimeTimer: false,
     autoNextAccumulatedRoutine: false,
+    darkModeTheme: 'light',
+    darkModeFollowSystem: false,
     userName: '나',
     isVoiceEnabled: true,
     isWakeUpAlarmEnabled: false,
@@ -3406,6 +631,8 @@ export default function App() {
             nextRoutineGroupGuidanceEnabled: false,
             hideAnytimeTimer: false,
             autoNextAccumulatedRoutine: false,
+            darkModeTheme: 'light',
+            darkModeFollowSystem: false,
             userName: '나',
             isVoiceEnabled: true,
             isWakeUpAlarmEnabled: false,
@@ -3502,6 +729,8 @@ export default function App() {
         if (parsed.autoNextAccumulatedRoutine === undefined) parsed.autoNextAccumulatedRoutine = false;
         if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
         if (parsed.isWakeUpAlarmEnabled === undefined) parsed.isWakeUpAlarmEnabled = false;
+        if (parsed.darkModeTheme === undefined) parsed.darkModeTheme = 'light';
+        if (parsed.darkModeFollowSystem === undefined) parsed.darkModeFollowSystem = false;
         
         if (parsed.naggingSettings === undefined) {
           parsed.naggingSettings = {
@@ -3643,22 +872,6 @@ export default function App() {
   }, []);
 
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  // --- 캐릭터를 누를 수 있는 횟수를 가산해주는 함수 (Check-Check Opportunity Addition Engine) ---
-  // 사용자가 앱에 대해서 긍정적인 행동(앱 실행, 루틴 시작, 완벽/완료, 편집, 통계 확인 등)을 할 때마다
-  // 이 함수가 실행되어 'availableCheckCheckCount'를 올려줍니다.
-  // 상황별 가산량(points)을 원하시는 대로 직접 수정하실 수 있습니다. (예: +1을 +3 등으로 변경 가능)
-  const addAvailableCheckCheckPoints = (points: number = 1, actionName: string = "") => {
-    setUserData(prev => {
-      // 기기에 저장된 잔여 횟수가 없을 때는 기본값 5로 채색 후 누적 시작합니다.
-      const currentAvailable = prev.availableCheckCheckCount !== undefined ? prev.availableCheckCheckCount : 5;
-      console.log(`[체크체크 가산 엔진] 행동: "${actionName}", 가산포인트: +${points}, 기존 잔여: ${currentAvailable}, 새로운 잔여: ${currentAvailable + points}`);
-      return {
-        ...prev,
-        availableCheckCheckCount: currentAvailable + points
-      };
-    });
-  };
 
   // --- 체크인 후 매 29분이 경과할 때마다 캐릭터 누르기 횟수 2회씩 자동 수혈하는 엔진 ---
   useEffect(() => {
@@ -4103,6 +1316,46 @@ export default function App() {
     return () => window.removeEventListener('focus', handlePermissionChange);
   }, [userData.isWakeUpAlarmEnabled, userData.routineChunks]);
 
+  useEffect(() => {
+    const applyDarkMode = () => {
+      let isDarkActive = false;
+      if (userData.darkModeFollowSystem) {
+        isDarkActive = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } else {
+        isDarkActive = userData.darkModeTheme === 'dark';
+      }
+
+      if (isDarkActive) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+
+    applyDarkMode();
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (userData.darkModeFollowSystem) {
+        applyDarkMode();
+      }
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleChange);
+      } else {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, [userData.darkModeTheme, userData.darkModeFollowSystem]);
+
   const todayStr = useMemo(() => {
     const [resetH] = userData.resetTime.split(':').map(Number);
     const effDate = getEffectiveDateObject(currentTime, resetH);
@@ -4113,6 +1366,13 @@ export default function App() {
     const [resetH] = userData.resetTime.split(':').map(Number);
     return getEffectiveDateObject(currentTime, resetH);
   }, [todayStr, userData.resetTime]);
+
+  const {
+    checkCheckIconId,
+    isCheckCheckAvailable,
+    handleCheckCheckClick,
+    addAvailableCheckCheckPoints
+  } = useCheckCheckBox(userData, setUserData, todayStr);
 
   // [수정] 탭 변경이나 설정 하위 뷰 변경 시에만 최상단으로 스크롤 이동
   useEffect(() => {
@@ -6466,47 +3726,6 @@ export default function App() {
     });
   };
 
-  // --- 체크체크박스 (Check-Check Box) 로직 ---
-  // 이 부분에서 캐릭터(체크체크)를 누를 수 있는 조건과 기회 횟수를 차감하고 관리합니다.
-  
-  // [수정 설정]: 캐릭터를 누를 수 있는 기회(availableCheckCheckCount)가 0보다 클 때만 한정하여 누르기가 작동합니다.
-  const isCheckCheckAvailable = (userData.availableCheckCheckCount !== undefined ? userData.availableCheckCheckCount : 5) > 0;
-
-  const handleCheckCheckClick = () => {
-    soundService.unlock();
-    
-    // 캐릭터를 누를 수 있을 때(잔여 기회 횟수가 1 이상일 때)만 작동을 허용합니다.
-    if (isCheckCheckAvailable) {
-      // 모바일 기기 햅틱 진동 피드백 ('두둑'하는 느낌의 짧은 연속 진동)
-      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-        navigator.vibrate([20, 30, 20]);
-      }
-
-      // 지정해주신 효과음('public/sounds/nikin-short-chick-sound-171389.mp3')을 재생합니다. (다만, 효과음 설정에서 병아리 소리가 비활성화되어 있는 경우는 재생하지 않습니다)
-      const isChickSoundEnabled = userData.soundSettings?.chickSound?.enabled !== false;
-      if (isChickSoundEnabled) {
-        soundService.play('public/sounds/nikin-short-chick-sound-171389.mp3');
-      }
-      
-      setUserData(prev => {
-        const currentCheckCount = (prev.dailyCheckCheckCounts?.[todayStr]) || 0;
-        const currentAvailable = prev.availableCheckCheckCount !== undefined ? prev.availableCheckCheckCount : 5;
-        
-        return {
-          ...prev,
-          // 실시간으로 누를 수 있는 기회 횟수를 1 차감합니다 (0 미만으로 내려가지 않도록 유도).
-          availableCheckCheckCount: Math.max(0, currentAvailable - 1),
-          // 기존 기능(캐릭터 누적 성장용 데일리 카운트)은 그대로 유지하여 캐릭터 애니메이션과의 호환성을 해치지 않습니다.
-          dailyCheckCheckCounts: {
-            ...prev.dailyCheckCheckCounts,
-            [todayStr]: currentCheckCount + 1
-          },
-          lastCheckCheckTime: Date.now()
-        };
-      });
-    }
-  };
-
   const resetWakeUpHistory = () => {
     setConfirmModal({
       isOpen: true,
@@ -7138,25 +4357,6 @@ export default function App() {
     e.target.value = '';
   };
 
-  // 체크체크박스 아이콘 결정 로직 (클릭 횟수에 따라 진화)
-  // 사용자가 설정한 리셋 시각에 하루 분량으로 리셋되도록 오늘 누른 횟수만을 기준으로 결정합니다.
-  const checkCheckIconId = useMemo(() => {
-    // 오늘의 캐릭터 클릭 횟수를 구합니다.
-    const totalCount = (userData.dailyCheckCheckCounts?.[todayStr]) || 0;
-    const stages = phrases.checkCheckSettings.evolutionStages;
-    
-    // 캐릭터가 다음 단계로 진화하기 위해 필요한 누점 누름 횟수 간격입니다. (현재 20회로 설정됨, 수정 가능)
-    const clicksPerEvolution = 20;
-    
-    // 누름 횟수를 간격(20회)으로 나누어 현재 진화 단계의 인덱스를 계산합니다.
-    const stageIndex = Math.floor(totalCount / clicksPerEvolution);
-    
-    // 단계 배열 인덱스를 벗어나지 않도록 하고, 최종 진화 단계를 구합니다.
-    const currentStage = stages[Math.min(stageIndex, stages.length - 1)] || stages[0];
-    
-    return currentStage.iconId;
-  }, [userData.dailyCheckCheckCounts, todayStr]);
-
   const challengeDays = useMemo(() => {
     const dates = Object.keys(userData.dailyCompletionRate || {}).filter(d => !!d);
     if (dates.length === 0) return 1;
@@ -7222,7 +4422,7 @@ export default function App() {
               }`}
             >
               <Settings className={`w-3.5 h-3.5 ${activeSettingsTab === 'general' ? 'text-indigo-500' : 'text-slate-300'}`} />
-              일반설정
+              {t('settings.generalSettings')}
               {activeSettingsTab === 'general' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
             </button>
 
@@ -7258,7 +4458,7 @@ export default function App() {
               }`}
             >
               <Sliders className={`w-3.5 h-3.5 ${activeSettingsTab === 'groups' ? 'text-violet-500' : 'text-slate-300'}`} />
-              루틴 그룹 관리
+              {t('settings.routineGroupManagement')}
               {activeSettingsTab === 'groups' && <div className="absolute inset-x-0 -bottom-1 bg-white h-2 z-30" />}
             </button>
           </div>
@@ -7307,7 +4507,7 @@ export default function App() {
                         <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                           <User className="w-5 h-5 text-indigo-600" />
                         </div>
-                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">사용자 이름</h3>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">{t('settings.userNameLabel')}</h3>
                       </div>
                       <div className="flex gap-2">
                         <input 
@@ -7331,7 +4531,7 @@ export default function App() {
                               : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
                           }`}
                         >
-                          저장
+                          {t('common.save')}
                         </button>
                       </div>
                     </div>
@@ -7341,7 +4541,7 @@ export default function App() {
                         <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                           <Sun className="w-5 h-5 text-indigo-600" />
                         </div>
-                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">기상 목표 시각</h3>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">{t('settings.wakeUpGoalTime')}</h3>
                       </div>
                       <div className="flex gap-1.5 sm:gap-2 items-center">
                         <input 
@@ -7364,7 +4564,7 @@ export default function App() {
                               : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
                           }`}
                         >
-                          변경
+                          {t('settings.changeBtn')}
                         </button>
                         <button 
                           onClick={() => {
@@ -7378,7 +4578,7 @@ export default function App() {
                           }`}
                         >
                           {userData.isWakeUpAlarmEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
-                          알람
+                          {t('settings.alarmBtn')}
                         </button>
                       </div>
                     </div>
@@ -7389,9 +4589,9 @@ export default function App() {
                           <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                             <Moon className="w-5 h-5 text-indigo-600" />
                           </div>
-                          <h3 className="text-base font-black text-slate-800 whitespace-nowrap">하루 리셋 시각</h3>
+                          <h3 className="text-base font-black text-slate-800 whitespace-nowrap">{t('settings.dayResetTime')}</h3>
                         </div>
-                        <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">이 시간이 되면 모든 루틴의 완료 상태가 초기화되며, 그 전까지의 기록은 전날로 합산됩니다.</p>
+                        <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">{t('settings.dayResetTimeDesc')}</p>
                       </div>
                       
                       <div className="relative">
@@ -7404,7 +4604,7 @@ export default function App() {
                               <Clock className="w-3.5 h-3.5 text-indigo-600" />
                             </div>
                             <span className="text-base font-black text-slate-800">
-                              오전 {parseInt(userData.resetTime.split(':')[0])}시
+                              {t('settings.amHour', { hour: parseInt(userData.resetTime.split(':')[0]) })}
                             </span>
                           </div>
                           <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isResetTimeDropdownOpen ? 'rotate-180' : ''}`} />
@@ -7443,7 +4643,7 @@ export default function App() {
                                             : 'hover:bg-slate-50 text-slate-600'
                                         }`}
                                       >
-                                        <span className="font-black text-sm">오전 {hour}:00</span>
+                                        <span className="font-black text-sm">{t('settings.amHour', { hour })}</span>
                                         {isSelected && <Check className="w-4 h-4 text-white" />}
                                       </button>
                                     );
@@ -7648,6 +4848,72 @@ export default function App() {
                       </div>
                     </div>
 
+                    <div className="p-[15px] bg-white dark:bg-slate-900 rounded-[15px] space-y-[10px] shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Moon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <h3 className="text-base font-black text-slate-900 dark:text-slate-100">다크모드 설정</h3>
+                      </div>
+                      <p className="text-[12px] font-bold text-slate-400 dark:text-slate-500 leading-tight ml-10">
+                        앱의 화면 테마를 설정합니다. 다크모드를 사용하면 야간에 눈의 피로를 덜어줍니다.
+                      </p>
+                      
+                      <div className="flex flex-col sm:flex-row gap-3 pt-2 pl-10">
+                        {/* 라이트 / 다크 선택 버튼 */}
+                        <div className="flex items-center bg-slate-100 dark:bg-slate-950 p-1 rounded-xl flex-1 border border-slate-200/50 dark:border-slate-800/80">
+                          <button
+                            type="button"
+                            disabled={userData.darkModeFollowSystem}
+                            onClick={() => setUserData(prev => ({ ...prev, darkModeTheme: 'light' }))}
+                            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${
+                              userData.darkModeFollowSystem
+                                ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                                : userData.darkModeTheme === 'light'
+                                  ? 'bg-white dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                            }`}
+                          >
+                            라이트모드
+                          </button>
+                          <button
+                            type="button"
+                            disabled={userData.darkModeFollowSystem}
+                            onClick={() => setUserData(prev => ({ ...prev, darkModeTheme: 'dark' }))}
+                            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${
+                              userData.darkModeFollowSystem
+                                ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                                : userData.darkModeTheme === 'dark'
+                                  ? 'bg-white dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                            }`}
+                          >
+                            다크모드
+                          </button>
+                        </div>
+
+                        {/* 사용자 기기 설정에 따름 스위치 */}
+                        <button
+                          type="button"
+                          onClick={() => setUserData(prev => ({ ...prev, darkModeFollowSystem: !prev.darkModeFollowSystem }))}
+                          className={`flex items-center justify-between px-3 py-2 border rounded-xl transition-all text-left flex-1 ${
+                            userData.darkModeFollowSystem
+                              ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 font-black'
+                              : 'bg-slate-50 border-slate-100 dark:bg-slate-900/50 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <span className="text-xs">기기 설정에 따름</span>
+                          <div className={`w-8 h-4 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex-shrink-0 ml-2 ${
+                            userData.darkModeFollowSystem ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                          }`}>
+                            <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 ease-in-out transform ${
+                              userData.darkModeFollowSystem ? 'translate-x-4' : 'translate-x-0'
+                            }`} />
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
                       <div className="flex items-center gap-2 pb-1 border-b border-slate-50">
                         <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -7780,15 +5046,40 @@ export default function App() {
                         <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center flex-shrink-0">
                           <Globe className="w-5 h-5 text-slate-600" />
                         </div>
-                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">언어 설정 변경 (Langage)</h3>
+                        <h3 className="text-base font-black text-slate-800 whitespace-nowrap">{t('settings.languageTitle')}</h3>
                       </div>
-                      <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">현재는 한국어만 지원합니다. 추후 더 많은 언어가 추가될 예정입니다.</p>
-                      <div className="space-y-4 pt-1">
-                          <div className="flex flex-col items-start text-left pr-4">
-                          <div className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 font-extrabold text-xs rounded-lg whitespace-nowrap shadow-inner">
-                            한국어 (KO)
-                          </div>
-                        </div>
+                      <p className="text-[12px] font-bold text-slate-400 leading-tight ml-10">{t('settings.languageDesc')}</p>
+                      <div className="flex items-center gap-3 pt-1 ml-10">
+                        <button
+                          onClick={() => i18n.changeLanguage('ko')}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all transform active:scale-95 cursor-pointer ${
+                            (i18n.resolvedLanguage?.startsWith('ko') || i18n.language?.startsWith('ko') || (!i18n.language?.startsWith('ja') && !i18n.language?.startsWith('en')))
+                              ? 'bg-indigo-600 border border-indigo-600 text-white shadow-md shadow-indigo-100'
+                              : 'bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          한국어 (KO)
+                        </button>
+                        <button
+                          onClick={() => i18n.changeLanguage('ja')}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all transform active:scale-95 cursor-pointer ${
+                            (i18n.resolvedLanguage?.startsWith('ja') || i18n.language?.startsWith('ja'))
+                              ? 'bg-indigo-600 border border-indigo-600 text-white shadow-md shadow-indigo-100'
+                              : 'bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          日本語 (JA)
+                        </button>
+                        <button
+                          onClick={() => i18n.changeLanguage('en')}
+                          className={`px-4 py-2 rounded-xl text-xs font-black transition-all transform active:scale-95 cursor-pointer ${
+                            (i18n.resolvedLanguage?.startsWith('en') || i18n.language?.startsWith('en'))
+                              ? 'bg-indigo-600 border border-indigo-600 text-white shadow-md shadow-indigo-100'
+                              : 'bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          English (EN)
+                        </button>
                       </div>
                     </div>
                   </motion.div>
@@ -8416,8 +5707,8 @@ export default function App() {
             <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-1 pr-4">
-                  <h3 className="text-base font-black text-slate-800">루틴 종료 후 알림</h3>
-                  <p className="text-[11px] font-bold text-slate-400 leading-tight">설정 시간이 경과한 후에도 지속적으로 안내합니다. </p>
+                  <h3 className="text-base font-black text-slate-800">{t('nagging.overTimeTitle')}</h3>
+                  <p className="text-[11px] font-bold text-slate-400 leading-tight">{t('nagging.overTimeDesc')}</p>
                 </div>
                 <button 
                   onClick={() => updateNagging('overTimeEnabled', !settings.overTimeEnabled)}
@@ -8429,7 +5720,7 @@ export default function App() {
               {settings.overTimeEnabled && (
                 <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.overTimeTypes')}</label>
                     <div className="flex gap-2">
                       {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
                         const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
@@ -8452,15 +5743,15 @@ export default function App() {
                             }`}
                           >
                             <Icon className="w-3 h-3" />
-                            {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
-                             type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
+                            {type === TaskType.TIME_INDEPENDENT ? t('taskType.TIME_INDEPENDENT') : 
+                             type === TaskType.TIME_LIMITED ? t('taskType.TIME_LIMITED') : t('taskType.TIME_ACCUMULATED')}
                           </button>
                         );
                       })}
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">알림 간격 설정</label>
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.overTimeInterval')}</label>
                     <div className="flex items-center gap-2">
                       <input 
                         type="number"
@@ -8475,11 +5766,11 @@ export default function App() {
                         }}
                         className="w-16 text-center text-sm font-black p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       />
-                      <span className="text-xs font-black text-slate-400">분 마다</span>
+                      <span className="text-xs font-black text-slate-400">{t('nagging.minutesEach')}</span>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
+                    <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.overTimeMessageLabel')}</label>
                     <input 
                       type="text"
                       value={settings.overTimeMessage}
@@ -8497,13 +5788,13 @@ export default function App() {
               onClick={handleNaggingBack}
               className="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-[15px] hover:bg-slate-200 transition-all"
             >
-              취소
+              {t('common.cancel')}
             </button>
             <button 
               onClick={handleNaggingSave}
               className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
             >
-              저장
+              {t('common.save')}
             </button>
           </div>
         </div>
@@ -8533,22 +5824,25 @@ export default function App() {
   };
 
   const formattedDate = useMemo(() => {
-    return effectiveDate.toLocaleDateString('ko-KR', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric', 
-      weekday: 'long' 
-    });
-  }, [effectiveDate]);
+    return effectiveDate.toLocaleDateString(
+      i18n.language.startsWith('ja') ? 'ja-JP' : i18n.language.startsWith('en') ? 'en-US' : 'ko-KR', 
+      { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        weekday: 'long' 
+      }
+    );
+  }, [effectiveDate, i18n.language]);
 
   if (!isDataLoaded) {
     return (
-      <div className="min-h-screen bg-[#F7FEE7] flex flex-col items-center justify-center font-sans p-6 text-slate-800">
+      <div className="min-h-screen bg-[#F7FEE7] dark:bg-slate-950 flex flex-col items-center justify-center font-sans p-6 text-slate-800 dark:text-slate-100">
         <div className="flex flex-col items-center gap-4 max-w-sm text-center">
           <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <h2 className="text-xl font-black mt-2 text-indigo-900">단하루 불러오는 중...</h2>
-          <p className="text-sm text-slate-500 font-bold leading-relaxed">
-            로컬 저장소(IndexedDB)에서 안전하게 데이터를 불러오는 중입니다. 잠시만 기다려주세요.
+          <h2 className="text-xl font-black mt-2 text-indigo-900 dark:text-indigo-400">{t('common.loadingTitle')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+            {t('common.loadingDesc')}
           </p>
         </div>
       </div>
@@ -8556,7 +5850,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7FEE7] text-slate-900 font-sans pb-20" spellCheck={false}>
+    <div className="min-h-screen bg-[#F7FEE7] dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-20" spellCheck={false}>
       {/* Celebration Animation Overlay */}
       <AnimatePresence>
         {lastCompletedTaskName && (
@@ -8634,7 +5928,7 @@ export default function App() {
                 transition={{ delay: 0.5 }}
                 className="text-2xl font-bold text-red-400 mt-2"
               >
-                체크인 성공! 기분 좋은 시작입니다.
+                {t('common.checkInSuccess')}
               </motion.p>
             </motion.div>
           </motion.div>
@@ -8642,7 +5936,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* 홈아이콘줄 (Sticky Header Box) */}
-      <div className="sticky top-0 z-40 bg-[#F7FEE7]/80 backdrop-blur-md pt-2.5 pb-0">
+      <div className="sticky top-0 z-40 bg-[#F7FEE7]/80 dark:bg-slate-950/80 backdrop-blur-md pt-2.5 pb-0">
         <div className="max-w-2xl mx-auto px-4">
           <nav className="flex items-center gap-3">
             <button 
@@ -8653,8 +5947,8 @@ export default function App() {
               }}
               className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${
                 activeTab === 'home' && !selectedChunkId 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
-                  : 'bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 border border-slate-100 shadow-sm'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none' 
+                  : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 border border-slate-100 dark:border-slate-800 shadow-sm'
               }`}
             >
               <Home className="w-5 h-5" />
@@ -8669,8 +5963,8 @@ export default function App() {
               }}
               className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all ${
                 activeTab === 'settings'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
-                  : 'bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 border border-slate-100 shadow-sm'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none' 
+                  : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 border border-slate-100 dark:border-slate-800 shadow-sm'
               }`}
             >
               <Settings className="w-5 h-5" />
@@ -8684,8 +5978,8 @@ export default function App() {
               }}
               className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all ${
                 activeTab === 'add'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
-                  : 'bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 border border-slate-100 shadow-sm'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none' 
+                  : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 border border-slate-100 dark:border-slate-800 shadow-sm'
               }`}
             >
               <PlusCircle className="w-5 h-5" />
@@ -8699,8 +5993,8 @@ export default function App() {
               }}
               className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${
                 activeTab === 'stats' 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
-                  : 'bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 border border-slate-100 shadow-sm'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none' 
+                  : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 border border-slate-100 dark:border-slate-800 shadow-sm'
               }`}
             >
               <BarChart3 className="w-5 h-5" />
@@ -8733,7 +6027,7 @@ export default function App() {
                 tap: { scale: 0.94 }
               }}
               transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-              className={`transition-all w-16 h-10 flex items-center px-1.5 rounded-[10px] border shadow-sm relative overflow-hidden ${
+              className={`transition-all w-16 h-10 flex items-center px-1.5 rounded-[10px] border shadow-sm relative overflow-hidden always-light ${
                 isCheckCheckAvailable 
                   ? 'bg-white border-indigo-200 cursor-pointer hover:border-indigo-400' 
                   : 'bg-white border-slate-100 cursor-default'
@@ -8749,7 +6043,7 @@ export default function App() {
                 <CheckCheckIcon iconId={checkCheckIconId} size={32} />
               </motion.div>
               <div className="flex-grow flex flex-col items-center justify-center ml-0.5 relative">
-                <span className="text-[10px] font-black text-slate-500 leading-none" title="누를 수 있는 횟수">
+                <span className="text-[10px] font-black text-slate-500 leading-none" title={t('character.pressCountTitle')}>
                   {(userData.availableCheckCheckCount !== undefined ? userData.availableCheckCheckCount : 5)}
                 </span>
                 {isCheckCheckAvailable && (
@@ -9042,9 +6336,9 @@ export default function App() {
                 </div>
                 
                 <div className="space-y-2">
-                  <h3 className="text-2xl font-black text-slate-900">알람이 울립니다!</h3>
+                  <h3 className="text-2xl font-black text-slate-900">{t('alarm.ringingTitle')}</h3>
                   <p className="text-slate-500 font-bold">
-                    <span className="text-indigo-600">[{activeAlarmChunk.name}]</span> 시작할 시간이에요.
+                    <span className="text-indigo-600">[{activeAlarmChunk.name}]</span> {t('alarm.ringingBodySuffix')}
                   </p>
                 </div>
 
@@ -9080,13 +6374,13 @@ export default function App() {
                     }}
                     className="w-full py-4 bg-indigo-600 text-white rounded-[10px] font-black text-lg shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
                   >
-                    <Play className="w-5 h-5" /> 루틴 시작하기
+                    <Play className="w-5 h-5" /> {t('alarm.startRoutine')}
                   </button>
                   <button 
                     onClick={() => setActiveAlarmChunk(null)}
                     className="w-full py-4 bg-slate-100 text-slate-500 rounded-[10px] font-black hover:bg-slate-200 transition-all"
                   >
-                    나중에 하기
+                    {t('alarm.doLater')}
                   </button>
                 </div>
               </div>
@@ -9130,9 +6424,9 @@ export default function App() {
               <div className="mx-auto w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-2">
                 <ArrowBigRightDash className="w-8 h-8 text-indigo-500" />
               </div>
-              <h3 className="text-xl font-black text-slate-800">다음 루틴 시작</h3>
+              <h3 className="text-xl font-black text-slate-800">{t('alarm.nextRoutineTitle')}</h3>
               <p className="text-sm font-bold text-slate-500 leading-relaxed">
-                수행 가능한 다음 루틴이 남아있습니다. 바로 시작해보세요!
+                {t('alarm.nextRoutineDesc')}
               </p>
 
               <div className="w-full space-y-2.5 mb-5 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar overscroll-contain">
@@ -9204,7 +6498,7 @@ export default function App() {
                 onClick={() => setShowNextRoutineModal(false)}
                 className="w-full p-4 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-2xl text-center text-sm font-black text-slate-500 transition-all active:scale-[0.98]"
               >
-                지금 안함
+                {t('alarm.notNow')}
               </button>
             </motion.div>
           </div>
@@ -9232,15 +6526,15 @@ export default function App() {
                 <div className="mx-auto w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-2">
                   <BellOff className="w-8 h-8 text-amber-500" />
                 </div>
-                <h3 className="text-xl font-black text-slate-800">알림 권한이 필요합니다</h3>
+                <h3 className="text-xl font-black text-slate-800">{t('alarm.permissionRequiredTitle')}</h3>
                 <div className="text-sm font-bold text-slate-500 leading-relaxed text-left bg-slate-50 p-4 rounded-2xl">
-                  기상 알람 및 루틴 알람을 받으시려면 알림 권한을 허용하여야 합니다.<br/><br/>
+                  {t('alarm.permissionRequiredDesc')}<br/><br/>
                 </div>
                 <button 
                   onClick={() => setShowPermissionGuide(false)}
                   className="w-full bg-indigo-600 text-white font-black py-4 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
                 >
-                  확인했습니다
+                  {t('alarm.permissionConfirm')}
                 </button>
               </div>
             </motion.div>
@@ -9269,7 +6563,7 @@ export default function App() {
                 <div className="mx-auto w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mb-2">
                   <AlertCircle className="w-8 h-8 text-rose-500" />
                 </div>
-                <h3 className="text-xl font-black text-slate-800">알람 비활성화 안내</h3>
+                <h3 className="text-xl font-black text-slate-800">{t('alarm.disableNoticeTitle')}</h3>
                 <p className="text-sm font-bold text-slate-500 leading-relaxed">
                   {permissionNotificationMessage}
                 </p>
@@ -9277,7 +6571,7 @@ export default function App() {
                   onClick={() => setPermissionNotificationMessage(null)}
                   className="w-full bg-slate-900 text-white font-black py-4 rounded-[15px] hover:bg-slate-800 transition-all shadow-lg"
                 >
-                  확인
+                  {t('alarm.ok')}
                 </button>
               </div>
             </motion.div>
@@ -9355,15 +6649,15 @@ export default function App() {
                   <RotateCcw className="w-5 h-5 text-white animate-spin-slow" />
                 </div>
                 <div>
-                  <p className="text-sm font-black">새로운 버전이 있습니다!</p>
-                  <p className="text-[10px] text-slate-400">데이터 손실 없이 지금 업데이트하세요.</p>
+                  <p className="text-sm font-black">{t('update.newVersion')}</p>
+                  <p className="text-[10px] text-slate-400">{t('update.newVersionDesc')}</p>
                 </div>
               </div>
               <button
                 onClick={handleUpdateApp}
                 className="bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-[12px] text-xs font-black transition-all active:scale-95 whitespace-nowrap"
               >
-                지금 새로고침
+                {t('update.refreshNow')}
               </button>
             </div>
           </motion.div>
@@ -9391,16 +6685,15 @@ export default function App() {
                 <div className="mx-auto w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-2">
                   <Clock className="w-8 h-8 text-amber-500" />
                 </div>
-                <h3 className="text-xl font-black text-slate-800">새로운 하루가 시작되었습니다</h3>
+                <h3 className="text-xl font-black text-slate-800">{t('reset.newDayTitle')}</h3>
                 <div className="text-sm font-bold text-slate-500 leading-relaxed text-center bg-slate-50 p-4 rounded-2xl">
-                  하루 리셋 시각({userData.resetTime})에 도달해<br/>
-                  <span className="text-indigo-600">[{resetPauseModal.taskTitle}]</span>을(를) 중단하고 기록했습니다.
+                  {t('reset.newDayDesc', { time: userData.resetTime, taskTitle: resetPauseModal.taskTitle })}
                 </div>
                 <button 
                   onClick={() => setResetPauseModal({ isOpen: false, taskTitle: null })}
                   className="w-full bg-indigo-600 text-white font-black py-4 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
                 >
-                  확인
+                  {t('reset.ok')}
                 </button>
               </div>
             </motion.div>

@@ -1,0 +1,2270 @@
+[
+  {
+    "lineNum": 320,
+    "text": "title: '루틴 활성화',"
+  },
+  {
+    "lineNum": 321,
+    "text": "message: '오늘은 쉬는 요일입니다. 활성화하시겠습니까?',"
+  },
+  {
+    "lineNum": 341,
+    "text": "title: '다시 시작하시겠습니까?',"
+  },
+  {
+    "lineNum": 342,
+    "text": "message: '타이머가 0부터 다시 시작됩니다. 다시 시작하시겠습니까?',"
+  },
+  {
+    "lineNum": 343,
+    "text": "confirmLabel: '다시하기',"
+  },
+  {
+    "lineNum": 344,
+    "text": "cancelLabel: '취소',"
+  },
+  {
+    "lineNum": 562,
+    "text": "[디자인 수정 구역 0: 타이머 채우기(Progress) 색상 로직]"
+  },
+  {
+    "lineNum": 563,
+    "text": "- 루틴 타입에 따라 타이머 박스 내부가 채워지는 색상을 결정합니다."
+  },
+  {
+    "lineNum": 564,
+    "text": "- bg-sky-400, bg-indigo-500, bg-rose-400 등 Tailwind 색상 클래스를 변경하세요."
+  },
+  {
+    "lineNum": 608,
+    "text": "completionStatus: '전체완료',"
+  },
+  {
+    "lineNum": 633,
+    "text": "{/* 홈아이콘줄 (Sticky Header Box) - Replicated from Home Screen */}"
+  },
+  {
+    "lineNum": 679,
+    "text": "{/* 음성안내아이콘 */}"
+  },
+  {
+    "lineNum": 698,
+    "text": "{/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}"
+  },
+  {
+    "lineNum": 722,
+    "text": "<span className=\"text-[10px] font-black text-slate-500 leading-none\" title=\"누를 수 있는 횟수\">"
+  },
+  {
+    "lineNum": 764,
+    "text": "<span className=\"text-xs font-black text-slate-400\">루틴 {idx + 1}</span>"
+  },
+  {
+    "lineNum": 773,
+    "text": "{task.status === TaskStatus.PERFECT ? '완벽' : task.status === TaskStatus.COMPLETED ? '완료' : '스킵'}"
+  },
+  {
+    "lineNum": 791,
+    "text": "완성!"
+  },
+  {
+    "lineNum": 803,
+    "text": "<h3 className=\"text-center text-lg font-black text-slate-700 mb-6\">축하합니다! 문구를 선택해주세요.</h3>"
+  },
+  {
+    "lineNum": 816,
+    "text": "const totalTargetDurationStr = `${totalTargetMinutes}분`;"
+  },
+  {
+    "lineNum": 821,
+    "text": "const regex = new RegExp(`\\\\{\\\\{${tag}\\\\}\\\\}(이/가|을/를|은/는|으로/로|이죠/죠|야/이야|이야/야|다/이다|이다/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)`, 'g');"
+  },
+  {
+    "lineNum": 828,
+    "text": "storedPhrase = resolveParticles(storedPhrase, 'purpose', chunk.purpose || '목표');"
+  },
+  {
+    "lineNum": 829,
+    "text": "storedPhrase = resolveParticles(storedPhrase, 'userName', userData.userName || '나');"
+  },
+  {
+    "lineNum": 837,
+    "text": "displayPhrase = displayPhrase.replace(/\\{\\{userName\\}\\}/g, userData.userName || '나');"
+  },
+  {
+    "lineNum": 843,
+    "text": "displayPhrase = displayPhrase.replace(/\\{\\{purpose\\}\\}/g, chunk.purpose || '목표');"
+  },
+  {
+    "lineNum": 862,
+    "text": "{/* [수정] 스크롤 고정을 위한 앵커 포인트를 최하단으로 이동 */}"
+  },
+  {
+    "lineNum": 874,
+    "text": "{/* 루틴그룹박스 (Routine Group Box) */}"
+  },
+  {
+    "lineNum": 879,
+    "text": "{/* 월간 캘린더 히트맵 */}"
+  },
+  {
+    "lineNum": 891,
+    "text": "{/* 첫번째줄: {목적}이 되기 위한 {제목} <아이콘> */}"
+  },
+  {
+    "lineNum": 894,
+    "text": "{/* [디자인 수정 구역 1: 제목 텍스트]"
+  },
+  {
+    "lineNum": 895,
+    "text": "- 글자 크기: text-lg, text-xl 등"
+  },
+  {
+    "lineNum": 896,
+    "text": "- 글자 색상: text-white, text-indigo-100 등"
+  },
+  {
+    "lineNum": 926,
+    "text": "{/* 두번째줄: 실행요일표시 + 시작상황/시각 + 오늘 목표시간 합산 */}"
+  },
+  {
+    "lineNum": 928,
+    "text": "{/* [디자인 수정 구역 2: 요일 표시 (동그라미)]"
+  },
+  {
+    "lineNum": 929,
+    "text": "- 동그라미 크기: w-7 h-7"
+  },
+  {
+    "lineNum": 930,
+    "text": "- 활성 배경색: bg-white/20, 테두리: border-white/40"
+  },
+  {
+    "lineNum": 931,
+    "text": "- 비활성 배경색: bg-black/10, 테두리: border-white/5"
+  },
+  {
+    "lineNum": 932,
+    "text": "- 글자 크기: text-xs"
+  },
+  {
+    "lineNum": 936,
+    "text": "const dayNames = ['월', '화', '수', '목', '금', '토', '일'];"
+  },
+  {
+    "lineNum": 956,
+    "text": "{/* [디자인 수정 구역 3: 시작 정보 및 합산 시간]"
+  },
+  {
+    "lineNum": 957,
+    "text": "- 글자 크기: text-xs"
+  },
+  {
+    "lineNum": 958,
+    "text": "- 배경색: bg-white/10"
+  },
+  {
+    "lineNum": 959,
+    "text": "- 테두리: border-white/10"
+  },
+  {
+    "lineNum": 965,
+    "text": "{chunk.startType === 'time' && chunk.startTime ? chunk.startTime.replace(/시/g, '') : (chunk.situation || '언제든')}"
+  },
+  {
+    "lineNum": 976,
+    "text": "<span>총 {scheduledTasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0)}분</span>"
+  },
+  {
+    "lineNum": 998,
+    "text": "{/* 세번째 줄: 프로그레스 바 */}"
+  },
+  {
+    "lineNum": 1001,
+    "text": "{/* [디자인 수정 구역 4: 프로그레스 바]"
+  },
+  {
+    "lineNum": 1002,
+    "text": "- 바 높이: h-2.5"
+  },
+  {
+    "lineNum": 1003,
+    "text": "- 바 채우기 색상: from-indigo-300 to-violet-300 (그라데이션)"
+  },
+  {
+    "lineNum": 1020,
+    "text": "{/* 현재루틴박스 (Current Routine Box) */}"
+  },
+  {
+    "lineNum": 1035,
+    "text": "{/* [디자인 수정 구역 5: 현재 루틴 인디케이터]"
+  },
+  {
+    "lineNum": 1036,
+    "text": "- 배경색: bg-indigo-500"
+  },
+  {
+    "lineNum": 1037,
+    "text": "- 글자색: text-white"
+  },
+  {
+    "lineNum": 1040,
+    "text": "현재루틴"
+  },
+  {
+    "lineNum": 1045,
+    "text": "{/* [디자인 수정 구역 6: 루틴 제목 및 타입 배지]"
+  },
+  {
+    "lineNum": 1046,
+    "text": "- 제목 색상: text-slate-900"
+  },
+  {
+    "lineNum": 1047,
+    "text": "- 배지 배경: bg-slate-100, 배지 글자: text-slate-500"
+  },
+  {
+    "lineNum": 1059,
+    "text": "<span>{activeTask.targetDuration}분</span>"
+  },
+  {
+    "lineNum": 1067,
+    "text": "title=\"루틴 상세 통계 보기\""
+  },
+  {
+    "lineNum": 1074,
+    "text": "{/* [디자인 수정 구역 7: 타이머 박스 본체]"
+  },
+  {
+    "lineNum": 1075,
+    "text": "- 배경색(일시정지시): bg-slate-50"
+  },
+  {
+    "lineNum": 1076,
+    "text": "- 배경색(진행시): bg-slate-100"
+  },
+  {
+    "lineNum": 1077,
+    "text": "- 테두리: border-slate-200"
+  },
+  {
+    "lineNum": 1082,
+    "text": "{/* [디자인 수정 구역 8: 타이머 채움 애니메이션 레이어]"
+  },
+  {
+    "lineNum": 1083,
+    "text": "- 투명도: opacity-0.2 ~ 0.4"
+  },
+  {
+    "lineNum": 1084,
+    "text": "- 색상은 위쪽 'getStageInfo' 함수 내 'color' 값을 따릅니다."
+  },
+  {
+    "lineNum": 1109,
+    "text": "{/* [디자인 수정 구역 9: 타이머 내 날짜/시각 정보]"
+  },
+  {
+    "lineNum": 1110,
+    "text": "- 글자색: text-slate-500"
+  },
+  {
+    "lineNum": 1117,
+    "text": "{/* [디자인 수정 구역 10: 타이머 숫자 (00:00)]"
+  },
+  {
+    "lineNum": 1118,
+    "text": "- 진행중 색상: text-slate-900"
+  },
+  {
+    "lineNum": 1119,
+    "text": "- 일시정지 색상: text-slate-400"
+  },
+  {
+    "lineNum": 1120,
+    "text": "- 분 표시 색상: text-slate-400"
+  },
+  {
+    "lineNum": 1141,
+    "text": "<span className={`text-xl ml-2 select-none ${isAnytimeHidden ? 'text-transparent' : 'text-slate-400'}`}>/ {activeTask.targetDuration}분</span>"
+  },
+  {
+    "lineNum": 1146,
+    "text": "{/* [디자인 수정 구역 11: 타이머 상태 텍스트 (Ready/Paused/In Progress)]"
+  },
+  {
+    "lineNum": 1147,
+    "text": "- 글자색: text-slate-400 ~ text-slate-500"
+  },
+  {
+    "lineNum": 1165,
+    "text": "<span className=\"text-sm font-black text-slate-700 uppercase tracking-tight\">체크리스트</span>"
+  },
+  {
+    "lineNum": 1182,
+    "text": "체크 전부 지우기"
+  },
+  {
+    "lineNum": 1215,
+    "text": "{/* [디자인 수정 구역 12: 하단 보조 버튼들 (START/PAUSE, LATER, SKIP)]"
+  },
+  {
+    "lineNum": 1216,
+    "text": "- 각 버튼의 배경색(bg-...) 및 글자색(text-...)을 변경하세요."
+  },
+  {
+    "lineNum": 1261,
+    "text": "let btnText = \"실행 완료\";"
+  },
+  {
+    "lineNum": 1263,
+    "text": "[디자인 수정 구역 13: 메인 완료 버튼 색상 설정]"
+  },
+  {
+    "lineNum": 1269,
+    "text": "btnText = \"완료\";"
+  },
+  {
+    "lineNum": 1272,
+    "text": "btnText = \"완벽\";"
+  },
+  {
+    "lineNum": 1277,
+    "text": "btnText = \"완벽\";"
+  },
+  {
+    "lineNum": 1280,
+    "text": "btnText = \"완료\";"
+  },
+  {
+    "lineNum": 1285,
+    "text": "btnText = \"완벽\";"
+  },
+  {
+    "lineNum": 1294,
+    "text": "{btnText === \"완벽\" ? <DoubleCheckCircle className=\"w-6 h-6\" /> : <CheckCircle2 className=\"w-6 h-6\" />}"
+  },
+  {
+    "lineNum": 1304,
+    "text": "{/* 나머지루틴목록 (Remaining Routines List) */}"
+  },
+  {
+    "lineNum": 1353,
+    "text": "border-: 테두리 색상 (예: border-slate-200)"
+  },
+  {
+    "lineNum": 1354,
+    "text": "border-transparent: 테두리를 투명하게(없앰) 처리--- */"
+  },
+  {
+    "lineNum": 1395,
+    "text": "루틴 초기화하기"
+  },
+  {
+    "lineNum": 1457,
+    "text": "placeholder=\"그룹 이름\""
+  },
+  {
+    "lineNum": 1468,
+    "text": "placeholder=\"그룹 목적\""
+  },
+  {
+    "lineNum": 1481,
+    "text": "저장"
+  },
+  {
+    "lineNum": 1498,
+    "text": "수정"
+  },
+  {
+    "lineNum": 1510,
+    "text": "title=\"그룹 삭제\""
+  },
+  {
+    "lineNum": 1603,
+    "text": "title: '항목 삭제',"
+  },
+  {
+    "lineNum": 1604,
+    "text": "message: '이 항목을 삭제하시겠습니까?',"
+  },
+  {
+    "lineNum": 1720,
+    "text": "<h3 className=\"text-xl font-black text-slate-900\">체크리스트 만들기</h3>"
+  },
+  {
+    "lineNum": 1736,
+    "text": "placeholder=\"체크리스트 항목 입력...\""
+  },
+  {
+    "lineNum": 1743,
+    "text": "추가"
+  },
+  {
+    "lineNum": 1755,
+    "text": "<p className=\"text-xs font-bold\">항목을 추가해보세요</p>"
+  },
+  {
+    "lineNum": 1788,
+    "text": "완료"
+  },
+  {
+    "lineNum": 1831,
+    "text": "<label className=\"text-[10px] font-bold text-slate-400 ml-1\">루틴 제목</label>"
+  },
+  {
+    "lineNum": 1838,
+    "text": "{task.checklist && task.checklist.length > 0 ? `체크리스트 (${task.checklist.length})` : '체크리스트 만들기'}"
+  },
+  {
+    "lineNum": 1846,
+    "text": "placeholder={isTrigger ? \"예: 침대에서 벗어나기\" : \"루틴 내용을 입력하세요\"}"
+  },
+  {
+    "lineNum": 1856,
+    "text": "<span className=\"text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1\">실행 요일 (그룹 일정 내)</span>"
+  },
+  {
+    "lineNum": 1859,
+    "text": "{ label: '월', value: 1 },"
+  },
+  {
+    "lineNum": 1860,
+    "text": "{ label: '화', value: 2 },"
+  },
+  {
+    "lineNum": 1861,
+    "text": "{ label: '수', value: 3 },"
+  },
+  {
+    "lineNum": 1862,
+    "text": "{ label: '목', value: 4 },"
+  },
+  {
+    "lineNum": 1863,
+    "text": "{ label: '금', value: 5 },"
+  },
+  {
+    "lineNum": 1864,
+    "text": "{ label: '토', value: 6, color: 'bg-emerald-600' },"
+  },
+  {
+    "lineNum": 1865,
+    "text": "{ label: '일', value: 0, color: 'bg-rose-600' }"
+  },
+  {
+    "lineNum": 1904,
+    "text": "<span className=\"text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1\">루틴 유형</span>"
+  },
+  {
+    "lineNum": 1907,
+    "text": "{ type: TaskType.TIME_INDEPENDENT, label: '시간무관루틴', icon: Clock },"
+  },
+  {
+    "lineNum": 1908,
+    "text": "{ type: TaskType.TIME_LIMITED, label: '시간제한루틴', icon: Hourglass },"
+  },
+  {
+    "lineNum": 1909,
+    "text": "{ type: TaskType.TIME_ACCUMULATED, label: '시간축적루틴', icon: BrickWall }"
+  },
+  {
+    "lineNum": 1926,
+    "text": "시간 (분)"
+  },
+  {
+    "lineNum": 1960,
+    "text": "시간 (최대 3분)"
+  },
+  {
+    "lineNum": 2000,
+    "text": "취소"
+  },
+  {
+    "lineNum": 2008,
+    "text": "루틴 삭제"
+  },
+  {
+    "lineNum": 2017,
+    "text": "{isEditing ? '수정 완료' : '루틴 추가하기'}"
+  },
+  {
+    "lineNum": 2064,
+    "text": "<span>체크리스트</span>"
+  },
+  {
+    "lineNum": 2077,
+    "text": "<span className=\"text-[10px] font-bold text-slate-400\">{rt.duration}분</span>"
+  },
+  {
+    "lineNum": 2083,
+    "text": "const weekDays = ['월', '화', '수', '목', '금', '토', '일'];"
+  },
+  {
+    "lineNum": 2224,
+    "text": "confirmLabel: '확인',"
+  },
+  {
+    "lineNum": 2225,
+    "text": "cancelLabel: '취소',"
+  },
+  {
+    "lineNum": 2433,
+    "text": "setRoutineAddedMessage(`'${taskToSave.text}' 루틴이 추가되었습니다`);"
+  },
+  {
+    "lineNum": 2450,
+    "text": "title: '루틴 삭제',"
+  },
+  {
+    "lineNum": 2451,
+    "text": "message: `'${routine.text}' 루틴을 삭제하시겠습니까?`,"
+  },
+  {
+    "lineNum": 2452,
+    "text": "confirmLabel: '삭제',"
+  },
+  {
+    "lineNum": 2459,
+    "text": "setDeletionMessage('루틴이 삭제되었습니다');"
+  },
+  {
+    "lineNum": 2478,
+    "text": "setErrorMessage('루틴 그룹 이름을 입력해주세요.');"
+  },
+  {
+    "lineNum": 2483,
+    "text": "setErrorMessage('루틴 그룹 목적을 입력해주세요.');"
+  },
+  {
+    "lineNum": 2502,
+    "text": "text: triggerTask.text || '트리거 루틴',"
+  },
+  {
+    "lineNum": 2545,
+    "text": "setErrorMessage('모든 루틴 그룹은 반드시 두 개 이상의 루틴이 들어가야 합니다. (트리거 + 개별 루틴)');"
+  },
+  {
+    "lineNum": 2562,
+    "text": "setSaveSuccessMessage('변경사항이 저장되었습니다');"
+  },
+  {
+    "lineNum": 2586,
+    "text": "{/* 루틴 추가/삭제/수정 알림 팝업 */}"
+  },
+  {
+    "lineNum": 2625,
+    "text": "label={<div className=\"flex items-center gap-2\"><Edit2 className=\"w-4 h-4\" /> 루틴 수정</div>}"
+  },
+  {
+    "lineNum": 2646,
+    "text": "{/* 여백 조정 포인트: px-2.5 (기존 p-5에서 좌우 여백만 절반으로 축소) */}"
+  },
+  {
+    "lineNum": 2657,
+    "text": "<h2 className=\"text-xl font-black text-slate-900\">{mode === 'edit' ? '루틴 그룹 수정' : '새로운 루틴 그룹 만들기'}</h2>"
+  },
+  {
+    "lineNum": 2663,
+    "text": "<SectionTitle>1. 루틴그룹 이름</SectionTitle>"
+  },
+  {
+    "lineNum": 2668,
+    "text": "placeholder=\"예: 아침 루틴, 독서 루틴 등\""
+  },
+  {
+    "lineNum": 2677,
+    "text": "<SectionTitle>2. 목적</SectionTitle>"
+  },
+  {
+    "lineNum": 2679,
+    "text": "이 루틴을 성실하게 수행하는 사람은 어떤 사람일까요?"
+  },
+  {
+    "lineNum": 2686,
+    "text": "placeholder=\"예: 아침시간을 낭비하지 않는 사람\""
+  },
+  {
+    "lineNum": 2695,
+    "text": "<SectionTitle>3. 요일 설정</SectionTitle>"
+  },
+  {
+    "lineNum": 2697,
+    "text": "모든 요일을 해제하여 비정기적인 루틴을 수행할 수 있습니다"
+  },
+  {
+    "lineNum": 2701,
+    "text": "{ label: '월', value: 1 },"
+  },
+  {
+    "lineNum": 2702,
+    "text": "{ label: '화', value: 2 },"
+  },
+  {
+    "lineNum": 2703,
+    "text": "{ label: '수', value: 3 },"
+  },
+  {
+    "lineNum": 2704,
+    "text": "{ label: '목', value: 4 },"
+  },
+  {
+    "lineNum": 2705,
+    "text": "{ label: '금', value: 5 },"
+  },
+  {
+    "lineNum": 2706,
+    "text": "{ label: '토', value: 6, color: 'bg-emerald-600' },"
+  },
+  {
+    "lineNum": 2707,
+    "text": "{ label: '일', value: 0, color: 'bg-rose-600' }"
+  },
+  {
+    "lineNum": 2733,
+    "text": "<SectionTitle>4. 시작 상황 또는 시각 설정</SectionTitle>"
+  },
+  {
+    "lineNum": 2739,
+    "text": "{ id: 'anytime', label: '아무때나' },"
+  },
+  {
+    "lineNum": 2740,
+    "text": "{ id: 'situation', label: '상황' },"
+  },
+  {
+    "lineNum": 2741,
+    "text": "{ id: 'time', label: '시각' }"
+  },
+  {
+    "lineNum": 2770,
+    "text": "아무때나 시작합니다"
+  },
+  {
+    "lineNum": 2781,
+    "text": "placeholder=\"상황을 입력하세요 (예: 나갔다와서)\""
+  },
+  {
+    "lineNum": 2807,
+    "text": "{isAlarmEnabled ? '알람 ON' : '알람 OFF'}"
+  },
+  {
+    "lineNum": 2841,
+    "text": "label={<SectionTitle>5. 첫번째 루틴 (트리거 루틴)</SectionTitle>}"
+  },
+  {
+    "lineNum": 2845,
+    "text": "description=\"가벼운 주의 환기 행동으로 시작합니다. 아침 루틴을 위해서 침대에서 벗어나기, 독서를 위해서 책을 펼쳐놓기와 같이 3분이내 끝날 수 있는 행동을 설정해주세요\""
+  },
+  {
+    "lineNum": 2851,
+    "text": "<SectionTitle>6. 루틴 추가</SectionTitle>"
+  },
+  {
+    "lineNum": 2876,
+    "text": "title: '루틴 삭제',"
+  },
+  {
+    "lineNum": 2877,
+    "text": "message: `'${rt.text}' 루틴을 삭제하시겠습니까?`,"
+  },
+  {
+    "lineNum": 2878,
+    "text": "confirmLabel: '삭제',"
+  },
+  {
+    "lineNum": 2883,
+    "text": "setDeletionMessage('루틴이 삭제되었습니다');"
+  },
+  {
+    "lineNum": 2969,
+    "text": "title: '변경 취소 확인',"
+  },
+  {
+    "lineNum": 2970,
+    "text": "message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',"
+  },
+  {
+    "lineNum": 2971,
+    "text": "confirmLabel: '취소하고 나가기',"
+  },
+  {
+    "lineNum": 2972,
+    "text": "cancelLabel: '계속 수정하기',"
+  },
+  {
+    "lineNum": 2990,
+    "text": "title: '입력 취소 확인',"
+  },
+  {
+    "lineNum": 2991,
+    "text": "message: '작성 중인 내용이 있습니다. 저장하지 않고 나가시겠습니까?',"
+  },
+  {
+    "lineNum": 2992,
+    "text": "confirmLabel: '저장하지 않고 나가기',"
+  },
+  {
+    "lineNum": 2993,
+    "text": "cancelLabel: '계속 작성하기',"
+  },
+  {
+    "lineNum": 3010,
+    "text": "취소하기"
+  },
+  {
+    "lineNum": 3016,
+    "text": "{mode === 'edit' ? '저장하기' : '루틴 그룹 만들기'}"
+  },
+  {
+    "lineNum": 3171,
+    "text": "const josaRegex = /(name|task)(이\\/가|을\\/를|은\\/는|으로\\/로|이죠\\/죠|이야\\/야|이다\\/다)/g;"
+  },
+  {
+    "lineNum": 3257,
+    "text": "addAvailableCheckCheckPoints(1, '앱 켜기(마운트)');"
+  },
+  {
+    "lineNum": 3301,
+    "text": "userName: '나',"
+  },
+  {
+    "lineNum": 3307,
+    "text": "startMessage: 'task 시작합니다',"
+  },
+  {
+    "lineNum": 3310,
+    "text": "ongoingMessage: 'task가 n분째 진행중입니다',"
+  },
+  {
+    "lineNum": 3313,
+    "text": "beforeEndMessage: 'task 종료 r분 전입니다.',"
+  },
+  {
+    "lineNum": 3315,
+    "text": "endMessage: 'task 시간이 지났습니다.',"
+  },
+  {
+    "lineNum": 3321,
+    "text": "overTimeMessage: 'name님, task가 m분 지났어요.',"
+  },
+  {
+    "lineNum": 3415,
+    "text": "userName: '나',"
+  },
+  {
+    "lineNum": 3421,
+    "text": "startMessage: 'task 시작합니다',"
+  },
+  {
+    "lineNum": 3424,
+    "text": "ongoingMessage: 'task가 n분째 진행중입니다',"
+  },
+  {
+    "lineNum": 3427,
+    "text": "beforeEndMessage: 'task 종료 r분 전입니다.',"
+  },
+  {
+    "lineNum": 3429,
+    "text": "endMessage: 'task 시간이 지났습니다.',"
+  },
+  {
+    "lineNum": 3435,
+    "text": "overTimeMessage: 'name님, task가 m분 지났어요.',"
+  },
+  {
+    "lineNum": 3518,
+    "text": "startMessage: 'task 시작합니다',"
+  },
+  {
+    "lineNum": 3521,
+    "text": "ongoingMessage: 'task가 n분째 진행중입니다',"
+  },
+  {
+    "lineNum": 3524,
+    "text": "beforeEndMessage: 'task 종료 r분 전입니다.',"
+  },
+  {
+    "lineNum": 3526,
+    "text": "endMessage: 'task 시간이 지났습니다.',"
+  },
+  {
+    "lineNum": 3532,
+    "text": "overTimeMessage: 'name님, task가 m분 지났어요.',"
+  },
+  {
+    "lineNum": 3599,
+    "text": "name: '기본 루틴',"
+  },
+  {
+    "lineNum": 3600,
+    "text": "purpose: '더 나은 나',"
+  },
+  {
+    "lineNum": 3619,
+    "text": "purpose: chunk.purpose || '더 나은 나',"
+  },
+  {
+    "lineNum": 3663,
+    "text": "console.log(`[체크체크 가산 엔진] 행동: \"${actionName}\", 가산포인트: +${points}, 기존 잔여: ${currentAvailable}, 새로운 잔여: ${currentAvailable + points}`);"
+  },
+  {
+    "lineNum": 3698,
+    "text": "const pointsEarned = countDiff * 2; // 29분당 2회씩 가산"
+  },
+  {
+    "lineNum": 3710,
+    "text": "console.log(`[체크인 경과 보너스 엔진] 체크인 등록(${checkInTimeStr}) 시점으로부터 ${minutesPassed}분 경과 감지! 누적 ${expectedBonusCount}회차 보너스로 캐릭터 누르기 횟수가 +${pointsEarned}회 자동 추가되었습니다.`);"
+  },
+  {
+    "lineNum": 3766,
+    "text": "addAvailableCheckCheckPoints(1, '통계 확인(stats 탭)');"
+  },
+  {
+    "lineNum": 3816,
+    "text": "confirmLabel: '확인',"
+  },
+  {
+    "lineNum": 3817,
+    "text": "cancelLabel: '취소',"
+  },
+  {
+    "lineNum": 3899,
+    "text": "ongoingMessage: 'task가 n분째 진행중입니다',"
+  },
+  {
+    "lineNum": 3903,
+    "text": "beforeEndMessage: 'task 종료 r분 전입니다.',"
+  },
+  {
+    "lineNum": 3906,
+    "text": "endMessage: 'task 시간이 지났습니다.',"
+  },
+  {
+    "lineNum": 3910,
+    "text": "overTimeMessage: 'name님, task가 m분 지났어요.',"
+  },
+  {
+    "lineNum": 3942,
+    "text": "title: '변경 취소 확인',"
+  },
+  {
+    "lineNum": 3943,
+    "text": "message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',"
+  },
+  {
+    "lineNum": 3944,
+    "text": "confirmLabel: '취소하고 나가기',"
+  },
+  {
+    "lineNum": 3945,
+    "text": "cancelLabel: '계속 수정하기',"
+  },
+  {
+    "lineNum": 3960,
+    "text": "title: '변경 취소 확인',"
+  },
+  {
+    "lineNum": 3961,
+    "text": "message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',"
+  },
+  {
+    "lineNum": 3962,
+    "text": "confirmLabel: '취소하고 나가기',"
+  },
+  {
+    "lineNum": 3963,
+    "text": "cancelLabel: '계속 수정하기',"
+  },
+  {
+    "lineNum": 3978,
+    "text": "title: '변경 취소 확인',"
+  },
+  {
+    "lineNum": 3979,
+    "text": "message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',"
+  },
+  {
+    "lineNum": 3980,
+    "text": "confirmLabel: '취소하고 나가기',"
+  },
+  {
+    "lineNum": 3981,
+    "text": "cancelLabel: '계속 수정하기',"
+  },
+  {
+    "lineNum": 4006,
+    "text": "title: '입력 취소 확인',"
+  },
+  {
+    "lineNum": 4007,
+    "text": "message: '작성 중인 내용이 있습니다. 저장하지 않고 나가시겠습니까?',"
+  },
+  {
+    "lineNum": 4008,
+    "text": "confirmLabel: '저장하지 않고 나가기',"
+  },
+  {
+    "lineNum": 4009,
+    "text": "cancelLabel: '계속 작성하기',"
+  },
+  {
+    "lineNum": 4025,
+    "text": "title: '변경 취소 확인',"
+  },
+  {
+    "lineNum": 4026,
+    "text": "message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',"
+  },
+  {
+    "lineNum": 4027,
+    "text": "confirmLabel: '취소하고 나가기',"
+  },
+  {
+    "lineNum": 4028,
+    "text": "cancelLabel: '계속 수정하기',"
+  },
+  {
+    "lineNum": 4105,
+    "text": "setPermissionNotificationMessage('알림 권한이 거부되어 활성화된 모든 알람을 비활성화하였습니다. 알람을 받으시려면 기기 설정에서 알림 권한을 허용해주세요.');"
+  },
+  {
+    "lineNum": 4194,
+    "text": "return status === '완벽' || status === '완료';"
+  },
+  {
+    "lineNum": 4199,
+    "text": "const devTestModeForPerfectDay = false; // [임시 중단 용도] true = 무제한 테스트(홈화면 돌아올 때마다), false = 하루 한 번 실제 서비스 규칙 적용"
+  },
+  {
+    "lineNum": 4234,
+    "text": "return status === '완벽' || status === '완료';"
+  },
+  {
+    "lineNum": 4243,
+    "text": "const devTestModeForTodayEnd = false; // true = 무제한 테스트, false = 하루 한 번 실제 서비스 규칙 적용"
+  },
+  {
+    "lineNum": 4332,
+    "text": "name: userData.userName || '나',"
+  },
+  {
+    "lineNum": 4393,
+    "text": "nextVoiceMessage = settings?.startMessage || 'task 시작합니다';"
+  },
+  {
+    "lineNum": 4412,
+    "text": "name: userData.userName || '나',"
+  },
+  {
+    "lineNum": 4619,
+    "text": "name: userData.userName || '나',"
+  },
+  {
+    "lineNum": 4650,
+    "text": "voiceService.speakNagging(`start-${activeTask.id}-${activeTask.startTime}`, settings.startMessage || 'task 시작합니다', variables);"
+  },
+  {
+    "lineNum": 4902,
+    "text": "completionStatus: 'fail', // 미실행(실패)"
+  },
+  {
+    "lineNum": 5139,
+    "text": "const status = checkInDateForStatus.getTime() > targetDateForStatus.getTime() + (lateLimit * 60 * 1000) ? '지각' : '달성';"
+  },
+  {
+    "lineNum": 5146,
+    "text": "status: status as '달성' | '지각'"
+  },
+  {
+    "lineNum": 5171,
+    "text": "let statusStr = isScheduled ? '미실행' : '비활성';"
+  },
+  {
+    "lineNum": 5174,
+    "text": "if (task.status === TaskStatus.PERFECT) statusStr = '완벽';"
+  },
+  {
+    "lineNum": 5175,
+    "text": "else if (task.status === TaskStatus.COMPLETED || task.completed) statusStr = '완료';"
+  },
+  {
+    "lineNum": 5176,
+    "text": "else if (task.status === TaskStatus.SKIP) statusStr = '스킵';"
+  },
+  {
+    "lineNum": 5177,
+    "text": "else if (task.laterTimestamp) statusStr = '나중에';"
+  },
+  {
+    "lineNum": 5178,
+    "text": "else if (task.isPaused && taskDuration > 0) statusStr = '일시정지';"
+  },
+  {
+    "lineNum": 5179,
+    "text": "else if (task.startTime) statusStr = '실행중';"
+  },
+  {
+    "lineNum": 5186,
+    "text": "const isExcluded = !isScheduled || statusStr === '미실행' || statusStr === '스킵';"
+  },
+  {
+    "lineNum": 5237,
+    "text": "let completionStatus: '비활성' | '미실행' | '미완료' | '전체완료' = '미실행';"
+  },
+  {
+    "lineNum": 5238,
+    "text": "if (!isActive) completionStatus = '비활성';"
+  },
+  {
+    "lineNum": 5239,
+    "text": "else if (allFinished) completionStatus = '전체완료';"
+  },
+  {
+    "lineNum": 5240,
+    "text": "else if (anyStarted) completionStatus = '미완료';"
+  },
+  {
+    "lineNum": 5329,
+    "text": "addAvailableCheckCheckPoints(1, '루틴 그룹 재정렬');"
+  },
+  {
+    "lineNum": 5483,
+    "text": "availableCheckCheckCount: currentAvailable + 8, // 8회 추가"
+  },
+  {
+    "lineNum": 5484,
+    "text": "lastCheckInBonusCount: 0, // 오늘 체크인 가산 횟수 초기화 (체크인 시점 기준 29분 추적용)"
+  },
+  {
+    "lineNum": 5536,
+    "text": "availableCheckCheckCount: currentAvailable + 3, // 3회 추가"
+  },
+  {
+    "lineNum": 5537,
+    "text": "lastCheckInBonusCount: 0, // 오늘 체크인 가산 횟수 초기화 (체크인 시점 기준 29분 추적용)"
+  },
+  {
+    "lineNum": 5561,
+    "text": "addAvailableCheckCheckPoints(1, '루틴(태스크) 스킵');"
+  },
+  {
+    "lineNum": 5667,
+    "text": "status: TaskStatus.NOT_STARTED // 현재 루틴 지위 상실"
+  },
+  {
+    "lineNum": 5734,
+    "text": "addAvailableCheckCheckPoints(2, '루틴(태스크) 시작');"
+  },
+  {
+    "lineNum": 5873,
+    "text": "status: TaskStatus.IN_PROGRESS // 일시정지해도 '현재 루틴'으로 유지 (Rule 20.6)"
+  },
+  {
+    "lineNum": 5884,
+    "text": "status: TaskStatus.NOT_STARTED // 현재 루틴 지위 상실"
+  },
+  {
+    "lineNum": 5905,
+    "text": "title: '루틴 초기화',"
+  },
+  {
+    "lineNum": 5906,
+    "text": "message: '모든 루틴의 실행여부와 타이머가 초기화됩니다.',"
+  },
+  {
+    "lineNum": 5964,
+    "text": "? { ...h, startTime: null, endTime: null, duration: null, status: '미실행' }"
+  },
+  {
+    "lineNum": 6012,
+    "text": "addAvailableCheckCheckPoints(3, '루틴(태스크) 완료/완벽');"
+  },
+  {
+    "lineNum": 6192,
+    "text": "title: '후기 삭제',"
+  },
+  {
+    "lineNum": 6193,
+    "text": "message: '이 날의 후기를 삭제하시겠습니까?',"
+  },
+  {
+    "lineNum": 6238,
+    "text": "addAvailableCheckCheckPoints(1, '루틴 그룹 추가');"
+  },
+  {
+    "lineNum": 6239,
+    "text": "setGroupAddedMessage(`'${name}' 루틴 그룹이 추가되었습니다`);"
+  },
+  {
+    "lineNum": 6247,
+    "text": "title: '그룹 삭제',"
+  },
+  {
+    "lineNum": 6248,
+    "text": "message: '이 그룹과 포함된 모든 루틴이 삭제됩니다. 계속하시겠습니까?',"
+  },
+  {
+    "lineNum": 6249,
+    "text": "confirmLabel: '삭제',"
+  },
+  {
+    "lineNum": 6257,
+    "text": "addAvailableCheckCheckPoints(1, '루틴 그룹 삭제');"
+  },
+  {
+    "lineNum": 6259,
+    "text": "setDeletionMessage(`'${chunk?.name}' 그룹이 삭제되었습니다`);"
+  },
+  {
+    "lineNum": 6298,
+    "text": "if (chunk.inactiveDates?.includes(todayStr)) return '비활성';"
+  },
+  {
+    "lineNum": 6299,
+    "text": "if (!isChunkScheduledToday(chunk, effectiveDate, userData)) return '비활성';"
+  },
+  {
+    "lineNum": 6301,
+    "text": "if (scheduledTasks.length === 0) return '비활성';"
+  },
+  {
+    "lineNum": 6307,
+    "text": "return hasPass ? '완료' : '완벽';"
+  },
+  {
+    "lineNum": 6324,
+    "text": "if (anyStarted || anyAccumulated || totalCurrentDuration >= 1) return '실행중';"
+  },
+  {
+    "lineNum": 6326,
+    "text": "return '미실행';"
+  },
+  {
+    "lineNum": 6350,
+    "text": "return status === '미실행' || status === '실행중';"
+  },
+  {
+    "lineNum": 6354,
+    "text": "const runningGroups = playable.filter(chunk => getChunkStatus(chunk) === '실행중');"
+  },
+  {
+    "lineNum": 6355,
+    "text": "const unstartedGroups = playable.filter(chunk => getChunkStatus(chunk) === '미실행');"
+  },
+  {
+    "lineNum": 6409,
+    "text": "case '비활성': return <span className=\"text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-[10px]\">비활성</span>;"
+  },
+  {
+    "lineNum": 6410,
+    "text": "case '미실행': return <span className=\"text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-[10px]\">미실행</span>;"
+  },
+  {
+    "lineNum": 6411,
+    "text": "case '실행중': return <span className=\"text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-[10px]\">실행중</span>;"
+  },
+  {
+    "lineNum": 6412,
+    "text": "case '완료': return <span className=\"text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-[10px]\">완료</span>;"
+  },
+  {
+    "lineNum": 6413,
+    "text": "case '완벽': return <span className=\"text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-[10px]\">완벽</span>;"
+  },
+  {
+    "lineNum": 6414,
+    "text": "case '전체완료': return <span className=\"text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-[10px]\">전체완료</span>;"
+  },
+  {
+    "lineNum": 6425,
+    "text": "addAvailableCheckCheckPoints(1, '루틴 그룹 전체 저장');"
+  },
+  {
+    "lineNum": 6433,
+    "text": "title: '그룹 정보 변경',"
+  },
+  {
+    "lineNum": 6434,
+    "text": "message: `그룹 정보를 변경하시겠습니까?`,"
+  },
+  {
+    "lineNum": 6443,
+    "text": "addAvailableCheckCheckPoints(1, '루틴 그룹 정보 변경');"
+  },
+  {
+    "lineNum": 6456,
+    "text": "const finalName = trimmed === '' ? '나' : trimmed;"
+  },
+  {
+    "lineNum": 6459,
+    "text": "title: '사용자 이름 변경',"
+  },
+  {
+    "lineNum": 6460,
+    "text": "message: `사용자 이름을 '${finalName}'${getJosa(finalName, '으로/로')} 변경하시겠습니까?`,"
+  },
+  {
+    "lineNum": 6471,
+    "text": "? `기상 목표 시각을 ${time}${getJosa(time, '으로/로')} 변경하시겠습니까?\\n\\n오늘 기상 체크인은 이미 완료되어 이전 기록이 유지되며, 변경된 시각은 내일부터 적용됩니다.`"
+  },
+  {
+    "lineNum": 6472,
+    "text": ": `기상 목표 시각을 ${time}${getJosa(time, '으로/로')} 변경하시겠습니까?\\n\\n변경된 목표 시각에 따라 오늘의 기상 체크인 가능 여부가 즉시 변경됩니다.`;"
+  },
+  {
+    "lineNum": 6476,
+    "text": "title: '기상 시각 변경',"
+  },
+  {
+    "lineNum": 6507,
+    "text": "title: '리셋 시각 변경',"
+  },
+  {
+    "lineNum": 6508,
+    "text": "message: `하루 리셋 시각을 ${time}${getJosa(time, '으로/로')} 변경하시겠습니까?`,"
+  },
+  {
+    "lineNum": 6561,
+    "text": "title: '기상시각 기록 삭제',"
+  },
+  {
+    "lineNum": 6562,
+    "text": "message: '현재까지 기록된 기상시각 기록을 모두 삭제하시겠습니까?',"
+  },
+  {
+    "lineNum": 6563,
+    "text": "confirmLabel: '삭제',"
+  },
+  {
+    "lineNum": 6564,
+    "text": "validationValue: userData.userName || '나',"
+  },
+  {
+    "lineNum": 6575,
+    "text": "setDeletionMessage('기상시각 기록이 삭제되었습니다');"
+  },
+  {
+    "lineNum": 6583,
+    "text": "title: '사용 시간 기록 삭제',"
+  },
+  {
+    "lineNum": 6584,
+    "text": "message: '현재까지 기록된 사용 시간 바 기록을 모두 삭제하시겠습니까?',"
+  },
+  {
+    "lineNum": 6585,
+    "text": "confirmLabel: '삭제',"
+  },
+  {
+    "lineNum": 6586,
+    "text": "validationValue: userData.userName || '나',"
+  },
+  {
+    "lineNum": 6600,
+    "text": "setDeletionMessage('사용 시간 기록이 삭제되었습니다');"
+  },
+  {
+    "lineNum": 6608,
+    "text": "title: '루틴 기록 삭제',"
+  },
+  {
+    "lineNum": 6609,
+    "text": "message: '현재까지 기록된 모든 루틴 기록을 삭제하시겠습니까? 루틴 설정은 유지됩니다.',"
+  },
+  {
+    "lineNum": 6610,
+    "text": "confirmLabel: '삭제',"
+  },
+  {
+    "lineNum": 6611,
+    "text": "validationValue: userData.userName || '나',"
+  },
+  {
+    "lineNum": 6623,
+    "text": "setDeletionMessage('루틴 기록이 삭제되었습니다');"
+  },
+  {
+    "lineNum": 6631,
+    "text": "title: '루틴 전체 삭제',"
+  },
+  {
+    "lineNum": 6632,
+    "text": "message: '지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다. 계속하시겠습니까?',"
+  },
+  {
+    "lineNum": 6633,
+    "text": "confirmLabel: '전체 삭제',"
+  },
+  {
+    "lineNum": 6635,
+    "text": "validationValue: userData.userName || '나',"
+  },
+  {
+    "lineNum": 6649,
+    "text": "setDeletionMessage('모든 루틴 데이터가 삭제되었습니다');"
+  },
+  {
+    "lineNum": 6660,
+    "text": "setBackupMessage('파일을 생성하였습니다. 저장을 완료해주세요.');"
+  },
+  {
+    "lineNum": 6714,
+    "text": "title: '단하루 데이터 백업',"
+  },
+  {
+    "lineNum": 6715,
+    "text": "text: '루틴 설정과 기록이 포함된 백업 파일입니다.'"
+  },
+  {
+    "lineNum": 6718,
+    "text": "setDeletionMessage('백업이 완료되었습니다.');"
+  },
+  {
+    "lineNum": 6737,
+    "text": "setDeletionMessage('데이터가 파일로 저장되었습니다');"
+  },
+  {
+    "lineNum": 6775,
+    "text": "setDeletionMessage('해당하는 루틴 기록이 없습니다.');"
+  },
+  {
+    "lineNum": 6797,
+    "text": "'날짜',"
+  },
+  {
+    "lineNum": 6798,
+    "text": "'전체달성률',"
+  },
+  {
+    "lineNum": 6799,
+    "text": "'루틴그룹 이름',"
+  },
+  {
+    "lineNum": 6800,
+    "text": "'루틴그룹 시작시각',"
+  },
+  {
+    "lineNum": 6801,
+    "text": "'루틴그룹 완료시각',"
+  },
+  {
+    "lineNum": 6802,
+    "text": "'루틴그룹 소요시간',"
+  },
+  {
+    "lineNum": 6803,
+    "text": "'루틴그룹 완료여부',"
+  },
+  {
+    "lineNum": 6804,
+    "text": "'개별루틴 이름',"
+  },
+  {
+    "lineNum": 6805,
+    "text": "'개별루틴 시작시각',"
+  },
+  {
+    "lineNum": 6806,
+    "text": "'개별루틴 완료시각',"
+  },
+  {
+    "lineNum": 6807,
+    "text": "'개별루틴 시간별타입',"
+  },
+  {
+    "lineNum": 6808,
+    "text": "'개별루틴 목표 시간',"
+  },
+  {
+    "lineNum": 6809,
+    "text": "'개별루틴 실제소요시간',"
+  },
+  {
+    "lineNum": 6810,
+    "text": "'개별루틴 완료여부'"
+  },
+  {
+    "lineNum": 6866,
+    "text": "? (groupHistEntry.completionStatus === '비활성' || groupHistEntry.isActive === false)"
+  },
+  {
+    "lineNum": 6874,
+    "text": "!t.status || t.status === '미실행' || t.status === '비활성'"
+  },
+  {
+    "lineNum": 6884,
+    "text": "groupHistEntry?.completionStatus === '미실행' ||"
+  },
+  {
+    "lineNum": 6893,
+    "text": "let specialState: '쉬는요일' | '건너뜀' | '미실행' | '기록누락' | null = null;"
+  },
+  {
+    "lineNum": 6895,
+    "text": "specialState = '쉬는요일';"
+  },
+  {
+    "lineNum": 6897,
+    "text": "specialState = '건너뜀';"
+  },
+  {
+    "lineNum": 6899,
+    "text": "specialState = '미실행';"
+  },
+  {
+    "lineNum": 6901,
+    "text": "specialState = '기록누락';"
+  },
+  {
+    "lineNum": 6904,
+    "text": "let groupStatus: '정상' | '비활성' | '쉬어감' = '정상';"
+  },
+  {
+    "lineNum": 6907,
+    "text": "groupStatus = '쉬어감';"
+  },
+  {
+    "lineNum": 6908,
+    "text": "} else if (isNormallyInactive || groupHistEntry?.completionStatus === '비활성' || groupHistEntry?.isActive === false) {"
+  },
+  {
+    "lineNum": 6909,
+    "text": "groupStatus = '비활성';"
+  },
+  {
+    "lineNum": 6912,
+    "text": "if (groupHistEntry?.completionStatus === '비활성' || groupHistEntry?.isActive === false) {"
+  },
+  {
+    "lineNum": 6913,
+    "text": "groupStatus = '비활성';"
+  },
+  {
+    "lineNum": 6917,
+    "text": "const g_name = aliveGroup ? aliveGroup.name : '삭제된 그룹';"
+  },
+  {
+    "lineNum": 6931,
+    "text": "if (specialState === '기록누락') {"
+  },
+  {
+    "lineNum": 6932,
+    "text": "g_completion_status = '기록없음';"
+  },
+  {
+    "lineNum": 6936,
+    "text": "} else if (specialState === '쉬는요일') {"
+  },
+  {
+    "lineNum": 6937,
+    "text": "g_completion_status = '쉬는요일';"
+  },
+  {
+    "lineNum": 6941,
+    "text": "} else if (specialState === '건너뜀' || groupStatus === '쉬어감') {"
+  },
+  {
+    "lineNum": 6942,
+    "text": "g_completion_status = '건너뜀';"
+  },
+  {
+    "lineNum": 6946,
+    "text": "} else if (specialState === '미실행') {"
+  },
+  {
+    "lineNum": 6954,
+    "text": "t => t.status === '완벽' || t.status === '완료' || t.status === '스킵'"
+  },
+  {
+    "lineNum": 6959,
+    "text": "const hasSkip = totalActiveOnDate.some(t => t.status === '스킵');"
+  },
+  {
+    "lineNum": 6960,
+    "text": "g_completion_status = hasSkip ? '완료(100%)' : '완벽(100%)';"
+  },
+  {
+    "lineNum": 6966,
+    "text": "if (groupHistEntry?.completionStatus === '전체완료') {"
+  },
+  {
+    "lineNum": 6967,
+    "text": "g_completion_status = '완벽(100%)';"
+  },
+  {
+    "lineNum": 7003,
+    "text": "g_completion_status === '기록없음' ? '기록없음' : (g_completion_status === '쉬는요일' ? '쉬는요일' : '미실행')"
+  },
+  {
+    "lineNum": 7010,
+    "text": "const t_name = aliveTask ? aliveTask.text : '삭제된 루틴';"
+  },
+  {
+    "lineNum": 7017,
+    "text": "let t_status = '미실행';"
+  },
+  {
+    "lineNum": 7019,
+    "text": "if (taskHistEntry.status === '완벽') {"
+  },
+  {
+    "lineNum": 7020,
+    "text": "t_status = '완벽';"
+  },
+  {
+    "lineNum": 7021,
+    "text": "} else if (taskHistEntry.status === '완료') {"
+  },
+  {
+    "lineNum": 7022,
+    "text": "t_status = '완료';"
+  },
+  {
+    "lineNum": 7023,
+    "text": "} else if (taskHistEntry.status === '스킵') {"
+  },
+  {
+    "lineNum": 7024,
+    "text": "t_status = '스킵';"
+  },
+  {
+    "lineNum": 7025,
+    "text": "} else if (taskHistEntry.status === '비활성') {"
+  },
+  {
+    "lineNum": 7026,
+    "text": "t_status = '쉬는요일';"
+  },
+  {
+    "lineNum": 7028,
+    "text": "t_status = '미실행';"
+  },
+  {
+    "lineNum": 7031,
+    "text": "if (specialState === '기록누락') {"
+  },
+  {
+    "lineNum": 7032,
+    "text": "t_status = '기록없음';"
+  },
+  {
+    "lineNum": 7033,
+    "text": "} else if (specialState === '쉬는요일' || !isScheduled) {"
+  },
+  {
+    "lineNum": 7034,
+    "text": "t_status = '쉬는요일';"
+  },
+  {
+    "lineNum": 7035,
+    "text": "} else if (specialState === '건너뜀') {"
+  },
+  {
+    "lineNum": 7036,
+    "text": "t_status = '스킵';"
+  },
+  {
+    "lineNum": 7038,
+    "text": "t_status = '미실행';"
+  },
+  {
+    "lineNum": 7053,
+    "text": "if (t_status === '쉬는요일') {"
+  },
+  {
+    "lineNum": 7060,
+    "text": "aliveTask.taskType === TaskType.TIME_INDEPENDENT ? '시간무관루틴' :"
+  },
+  {
+    "lineNum": 7061,
+    "text": "aliveTask.taskType === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'"
+  },
+  {
+    "lineNum": 7064,
+    "text": "const t_target = (aliveTask && aliveTask.targetDuration) ? `${aliveTask.targetDuration}분` : '-';"
+  },
+  {
+    "lineNum": 7111,
+    "text": "title: '단하루 루틴 데이터 CSV',"
+  },
+  {
+    "lineNum": 7112,
+    "text": "text: '내보낸 루틴 기록 CSV 파일입니다.'"
+  },
+  {
+    "lineNum": 7114,
+    "text": "setDeletionMessage('CSV 데이터 내보내기가 완료되었습니다.');"
+  },
+  {
+    "lineNum": 7124,
+    "text": "setDeletionMessage('CSV 데이터가 파일로 다운로드되었습니다.');"
+  },
+  {
+    "lineNum": 7135,
+    "text": "setDeletionMessage('CSV 데이터가 파일로 다운로드되었습니다.');"
+  },
+  {
+    "lineNum": 7150,
+    "text": "throw new Error('유효한 백업 파일이 아닙니다.');"
+  },
+  {
+    "lineNum": 7155,
+    "text": "title: '데이터 복구',"
+  },
+  {
+    "lineNum": 7156,
+    "text": "message: '선택한 백업 파일로 기존 데이터를 모두 덮어씌웁니다. 이 작업은 되돌릴 수 없으며 앱이 새로고침됩니다. 계속하시겠습니까?',"
+  },
+  {
+    "lineNum": 7157,
+    "text": "confirmLabel: '덮어쓰기',"
+  },
+  {
+    "lineNum": 7176,
+    "text": "setDeletionMessage('데이터가 완전히 가져오지 못했습니다.');"
+  },
+  {
+    "lineNum": 7181,
+    "text": "setDeletionMessage('파일을 읽는 중 오류가 발생했습니다.');"
+  },
+  {
+    "lineNum": 7241,
+    "text": "{/* Left Tab: 일반설정 */}"
+  },
+  {
+    "lineNum": 7247,
+    "text": "title: '변경 취소 확인',"
+  },
+  {
+    "lineNum": 7248,
+    "text": "message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',"
+  },
+  {
+    "lineNum": 7249,
+    "text": "confirmLabel: '취소하고 나가기',"
+  },
+  {
+    "lineNum": 7250,
+    "text": "cancelLabel: '계속 수정하기',"
+  },
+  {
+    "lineNum": 7277,
+    "text": "{/* Right Tab: 루틴 그룹 관리 */}"
+  },
+  {
+    "lineNum": 7283,
+    "text": "title: '변경 취소 확인',"
+  },
+  {
+    "lineNum": 7284,
+    "text": "message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',"
+  },
+  {
+    "lineNum": 7285,
+    "text": "confirmLabel: '취소하고 나가기',"
+  },
+  {
+    "lineNum": 7286,
+    "text": "cancelLabel: '계속 수정하기',"
+  },
+  {
+    "lineNum": 7366,
+    "text": "placeholder=\"나\""
+  },
+  {
+    "lineNum": 7371,
+    "text": "if (userNameEdit !== (userData.userName || '나')) {"
+  },
+  {
+    "lineNum": 7375,
+    "text": "disabled={userNameEdit === (userData.userName || '나')}"
+  },
+  {
+    "lineNum": 7377,
+    "text": "userNameEdit !== (userData.userName || '나')"
+  },
+  {
+    "lineNum": 7512,
+    "text": "<h3 className=\"text-base font-black text-slate-800 whitespace-nowrap\">타이머 자동 시작</h3>"
+  },
+  {
+    "lineNum": 7518,
+    "text": "<h4 className=\"text-sm font-black text-slate-700\">첫 루틴 자동 시작</h4>"
+  },
+  {
+    "lineNum": 7519,
+    "text": "<p className=\"text-[12px] font-bold text-slate-400 leading-tight\">루틴 그룹을 시작함과 동시에 타이머가 자동으로 돌아갑니다.</p>"
+  },
+  {
+    "lineNum": 7531,
+    "text": "<h4 className=\"text-sm font-black text-slate-700\">다음 루틴 자동 시작</h4>"
+  },
+  {
+    "lineNum": 7532,
+    "text": "<p className=\"text-[12px] font-bold text-slate-400 leading-tight\">루틴을 완료하면 다음 루틴이 자동으로 시작됩니다.</p>"
+  },
+  {
+    "lineNum": 7549,
+    "text": "<h3 className=\"text-base font-black text-slate-800 whitespace-nowrap\">시간 무관 루틴 타이머 숨기기</h3>"
+  },
+  {
+    "lineNum": 7555,
+    "text": "<p className=\"text-[12px] font-bold text-slate-400 leading-tight\">시간 무관 루틴의 경우 타이머를 표시하지 않습니다</p>"
+  },
+  {
+    "lineNum": 7572,
+    "text": "<h3 className=\"text-base font-black text-slate-800 whitespace-nowrap\">시간 축적 루틴 자동 넘김</h3>"
+  },
+  {
+    "lineNum": 7578,
+    "text": "<p className=\"text-[12px] font-bold text-slate-400 leading-tight\">시간 축적 루틴의 경우, 사용자가 지정한 시간이 지나면 자동으로 다음 루틴으로 넘어갑니다. 단 다음 루틴의 타이머 자동 시작 여부는 위 ’다음 루틴 자동 시작‘ 옵션에서 설정해 주십시오</p>"
+  },
+  {
+    "lineNum": 7595,
+    "text": "<h3 className=\"text-base font-black text-slate-800 whitespace-nowrap\">루틴그룹 순서 자동전환</h3>"
+  },
+  {
+    "lineNum": 7601,
+    "text": "<h4 className=\"text-sm font-black text-slate-700\">실행중인 그룹 자동 정렬</h4>"
+  },
+  {
+    "lineNum": 7602,
+    "text": "<p className=\"text-[12px] font-bold text-slate-400 leading-tight\">실행중인 그룹은 자동으로 목록 상단으로 이동합니다.</p>"
+  },
+  {
+    "lineNum": 7614,
+    "text": "<h4 className=\"text-sm font-black text-slate-700\">완료된 그룹 자동 정렬</h4>"
+  },
+  {
+    "lineNum": 7615,
+    "text": "<p className=\"text-[12px] font-bold text-slate-400 leading-tight\">완료된 그룹은 자동으로 목록 하단으로 이동합니다.</p>"
+  },
+  {
+    "lineNum": 7627,
+    "text": "<h4 className=\"text-sm font-black text-slate-700\">비활성 그룹 자동 정렬</h4>"
+  },
+  {
+    "lineNum": 7628,
+    "text": "<p className=\"text-[12px] font-bold text-slate-400 leading-tight\">비활성화된 그룹은 자동으로 목록 가장 하단으로 이동합니다.</p>"
+  },
+  {
+    "lineNum": 7645,
+    "text": "<h3 className=\"text-base font-black text-slate-800 whitespace-nowrap\">다음 루틴 그룹 진행</h3>"
+  },
+  {
+    "lineNum": 7650,
+    "text": "<p className=\"text-[12px] font-bold text-slate-400 leading-tight\">하나의 루틴 그룹을 완료하면 다음 루틴 그룹 진행을 안내합니다.</p>"
+  },
+  {
+    "lineNum": 7666,
+    "text": "<h3 className=\"text-base font-black text-slate-900\">효과음 설정</h3>"
+  },
+  {
+    "lineNum": 7668,
+    "text": "<p className=\"text-[12px] font-bold text-slate-400 leading-tight ml-10\">사용자의 활동에 따른 효과음을 선택할 수 있습니다.</p>"
+  },
+  {
+    "lineNum": 7674,
+    "text": "<span className=\"text-sm font-black text-slate-700\">효과음 설정하기</span>"
+  },
+  {
+    "lineNum": 7685,
+    "text": "<h3 className=\"text-base font-black text-slate-900\">잔소리 기능</h3>"
+  },
+  {
+    "lineNum": 7687,
+    "text": "<p className=\"text-[12px] font-bold text-slate-400 leading-tight ml-10\">사용자 설정에 맞춘 음성 안내를 통해 루틴 진행을 돕습니다. 화면 상단의 스피커 아이콘을 눌러 재생을 정지할 수 있습니다.  </p>"
+  },
+  {
+    "lineNum": 7693,
+    "text": "<span className=\"text-sm font-black text-slate-700\">잔소리 설정하기</span>"
+  },
+  {
+    "lineNum": 7704,
+    "text": "<h3 className=\"text-base font-black text-slate-900 dark:text-slate-100\">다크모드 설정</h3>"
+  },
+  {
+    "lineNum": 7707,
+    "text": "앱의 화면 테마를 설정합니다. 다크모드를 사용하면 야간에 눈의 피로를 덜어줍니다."
+  },
+  {
+    "lineNum": 7711,
+    "text": "{/* 라이트 / 다크 선택 버튼 */}"
+  },
+  {
+    "lineNum": 7725,
+    "text": "라이트모드"
+  },
+  {
+    "lineNum": 7739,
+    "text": "다크모드"
+  },
+  {
+    "lineNum": 7743,
+    "text": "{/* 사용자 기기 설정에 따름 스위치 */}"
+  },
+  {
+    "lineNum": 7753,
+    "text": "<span className=\"text-xs\">기기 설정에 따름</span>"
+  },
+  {
+    "lineNum": 7770,
+    "text": "<h3 className=\"text-base font-black text-slate-800 whitespace-nowrap\">백업 및 복구</h3>"
+  },
+  {
+    "lineNum": 7782,
+    "text": "<span className=\"text-sm font-black text-slate-700\">CSV 데이터 내보내기</span>"
+  },
+  {
+    "lineNum": 7783,
+    "text": "<span className=\"text-[12px] font-bold text-slate-400 leading-tight\">루틴 기록을 CSV 파일로 내보냅니다.</span>"
+  },
+  {
+    "lineNum": 7795,
+    "text": "<span className=\"text-sm font-black text-slate-700\">데이터 백업하기</span>"
+  },
+  {
+    "lineNum": 7796,
+    "text": "<span className=\"text-[12px] font-bold text-slate-400 leading-tight\">현재 데이터를 JSON 파일로 다운로드합니다. 앱 전체를 백업할 수 있습니다. </span>"
+  },
+  {
+    "lineNum": 7814,
+    "text": "<span className=\"text-sm font-black text-slate-700\">데이터 복구하기</span>"
+  },
+  {
+    "lineNum": 7815,
+    "text": "<span className=\"text-[12px] font-bold text-slate-400 leading-tight\">백업된 JSON 파일을 불러와 데이터를 복원합니다.</span>"
+  },
+  {
+    "lineNum": 7827,
+    "text": "<h3 className=\"text-base font-black text-slate-800 whitespace-nowrap\">기록 삭제</h3>"
+  },
+  {
+    "lineNum": 7835,
+    "text": "<span className=\"text-sm font-black text-slate-700 mb-1\">기상시각 기록 삭제</span>"
+  },
+  {
+    "lineNum": 7836,
+    "text": "<span className=\"text-[12px] font-bold text-slate-400 leading-tight\">현재까지 기록된 기상시각 기록을 모두 삭제합니다.</span>"
+  },
+  {
+    "lineNum": 7843,
+    "text": "<span className=\"text-sm font-black text-slate-700 mb-1\">사용 시간 기록 삭제</span>"
+  },
+  {
+    "lineNum": 7844,
+    "text": "<span className=\"text-[12px] font-bold text-slate-400 leading-tight\">현재까지 기록된 사용 시간 바 기록을 모두 삭제합니다.</span>"
+  },
+  {
+    "lineNum": 7851,
+    "text": "<span className=\"text-sm font-black text-slate-700 mb-1\">루틴 기록 삭제</span>"
+  },
+  {
+    "lineNum": 7852,
+    "text": "<span className=\"text-[12px] font-bold text-slate-400 leading-tight\">현재까지 기록된 모든 루틴 기록을 삭제합니다. 루틴 설정은 유지합니다.</span>"
+  },
+  {
+    "lineNum": 7859,
+    "text": "<span className=\"text-sm font-black text-slate-700 mb-1\">루틴 전체 삭제</span>"
+  },
+  {
+    "lineNum": 7860,
+    "text": "<span className=\"text-[12px] font-bold text-slate-400 leading-tight\">지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다.</span>"
+  },
+  {
+    "lineNum": 7870,
+    "text": "<h3 className=\"text-base font-black text-slate-800 whitespace-nowrap\">소개 및 지원</h3>"
+  },
+  {
+    "lineNum": 7878,
+    "text": "<span className=\"text-sm font-black text-slate-700 mb-1\">개인정보 처리방침 Privacy Policy</span>"
+  },
+  {
+    "lineNum": 7879,
+    "text": "<span className=\"text-[12px] font-bold text-slate-400 leading-tight\">앱의 개인정보 취급 방침을 확인합니다.</span>"
+  },
+  {
+    "lineNum": 7886,
+    "text": "<span className=\"text-sm font-black text-slate-700 mb-1\">지원 Support URL</span>"
+  },
+  {
+    "lineNum": 7887,
+    "text": "<span className=\"text-[12px] font-bold text-slate-400 leading-tight\">도움말 확인 및 개발자에게 문의합니다.</span>"
+  },
+  {
+    "lineNum": 7909,
+    "text": "한국어 (KO)"
+  },
+  {
+    "lineNum": 7970,
+    "text": "<h3 className=\"text-base font-black text-slate-900\">루틴 그룹 관리</h3>"
+  },
+  {
+    "lineNum": 8012,
+    "text": "저장하고 닫기"
+  },
+  {
+    "lineNum": 8057,
+    "text": "title: '변경 취소 확인',"
+  },
+  {
+    "lineNum": 8058,
+    "text": "message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',"
+  },
+  {
+    "lineNum": 8059,
+    "text": "confirmLabel: '취소하고 나가기',"
+  },
+  {
+    "lineNum": 8060,
+    "text": "cancelLabel: '계속 수정하기',"
+  },
+  {
+    "lineNum": 8081,
+    "text": "setSoundSuccessMessage('변경사항이 저장되었습니다');"
+  },
+  {
+    "lineNum": 8085,
+    "text": "{ name: 'Level Up (레벨업)', file: '/sounds/tithuh-level-up-523624.mp3' },"
+  },
+  {
+    "lineNum": 8086,
+    "text": "{ name: 'Trumpets Fanfare (트럼펫 팡파르)', file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },"
+  },
+  {
+    "lineNum": 8087,
+    "text": "{ name: 'Level Win (성공 축하음)', file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },"
+  },
+  {
+    "lineNum": 8088,
+    "text": "{ name: 'Fireworks (불꽃놀이 효과음)', file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },"
+  },
+  {
+    "lineNum": 8089,
+    "text": "{ name: 'Applause Cheer (환호와 박수)', file: '/sounds/driken5482-applause-cheer-236786.mp3' },"
+  },
+  {
+    "lineNum": 8090,
+    "text": "{ name: 'Duck Quack (오리 꽥꽥)', file: '/sounds/freesound_community-075176_duck-quack-40345.mp3' },"
+  },
+  {
+    "lineNum": 8091,
+    "text": "{ name: 'Dog Bark (강아지 멍멍)', file: '/sounds/dragon-studio-dog-bark-382732.mp3' },"
+  },
+  {
+    "lineNum": 8092,
+    "text": "{ name: 'Beep (비프 안내음)', file: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' }"
+  },
+  {
+    "lineNum": 8096,
+    "text": "{ key: 'wakeUpCheckIn', label: '1. 기상 체크인', desc: '아침 기상 체크인에 성공하면 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },"
+  },
+  {
+    "lineNum": 8097,
+    "text": "{ key: 'triggerRoutineStart', label: '2. 트리거 루틴 시작', desc: '루틴 그룹을 처음 시작할 때 나오는 효과음입니다.', defaultFile: '/sounds/driken5482-applause-cheer-236786.mp3' },"
+  },
+  {
+    "lineNum": 8098,
+    "text": "{ key: 'individualRoutineComplete', label: '3. 개별 루틴 완료', desc: '개별 루틴을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/tithuh-level-up-523624.mp3' },"
+  },
+  {
+    "lineNum": 8099,
+    "text": "{ key: 'routineGroupComplete', label: '4. 루틴 그룹 완료', desc: '루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/dragon-studio-fireworks-02-419019.mp3' },"
+  },
+  {
+    "lineNum": 8100,
+    "text": "{ key: 'todayEnd', label: '5. 오늘 끝', desc: '오늘의 루틴을 마치면(모든 루틴그룹이 완료/비활성/건너뜀 상태이면서 완벽한 하루는 아님) 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },"
+  },
+  {
+    "lineNum": 8101,
+    "text": "{ key: 'allGroupsComplete', label: '6. 완벽한 하루 완료', desc: '오늘 예정된 모든 루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },"
+  },
+  {
+    "lineNum": 8102,
+    "text": "{ key: 'chickSound', label: '7. 병아리 소리', desc: '홈 아이콘줄의 체크체크 캐릭터를 누를 때 나는 소리입니다.', defaultFile: 'public/sounds/nikin-short-chick-sound-171389.mp3' }"
+  },
+  {
+    "lineNum": 8115,
+    "text": "<h2 className=\"text-xl font-black text-slate-800\">효과음 설정</h2>"
+  },
+  {
+    "lineNum": 8141,
+    "text": "<label className=\"text-[11px] font-bold text-slate-500 ml-1\">사운드 선택</label>"
+  },
+  {
+    "lineNum": 8161,
+    "text": "title=\"재생 테스트\""
+  },
+  {
+    "lineNum": 8179,
+    "text": "취소"
+  },
+  {
+    "lineNum": 8185,
+    "text": "저장"
+  },
+  {
+    "lineNum": 8199,
+    "text": "ongoingMessage: 'task가 n분째 진행중입니다',"
+  },
+  {
+    "lineNum": 8203,
+    "text": "beforeEndMessage: 'task 종료 r분 전입니다.',"
+  },
+  {
+    "lineNum": 8206,
+    "text": "endMessage: 'task 시간이 지났습니다.',"
+  },
+  {
+    "lineNum": 8210,
+    "text": "overTimeMessage: 'name님, task가 m분 지났어요.',"
+  },
+  {
+    "lineNum": 8231,
+    "text": "title: '변경 취소 확인',"
+  },
+  {
+    "lineNum": 8232,
+    "text": "message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',"
+  },
+  {
+    "lineNum": 8233,
+    "text": "confirmLabel: '취소하고 나가기',"
+  },
+  {
+    "lineNum": 8234,
+    "text": "cancelLabel: '계속 수정하기',"
+  },
+  {
+    "lineNum": 8256,
+    "text": "setNaggingSuccessMessage('잔소리 설정이 저장되었습니다');"
+  },
+  {
+    "lineNum": 8270,
+    "text": "<h2 className=\"text-xl font-black text-slate-800\">잔소리 기능 설정</h2>"
+  },
+  {
+    "lineNum": 8274,
+    "text": "{/* 공통 변수 안내 */}"
+  },
+  {
+    "lineNum": 8278,
+    "text": "<AlertCircle className=\"w-4 h-4\" /> 사용 가능한 변수"
+  },
+  {
+    "lineNum": 8281,
+    "text": "<div className=\"bg-white/50 p-2 rounded-lg\"><span className=\"text-indigo-900\">name</span>: 사용자 이름</div>"
+  },
+  {
+    "lineNum": 8282,
+    "text": "<div className=\"bg-white/50 p-2 rounded-lg\"><span className=\"text-indigo-900\">task</span>: 루틴 제목</div>"
+  },
+  {
+    "lineNum": 8283,
+    "text": "<div className=\"bg-white/50 p-2 rounded-lg\"><span className=\"text-indigo-900\">n</span>: 시작 후 경과 분</div>"
+  },
+  {
+    "lineNum": 8284,
+    "text": "<div className=\"bg-white/50 p-2 rounded-lg\"><span className=\"text-indigo-900\">r</span>: 종료 전 남은 분</div>"
+  },
+  {
+    "lineNum": 8285,
+    "text": "<div className=\"bg-white/50 p-2 rounded-lg\"><span className=\"text-indigo-900\">m</span>: 목표 초과 분</div>"
+  },
+  {
+    "lineNum": 8291,
+    "text": "<AlertCircle className=\"w-4 h-4\" /> 한글 조사 자동 교정"
+  },
+  {
+    "lineNum": 8294,
+    "text": "<span className=\"text-indigo-900 underline decoration-indigo-300 underline-offset-2\">name</span>이나 <span className=\"text-indigo-900 underline decoration-indigo-300 underline-offset-2\">task</span> 뒤에 <span className=\"font-black text-indigo-800\">'이/가'</span>와 같이 슬래시(/)로 구분된 조사를 사용하면 받침 유무에 따라 알맞게 교정됩니다."
+  },
+  {
+    "lineNum": 8295,
+    "text": "예를들어 \"task이/가 n분째 진행중입니다\"를 입력하시면, \"운동이 5분째 진행중입니다\" 또는 \"운동하기가 5분째 진행중입니다\"와 같이 적절한 조사가 출력됩니다."
+  },
+  {
+    "lineNum": 8296,
+    "text": "<p className=\"text-[10px] font-bold text-indigo-600/80 leading-relaxed\">* 지원: 은/는, 이/가, 을/를, 으로/로, 이죠/죠, 이다/다</p>"
+  },
+  {
+    "lineNum": 8301,
+    "text": "{/* 3-1. 루틴 시작시 알림 */}"
+  },
+  {
+    "lineNum": 8305,
+    "text": "<h3 className=\"text-base font-black text-slate-800\">루틴 시작시 알림</h3>"
+  },
+  {
+    "lineNum": 8306,
+    "text": "<p className=\"text-[11px] font-bold text-slate-400 leading-tight\">루틴을 시작할 때의 알림입니다.</p>"
+  },
+  {
+    "lineNum": 8319,
+    "text": "<h3 className=\"text-base font-black text-slate-800\">루틴 재시작시 알림</h3>"
+  },
+  {
+    "lineNum": 8320,
+    "text": "<p className=\"text-[11px] font-bold text-slate-400 leading-tight\">일시정지 또는 완료한 루틴을 재시작할 때에도 같은 알림을 보냅니다.</p>"
+  },
+  {
+    "lineNum": 8330,
+    "text": "<label className=\"text-[11px] font-bold text-slate-500 ml-1\">안내 문구 설정</label>"
+  },
+  {
+    "lineNum": 8335,
+    "text": "placeholder=\"예: task 시작합니다\""
+  },
+  {
+    "lineNum": 8343,
+    "text": "{/* 3-1-2. 루틴 진행 중 알림 */}"
+  },
+  {
+    "lineNum": 8347,
+    "text": "<h3 className=\"text-base font-black text-slate-800\">루틴 진행 중 알림</h3>"
+  },
+  {
+    "lineNum": 8348,
+    "text": "<p className=\"text-[11px] font-bold text-slate-400 leading-tight\">루틴이 진행되는 동안 정기적으로 알림을 보냅니다. 단, '루틴 종료 전 알림'과 겹치는 경우 '루틴 종료 전 알림'만 내보냅니다.</p>"
+  },
+  {
+    "lineNum": 8360,
+    "text": "<label className=\"text-[11px] font-bold text-slate-500 ml-1\">루틴 유형별 적용 여부</label>"
+  },
+  {
+    "lineNum": 8383,
+    "text": "{type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' :"
+  },
+  {
+    "lineNum": 8384,
+    "text": "type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}"
+  },
+  {
+    "lineNum": 8391,
+    "text": "<label className=\"text-[11px] font-bold text-slate-500 ml-1\">알림 간격 설정</label>"
+  },
+  {
+    "lineNum": 8406,
+    "text": "<span className=\"text-xs font-black text-slate-400\">분 마다</span>"
+  },
+  {
+    "lineNum": 8410,
+    "text": "<label className=\"text-[11px] font-bold text-slate-500 ml-1\">안내 문구 설정</label>"
+  },
+  {
+    "lineNum": 8422,
+    "text": "{/* 3-2. 루틴 종료 전 알림 */}"
+  },
+  {
+    "lineNum": 8426,
+    "text": "<h3 className=\"text-base font-black text-slate-800\">루틴 종료 전 알림</h3>"
+  },
+  {
+    "lineNum": 8427,
+    "text": "<p className=\"text-[11px] font-bold text-slate-400 leading-tight\">루틴 시간이 종료되기 전의 알림입니다.</p>"
+  },
+  {
+    "lineNum": 8439,
+    "text": "<label className=\"text-[11px] font-bold text-slate-500 ml-1\">루틴 유형별 적용 여부</label>"
+  },
+  {
+    "lineNum": 8462,
+    "text": "{type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' :"
+  },
+  {
+    "lineNum": 8463,
+    "text": "type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}"
+  },
+  {
+    "lineNum": 8470,
+    "text": "<label className=\"text-[11px] font-bold text-slate-500 ml-1\">알림 시점 설정</label>"
+  },
+  {
+    "lineNum": 8477,
+    "text": "<option key={m} value={m}>{m}분 전</option>"
+  },
+  {
+    "lineNum": 8482,
+    "text": "<label className=\"text-[11px] font-bold text-slate-500 ml-1\">안내 문구 설정</label>"
+  },
+  {
+    "lineNum": 8494,
+    "text": "{/* 3-3. 루틴 종료 알림 */}"
+  },
+  {
+    "lineNum": 8498,
+    "text": "<h3 className=\"text-base font-black text-slate-800\">루틴 종료 알림</h3>"
+  },
+  {
+    "lineNum": 8499,
+    "text": "<p className=\"text-[11px] font-bold text-slate-400 leading-tight\">사용자가 설정한 시간이 종료되었을 때의 알림입니다.</p>"
+  },
+  {
+    "lineNum": 8511,
+    "text": "<label className=\"text-[11px] font-bold text-slate-500 ml-1\">루틴 유형별 적용 여부</label>"
+  },
+  {
+    "lineNum": 8534,
+    "text": "{type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' :"
+  },
+  {
+    "lineNum": 8535,
+    "text": "type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}"
+  },
+  {
+    "lineNum": 8542,
+    "text": "<label className=\"text-[11px] font-bold text-slate-500 ml-1\">안내 문구 설정</label>"
+  },
+  {
+    "lineNum": 8554,
+    "text": "{/* 3-4. 루틴 종료 후 알림 */}"
+  },
+  {
+    "lineNum": 8786,
+    "text": "{/* 홈아이콘줄 (Sticky Header Box) */}"
+  },
+  {
+    "lineNum": 8851,
+    "text": "{/* 음성안내아이콘 */}"
+  },
+  {
+    "lineNum": 8870,
+    "text": "{/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}"
+  },
+  {
+    "lineNum": 8985,
+    "text": "if (status === '완벽' || status === '완료') {"
+  },
+  {
+    "lineNum": 9136,
+    "text": "validationPlaceholder={confirmModal.validationPlaceholder || (confirmModal.validationValue ? `${confirmModal.validationValue} 입력` : undefined)}"
+  },
+  {
+    "lineNum": 9255,
+    "text": "{/* 다음 루틴 그�            {/* Bottom Sheet Container */}"
+  },
+  {
+    "lineNum": 9356,
+    "text": "{/* 알림 권한 안내 모달 */}"
+  },
+  {
+    "lineNum": 9393,
+    "text": "{/* 알림 권한 거부 시 자동 비활성 안내 모달 */}"
+  },
+  {
+    "lineNum": 9485,
+    "text": "{/* 앱 업데이트 알림 */}"
+  },
+  {
+    "lineNum": 9515,
+    "text": "{/* 하루 리셋 안내 모달 */}"
+  },
+  {
+    "lineNum": 9552,
+    "text": "{/* 개별 루틴 상세 통계 하단 팝업 (Bottom Sheet) */}"
+  },
+  {
+    "lineNum": 9596,
+    "text": "{/* 2초간 화면 상호작용 및 메뉴 클릭 방지 오버레이 */}"
+  }
+]

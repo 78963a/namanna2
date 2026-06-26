@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertCircle } from 'lucide-react';
 import { getJosa } from '../../utils';
@@ -29,13 +30,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   message,
   onConfirm,
   onCancel,
-  confirmLabel = "확인",
-  cancelLabel = "취소",
+  confirmLabel,
+  cancelLabel,
   showCancel = true,
   validationValue,
-  validationPlaceholder = "내용을 입력해주세요",
+  validationPlaceholder,
   confirmColor = 'rose'
 }) => {
+  const { t, i18n } = useTranslation();
   const [inputValue, setInputValue] = React.useState('');
 
   React.useEffect(() => {
@@ -45,6 +47,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   }, [isOpen]);
 
   const isValid = !validationValue || inputValue === validationValue;
+
+  const resolvedConfirmLabel = confirmLabel || t('common.confirm');
+  const resolvedCancelLabel = cancelLabel || t('common.cancel');
+  const resolvedPlaceholder = validationPlaceholder || t('confirmModal.defaultPlaceholder');
 
   const colorClasses = {
     rose: 'bg-rose-500 hover:bg-rose-600 shadow-rose-100',
@@ -93,13 +99,16 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 {validationValue && (
                   <div className="mt-4 space-y-2">
                     <p className="text-sm font-bold text-rose-500 text-left">
-                      삭제하려면 "{validationValue}"{getJosa(validationValue, '을/를')} 정확히 입력해주세요.
+                      {t('confirmModal.validationMessage', { 
+                        value: validationValue, 
+                        josa: i18n.language === 'ko' ? getJosa(validationValue, '을/를') : '' 
+                      })}
                     </p>
                     <input
                       type="text"
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
-                      placeholder={validationPlaceholder}
+                      placeholder={resolvedPlaceholder}
                       spellCheck={false}
                       autoComplete="off"
                       className="w-full p-3 bg-slate-50 border border-slate-100 rounded-[10px] text-sm font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all"
@@ -114,7 +123,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                     onClick={onCancel}
                     className="flex-1 py-3 rounded-[10px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors whitespace-pre-wrap"
                   >
-                    {cancelLabel}
+                    {resolvedCancelLabel}
                   </button>
                 )}
                 <button 
@@ -126,7 +135,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                       : 'bg-slate-300 cursor-not-allowed shadow-none'
                   }`}
                 >
-                  {confirmLabel}
+                  {resolvedConfirmLabel}
                 </button>
               </div>
             </div>
