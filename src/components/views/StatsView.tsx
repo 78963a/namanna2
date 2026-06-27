@@ -26,7 +26,6 @@ import { timeToMinutes, minutesToTime, formatDate, formatDurationPrecise, isTask
 interface StatsViewProps {
   userData: UserData;
   currentTime: Date;
-  deleteReview?: (groupId: string, date: string) => void;
   initialSelectedGroupId?: string | null;
   isSingleGroupStatsOnly?: boolean;
   onBackOverride?: () => void;
@@ -37,7 +36,6 @@ interface StatsViewProps {
 export const StatsView: React.FC<StatsViewProps> = ({ 
   userData,
   currentTime,
-  deleteReview: _deleteReview,
   initialSelectedGroupId = null,
   isSingleGroupStatsOnly = false,
   onBackOverride,

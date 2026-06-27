@@ -12,21 +12,24 @@ interface PixelArtProps {
 export const CheckCheckIcon: React.FC<PixelArtProps> = ({ iconId, size = 32 }) => {
   // 도트 그리기 유틸리티
   const renderPixels = (pixels: string[], colors: Record<string, string>) => {
-    return pixels.map((row, y) => {
-      return row.split('').map((char, x) => {
-        if (char === ' ') return null;
-        return (
-          <rect
-            key={`${x}-${y}`}
-            x={x}
-            y={y}
-            width="1"
-            height="1"
-            fill={colors[char] || '#000'}
-          />
-        );
+    const rects: React.ReactNode[] = [];
+    pixels.forEach((row, y) => {
+      row.split('').forEach((char, x) => {
+        if (char !== ' ') {
+          rects.push(
+            <rect
+              key={`${x}-${y}`}
+              x={x}
+              y={y}
+              width="1"
+              height="1"
+              fill={colors[char] || '#000'}
+            />
+          );
+        }
       });
     });
+    return rects;
   };
 
   // 아이콘 데이터 (16x16)

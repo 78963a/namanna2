@@ -19,7 +19,6 @@ import {
   Trash2, 
   Clock,
   ChevronRight,
-  ChevronLeft,
   BarChart3,
   Home,
   AlertCircle,
@@ -28,11 +27,9 @@ import {
   Play,
   Timer,
   X,
-  GripVertical,
   RotateCcw,
   ChevronDown,
   PlusCircle,
-  Hourglass,
   BrickWall,
   Check,
   CheckCheck,
@@ -63,10 +60,9 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable
+  verticalListSortingStrategy
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+
 
 // Internal Types & Constants
 import { 
@@ -120,7 +116,7 @@ import { PerfectDayAnimation } from './PerfectDayAnimation';
 import { TodayEndAnimation } from './TodayEndAnimation';
 // import { TaskInputSection } from './components/routine/TaskInputSection';
 // import { SortableTaskItem } from './components/routine/SortableTaskItem';
-// import { SortableChunkItem } from './components/routine/SortableChunkItem';
+import { SortableChunkItem } from './components/routine/SortableChunkItem';
 // import { SortableChecklistItem } from './components/routine/SortableChecklistItem';
 // --- Components ---
 
@@ -142,124 +138,6 @@ import { TodayEndAnimation } from './TodayEndAnimation';
 export const OldExecutionView = () => {
   return null;
 };
-
-
-interface SortableChunkItemProps {
-  chunk: RoutineChunk;
-  onEnterDetail: (id: string) => void;
-  onUpdateInfo: (id: string, name: string, purpose: string) => void;
-  onDelete: (id: string) => void;
-  editingChunkId: string | null;
-  setEditingChunkId: (id: string | null) => void;
-  editingChunkName: string;
-  setEditingChunkName: (name: string) => void;
-  editingChunkPurpose: string;
-  setEditingChunkPurpose: (purpose: string) => void;
-}
-
-const SortableChunkItem: React.FC<SortableChunkItemProps> = ({
-  chunk,
-  onEnterDetail,
-  onUpdateInfo,
-  onDelete,
-  editingChunkId,
-  setEditingChunkId,
-  editingChunkName,
-  setEditingChunkName,
-  editingChunkPurpose,
-  setEditingChunkPurpose,
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: chunk.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 100 : 'auto',
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className="p-[15px] bg-slate-50 rounded-[10px] border border-slate-100 group flex items-center justify-between">
-      <div className="flex items-center gap-3 flex-grow min-w-0">
-        <button {...attributes} {...listeners} style={{ touchAction: 'none' }} className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-500 flex-shrink-0">
-          <GripVertical className="w-5 h-5" />
-        </button>
-        
-        {editingChunkId === chunk.id ? (
-          <div className="flex flex-col gap-2 flex-grow mr-4">
-            <input 
-              type="text"
-              value={editingChunkName}
-              onChange={(e) => setEditingChunkName(e.target.value)}
-              placeholder="그룹 이름"
-              spellCheck={false}
-              autoComplete="off"
-              className="w-full bg-white border border-slate-200 rounded-[10px] px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-              autoFocus
-            />
-            <div className="flex items-center gap-2">
-              <input 
-                type="text"
-                value={editingChunkPurpose}
-                onChange={(e) => setEditingChunkPurpose(e.target.value)}
-                placeholder="그룹 목적"
-                spellCheck={false}
-                autoComplete="off"
-                className="flex-grow bg-white border border-slate-200 rounded-[10px] px-2 py-1 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose);
-                  if (e.key === 'Escape') setEditingChunkId(null);
-                }}
-              />
-              <button 
-                onClick={() => onUpdateInfo(chunk.id, editingChunkName, editingChunkPurpose)}
-                className="text-xs font-bold text-indigo-600 whitespace-nowrap"
-              >
-                저장
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 flex-grow min-w-0">
-            <button 
-              onClick={() => onEnterDetail(chunk.id)}
-              className="flex-grow text-left group/title flex items-center gap-2 min-w-0"
-            >
-              <h4 className="font-black text-slate-900 group-hover/title:text-indigo-600 transition-colors whitespace-nowrap truncate flex items-center gap-1.5">
-                {chunk.name}
-                {chunk.isAlarmEnabled && <Bell className="w-3.5 h-3.5 text-amber-500 fill-amber-500/10" />}
-              </h4>
-              <div className="relative group/tooltip flex-shrink-0">
-                <Settings className="w-4 h-4 text-slate-300 group-hover/title:text-indigo-400 transition-colors" />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                  수정
-                </div>
-              </div>
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center gap-1">
-        <button 
-          onClick={() => onDelete(chunk.id)}
-          className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
-          title="그룹 삭제"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
 
 
 // --- Helper Components ---
@@ -424,10 +302,9 @@ export default function App() {
   // --- State ---
   const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
   const [statsKey, setStatsKey] = useState(0);
-  const [justFinishedGroupId, setJustFinishedGroupId] = useState<string | null>(null);
   const [showNextRoutineModal, setShowNextRoutineModal] = useState(false);
   const [selectedTaskForStats, setSelectedTaskForStats] = useState<string | null>(null);
-  const [modalSuggestions, setModalSuggestions] = useState<NextRoutineSuggestion[]>([]);
+  const [modalSuggestions] = useState<NextRoutineSuggestion[]>([]);
   const [isWaitingForNextRoutineModal, setIsWaitingForNextRoutineModal] = useState(false);
   const nextRoutineTimerRef = useRef<any>(null);
 
@@ -3229,26 +3106,6 @@ export default function App() {
   };
 
 
-
-  const deleteReview = (groupId: string, date: string) => {
-    setConfirmModal({
-      isOpen: true,
-      title: '후기 삭제',
-      message: '이 날의 후기를 삭제하시겠습니까?',
-      onConfirm: () => {
-        setUserData(prev => ({
-          ...prev,
-          routineGroupHistory: prev.routineGroupHistory?.map(h => 
-            (h.groupId === groupId && h.date === date) 
-              ? { ...h, closingNote: undefined, satisfaction: undefined } 
-              : h
-          )
-        }));
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-      }
-    });
-  };
-
   const addChunk = (
     name: string, 
     purpose: string, 
@@ -3351,8 +3208,6 @@ export default function App() {
       return hasPass ? '완료' : '완벽';
     }
 
-    const totalCurrentDuration = scheduledTasks.reduce((acc, t) => acc + calculateTaskDuration(t, currentTime), 0);
-
     // Identify if any task is explicitly started/in-progress
     const anyStarted = scheduledTasks.some(t => 
       (t.startTime && !t.isPaused) || // Running
@@ -3362,108 +3217,37 @@ export default function App() {
       calculateTaskDuration(t, currentTime) >= 1 // More than 1 second accumulated
     );
 
-    // If accumulatedDuration is set, it means it was started and paused.
-    const anyAccumulated = scheduledTasks.some(t => (t.accumulatedDuration || 0) >= 1);
-
-    if (anyStarted || anyAccumulated || totalCurrentDuration >= 1) return '실행중';
-
+    // If accumulatedDuration is set, it means it was �� 트리거]: 루틴 그룹(청크) 정보 전체 업데이트 시 기회 횟수 가산 (+1점)
+    if (anyStarted) return '실행중';
     return '미실행';
   };
 
-  const getNextSuggestedTaskForRunningGroup = (chunk: RoutineChunk, scheduledTasks: Task[]) => {
-    // 1. Paused tasks
-    const paused = scheduledTasks.filter(t => t.isPaused && !t.completed && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.PERFECT && t.status !== TaskStatus.SKIP);
-    if (paused.length > 0) return paused[0];
-
-    // 2. Unstarted tasks
-    const unstarted = scheduledTasks.filter(t => (!t.status || t.status === TaskStatus.NOT_STARTED) && !t.completed && !t.startTime);
-    if (unstarted.length > 0) return unstarted[0];
-
-    // 3. Skipped / later tasks
-    const skipped = scheduledTasks.filter(t => t.status === TaskStatus.SKIP || t.laterTimestamp || t.status === TaskStatus.LATER);
-    if (skipped.length > 0) return skipped[0];
-
-    return scheduledTasks[0] || chunk.tasks[0];
-  };
-
-  useEffect(() => {
-    if (activeTab === 'home' && justFinishedGroupId && userData.nextRoutineGroupGuidanceEnabled) {
-      const playable = userData.routineChunks.filter(chunk => {
-        if (chunk.id === justFinishedGroupId) return false;
-        const status = getChunkStatus(chunk);
-        return status === '미실행' || status === '실행중';
-      });
-
-      if (playable.length > 0) {
-        const runningGroups = playable.filter(chunk => getChunkStatus(chunk) === '실행중');
-        const unstartedGroups = playable.filter(chunk => getChunkStatus(chunk) === '미실행');
-
-        const suggestions: NextRoutineSuggestion[] = [];
-
-        // 1. Up to 2 running groups
-        const selectedRunning = runningGroups.slice(0, 2);
-        selectedRunning.forEach(chunk => {
-          const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
-          const suggestedTask = getNextSuggestedTaskForRunningGroup(chunk, scheduledTasks);
-          if (suggestedTask) {
-            suggestions.push({
-              chunkId: chunk.id,
-              chunkName: chunk.name,
-              taskId: suggestedTask.id,
-              taskName: suggestedTask.text
-            });
-          }
-        });
-
-        // 2. Up to 3 unstarted groups to fill the rest of the 5-slots limit
-        const remainingSlots = 5 - suggestions.length;
-        if (remainingSlots > 0 && unstartedGroups.length > 0) {
-          const selectedUnstarted = unstartedGroups.slice(0, Math.min(3, remainingSlots));
-          selectedUnstarted.forEach(chunk => {
-            const scheduledTasks = chunk.tasks.filter(t => isTaskScheduledToday(t, chunk, effectiveDate, userData));
-            const suggestedTask = scheduledTasks[0] || chunk.tasks[0];
-            if (suggestedTask) {
-              suggestions.push({
-                chunkId: chunk.id,
-                chunkName: chunk.name,
-                taskId: suggestedTask.id,
-                taskName: suggestedTask.text
-              });
-            }
-          });
-        }
-
-        if (suggestions.length > 0) {
-          setIsWaitingForNextRoutineModal(true);
-          if (nextRoutineTimerRef.current) clearTimeout(nextRoutineTimerRef.current);
-          nextRoutineTimerRef.current = setTimeout(() => {
-            setModalSuggestions(suggestions);
-            setShowNextRoutineModal(true);
-            setIsWaitingForNextRoutineModal(false);
-            nextRoutineTimerRef.current = null;
-          }, 2000);
-        }
-      }
-      setJustFinishedGroupId(null);
-    }
-  }, [activeTab, justFinishedGroupId, userData.nextRoutineGroupGuidanceEnabled]);
-
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case '비활성': return <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-[10px]">비활성</span>;
-      case '미실행': return <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-[10px]">미실행</span>;
-      case '실행중': return <span className="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-[10px]">실행중</span>;
-      case '완료': return <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-[10px]">완료</span>;
-      case '완벽': return <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-[10px]">완벽</span>;
-      case '전체완료': return <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-[10px]">전체완료</span>;
-      default: return null;
+    let color = 'bg-slate-100 text-slate-500';
+    if (status === '비활성') {
+      color = 'bg-slate-100 text-slate-400';
+    } else if (status === '미실행') {
+      color = 'bg-slate-100 text-slate-500';
+    } else if (status === '완벽') {
+      color = 'bg-emerald-100 text-emerald-600';
+    } else if (status === '완료') {
+      color = 'bg-indigo-100 text-indigo-600';
+    } else if (status === '실행중') {
+      color = 'bg-amber-100 text-amber-600';
     }
+    return (
+      <span className={`text-[10px] font-black px-2 py-0.5 rounded-[10px] ${color}`}>
+        {status}
+      </span>
+    );
   };
 
   const updateFullChunk = (id: string, updatedData: Partial<RoutineChunk>) => {
     setUserData(prev => ({
       ...prev,
-      routineChunks: prev.routineChunks.map(c => c.id === id ? { ...c, ...updatedData } : c)
+      routineChunks: prev.routineChunks.map(chunk => 
+        chunk.id === id ? { ...chunk, ...updatedData } : chunk
+      )
     }));
     // [가산 엔진 트리거]: 루틴 그룹(청크) 정보 전체 업데이트 시 기회 횟수 가산 (+1점)
     addAvailableCheckCheckPoints(1, '루틴 그룹 전체 저장');
@@ -4204,11 +3988,10 @@ export default function App() {
   const renderSettingsContent = (mode: 'main' | 'modal') => {
     if (settingsSubView.type === 'groupStats') {
       return (
-        <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-bottom-[50px] duration-300 overscroll-contain">
+        <div className={`flex flex-col custom-scrollbar animate-in fade-in slide-in-from-bottom-[50px] duration-300 ${mode === 'modal' ? 'h-full overflow-y-auto overscroll-contain' : ''}`}>
           <StatsView
             userData={userData}
             currentTime={currentTime}
-            deleteReview={deleteReview}
             initialSelectedGroupId={settingsSubView.chunkId}
             isSingleGroupStatsOnly={true}
             onBackOverride={handleSettingsClose}
@@ -4219,7 +4002,7 @@ export default function App() {
 
     if (settingsSubView.type === 'main' || settingsSubView.type === 'sound' || settingsSubView.type === 'nagging' || (activeTab === 'settings' && settingsSubView.type === 'detail')) {
       return (
-        <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className={`flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 ${mode === 'modal' ? 'h-full overflow-hidden' : ''}`}>
           {/* Folder Tab Containers */}
           <div className="flex px-4 items-end relative z-20 flex-shrink-0">
             {/* Left Tab: 일반설정 */}
@@ -4296,8 +4079,8 @@ export default function App() {
           </div>
 
           {/* Main Folder Content Body */}
-          <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 flex-grow flex flex-col">
-            <div className="overflow-y-auto p-[15px] custom-scrollbar flex-grow overscroll-contain">
+          <div className={`bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 relative z-10 flex-grow flex flex-col ${mode === 'modal' ? 'overflow-hidden' : ''}`}>
+            <div className={`p-[15px] custom-scrollbar flex-grow ${mode === 'modal' ? 'overflow-y-auto overscroll-contain' : ''}`}>
               <AnimatePresence mode="wait">
                 {activeSettingsTab === 'general' ? (
                   settingsSubView.type === 'sound' ? (
@@ -4922,7 +4705,7 @@ export default function App() {
                       const chunk = userData.routineChunks.find(c => c.id === settingsSubView.chunkId);
                       if (!chunk) return null;
                       return (
-                        <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                        <div className={`flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300 ${mode === 'modal' ? 'h-full overflow-hidden' : ''}`}>
                           <RoutineGroupFormView 
                             addChunk={addChunk}
                             updateChunk={updateFullChunk}
@@ -5000,644 +4783,12 @@ export default function App() {
       );
     }
 
-    if (false && settingsSubView.type === 'sound') {
-      const defaultSettings: SoundEffectSettings = {
-        wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
-        triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
-        individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
-        routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-        todayEnd: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-        allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-        chickSound: { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
-      };
-
-      const settings = localSoundSettings || {
-        ...defaultSettings,
-        ...(userData.soundSettings || {})
-      };
-
-      const updateSound = (key: keyof SoundEffectSettings, field: 'enabled' | 'file', value: any) => {
-        const item = settings[key] || { enabled: true, file: '' };
-        const updatedItem = { ...item, [field]: value };
-        setLocalSoundSettings(prev => ({
-          ...(prev || settings),
-          [key]: updatedItem
-        }));
-        setIsSoundSettingsDirty(true);
-      };
-
-      const handleSoundPlayTest = (filePath: string) => {
-        soundService.stop();
-        if (filePath) {
-          soundService.refresh(filePath);
-          soundService.play(filePath, true);
-        }
-      };
-
-      const handleSoundBack = () => {
-        if (isSoundSettingsDirty) {
-          setConfirmModal({
-            isOpen: true,
-            title: '변경 취소 확인',
-            message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
-            confirmLabel: '취소하고 나가기',
-            cancelLabel: '계속 수정하기',
-            confirmColor: 'indigo',
-            showCancel: true,
-            onConfirm: () => {
-              setIsSoundSettingsDirty(false);
-              setSettingsSubView({ type: 'main' });
-              setConfirmModal(prev => ({ ...prev, isOpen: false }));
-            },
-            onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
-          });
-        } else {
-          setSettingsSubView({ type: 'main' });
-        }
-      };
-
-      const handleSoundSave = () => {
-        setUserData(prev => ({
-          ...prev,
-          soundSettings: settings
-        }));
-        setIsSoundSettingsDirty(false);
-        setSoundSuccessMessage('변경사항이 저장되었습니다');
-      };
-
-      const AVAILABLE_SOUNDS = [
-        { name: 'Level Up (레벨업)', file: '/sounds/tithuh-level-up-523624.mp3' },
-        { name: 'Trumpets Fanfare (트럼펫 팡파르)', file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
-        { name: 'Level Win (성공 축하음)', file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-        { name: 'Fireworks (불꽃놀이 효과음)', file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-        { name: 'Applause Cheer (환호와 박수)', file: '/sounds/driken5482-applause-cheer-236786.mp3' },
-        { name: 'Duck Quack (오리 꽥꽥)', file: '/sounds/freesound_community-075176_duck-quack-40345.mp3' },
-        { name: 'Dog Bark (강아지 멍멍)', file: '/sounds/dragon-studio-dog-bark-382732.mp3' },
-        { name: 'Beep (비프 안내음)', file: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' }
-      ];
-
-      const soundItemsDetail: { key: keyof SoundEffectSettings; label: string; desc: string; defaultFile: string }[] = [
-        { key: 'wakeUpCheckIn', label: '1. 기상 체크인', desc: '아침 기상 체크인에 성공하면 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
-        { key: 'triggerRoutineStart', label: '2. 트리거 루틴 시작', desc: '루틴 그룹을 처음 시작할 때 나오는 효과음입니다.', defaultFile: '/sounds/driken5482-applause-cheer-236786.mp3' },
-        { key: 'individualRoutineComplete', label: '3. 개별 루틴 완료', desc: '개별 루틴을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/tithuh-level-up-523624.mp3' },
-        { key: 'routineGroupComplete', label: '4. 루틴 그룹 완료', desc: '루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
-        { key: 'todayEnd', label: '5. 오늘 끝', desc: '오늘의 루틴을 마치면(모든 루틴그룹이 완료/비활성/건너뜀 상태이면서 완벽한 하루는 아님) 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-        { key: 'allGroupsComplete', label: '6. 완벽한 하루 완료', desc: '오늘 예정된 모든 루틴 그룹을 완료했을 때 나오는 효과음입니다.', defaultFile: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
-        { key: 'chickSound', label: '7. 병아리 소리', desc: '홈 아이콘줄의 체크체크 캐릭터를 누를 때 나는 소리입니다.', defaultFile: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
-      ];
-
-      return (
-        <div className="flex flex-col h-full overflow-hidden">
-
-          <div className="flex items-center gap-3 mb-4 flex-shrink-0">
-            <button 
-              onClick={handleSoundBack}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5 text-slate-600" />
-            </button>
-            <h2 className="text-xl font-black text-slate-800">효과음 설정</h2>
-          </div>
-
-          <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-4">
-            {soundItemsDetail.map(({ key, label, desc, defaultFile }) => {
-              const item = settings[key] || { enabled: true, file: defaultFile };
-              const currentFile = item.file || defaultFile;
-
-              return (
-                <div key={key} className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col gap-1 pr-4">
-                      <h3 className="text-base font-black text-slate-800">{label}</h3>
-                      <p className="text-[11px] font-bold text-slate-400 leading-tight">{desc}</p>
-                    </div>
-                    <button 
-                      onClick={() => updateSound(key, 'enabled', !item.enabled)}
-                      className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${item.enabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                    >
-                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${item.enabled ? 'left-7' : 'left-1'}`} />
-                    </button>
-                  </div>
-
-                  {item.enabled && key !== 'chickSound' && (
-                    <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-top-2">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-bold text-slate-500 ml-1">사운드 선택</label>
-                        <div className="flex gap-2">
-                          <select 
-                            value={currentFile}
-                            onChange={(e) => {
-                              const newFile = e.target.value;
-                              updateSound(key, 'file', newFile);
-                              handleSoundPlayTest(newFile);
-                            }}
-                            className="flex-grow text-sm font-black p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer animate-in fade-in list-none select-none appearance-none"
-                          >
-                            {AVAILABLE_SOUNDS.map(sound => (
-                              <option key={sound.file} value={sound.file}>
-                                {sound.name}
-                              </option>
-                            ))}
-                          </select>
-                          <button 
-                            onClick={() => handleSoundPlayTest(currentFile)}
-                            className="bg-indigo-50 text-indigo-600 p-3 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors flex items-center gap-1"
-                            title="재생 테스트"
-                          >
-                            <Volume2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="flex gap-3 mt-6">
-            <button 
-              onClick={handleSoundBack}
-              className="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-[15px] hover:bg-slate-200 transition-all"
-            >
-              취소
-            </button>
-            <button 
-              onClick={handleSoundSave}
-              className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-            >
-              저장
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    if (false && settingsSubView.type === 'nagging') {
-      const defaultSettings: NaggingSettings = {
-        startEnabled: false,
-        restartEnabled: false,
-        startMessage: 'task',
-        ongoingEnabled: false,
-        ongoingInterval: 1,
-        ongoingMessage: 'task가 n분째 진행중입니다',
-        ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-        beforeEndEnabled: false,
-        beforeEndTime: 1,
-        beforeEndMessage: 'task 종료 r분 전입니다.',
-        beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-        endEnabled: false,
-        endMessage: 'task 시간이 지났습니다.',
-        endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-        overTimeEnabled: false,
-        overTimeInterval: 1,
-        overTimeMessage: 'name님, task가 m분 지났어요.',
-        overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
-      };
-
-      const settings = localNaggingSettings || {
-        ...defaultSettings,
-        ...(userData.naggingSettings || {})
-      };
-
-      const updateNagging = (key: keyof NaggingSettings, value: any) => {
-        setLocalNaggingSettings(prev => ({
-          ...(prev || settings),
-          [key]: value
-        }));
-        setIsNaggingDirty(true);
-      };
-
-      const handleNaggingBack = () => {
-        if (isNaggingDirty) {
-          setConfirmModal({
-            isOpen: true,
-           title: '변경 취소 확인',
-           message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
-            confirmLabel: '취소하고 나가기',
-            cancelLabel: '계속 수정하기',
-            confirmColor: 'indigo',
-            showCancel: true,
-            onConfirm: () => {
-              setIsNaggingDirty(false);
-              setSettingsSubView({ type: 'main' });
-              setConfirmModal(prev => ({ ...prev, isOpen: false }));
-            },
-            onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
-          });
-        } else {
-          setSettingsSubView({ type: 'main' });
-        }
-      };
-
-      const handleNaggingSave = () => {
-        if (localNaggingSettings) {
-          setUserData(prev => ({
-            ...prev,
-            naggingSettings: localNaggingSettings
-          }));
-          setIsNaggingDirty(false);
-          setNaggingSuccessMessage('잔소리 설정이 저장되었습니다');
-          // Removed setSettingsSubView to stay on the page
-        }
-      };
-
-      return (
-        <div className="flex flex-col h-full overflow-hidden">
-          <div className="flex items-center gap-3 mb-6">
-            <button 
-              onClick={handleNaggingBack}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 shadow-sm"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <h2 className="text-xl font-black text-slate-800">잔소리 기능 설정</h2>
-          </div>
-
-          <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-grow pb-10">
-            {/* 공통 변수 안내 */}
-            <div className="p-4 bg-indigo-50 rounded-2xl space-y-3 border border-indigo-100">
-              <div className="space-y-1.5">
-                <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4" /> 사용 가능한 변수
-                </h3>
-                <div className="grid grid-cols-2 gap-2 text-[11px] font-bold text-indigo-700">
-                  <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">name</span>: 사용자 이름</div>
-                  <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">task</span>: 루틴 제목</div>
-                  <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">n</span>: 시작 후 경과 분</div>
-                  <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">r</span>: 종료 전 남은 분</div>
-                  <div className="bg-white/50 p-2 rounded-lg"><span className="text-indigo-900">m</span>: 목표 초과 분</div>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 pt-1 border-t border-indigo-200/50">
-                <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4" /> 한글 조사 자동 교정
-                </h3>
-                <div className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
-                  <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">name</span>이나 <span className="text-indigo-900 underline decoration-indigo-300 underline-offset-2">task</span> 뒤에 <span className="font-black text-indigo-800">'이/가'</span>와 같이 슬래시(/)로 구분된 조사를 사용하면 받침 유무에 따라 알맞게 교정됩니다. 
-                  예를들어 "task이/가 n분째 진행중입니다"를 입력하시면, "운동이 5분째 진행중입니다" 또는 "운동하기가 5분째 진행중입니다"와 같이 적절한 조사가 출력됩니다. 
-                  <p className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">* 지원: 은/는, 이/가, 을/를, 으로/로, 이죠/죠, 이다/다</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 3-1. 루틴 시작시 알림 */}
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1 pr-4">
-                  <h3 className="text-base font-black text-slate-800">루틴 시작시 알림</h3>
-                  <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴을 시작할 때의 알림입니다.</p>
-                </div>
-                <button 
-                  onClick={() => updateNagging('startEnabled', !settings.startEnabled)}
-                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.startEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.startEnabled ? 'left-7' : 'left-1'}`} />
-                </button>
-              </div>
-              {settings.startEnabled && (
-                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                    <div className="flex flex-col gap-1 pr-4">
-                      <h3 className="text-base font-black text-slate-800">루틴 재시작시 알림</h3>
-                      <p className="text-[11px] font-bold text-slate-400 leading-tight">일시정지 또는 완료한 루틴을 재시작할 때에도 같은 알림을 보냅니다.</p>
-                    </div>
-                    <button 
-                      onClick={() => updateNagging('restartEnabled', !settings.restartEnabled)}
-                      className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.restartEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                    >
-                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.restartEnabled ? 'left-7' : 'left-1'}`} />
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
-                    <input 
-                      type="text"
-                      value={settings.startMessage}
-                      onChange={(e) => updateNagging('startMessage', e.target.value)}
-                      placeholder="예: task 시작합니다"
-                      className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 3-1-2. 루틴 진행 중 알림 */}
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1 pr-4">
-                  <h3 className="text-base font-black text-slate-800">루틴 진행 중 알림</h3>
-                  <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴이 진행되는 동안 정기적으로 알림을 보냅니다. 단, '루틴 종료 전 알림'과 겹치는 경우 '루틴 종료 전 알림'만 내보냅니다.</p>
-                </div>
-                <button 
-                  onClick={() => updateNagging('ongoingEnabled', !settings.ongoingEnabled)}
-                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.ongoingEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.ongoingEnabled ? 'left-7' : 'left-1'}`} />
-                </button>
-              </div>
-              {settings.ongoingEnabled && (
-                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
-                    <div className="flex gap-2">
-                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
-                        const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
-                        const isSelected = (settings.ongoingTargetTypes || allTypes).includes(type);
-                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
-                        return (
-                          <button
-                            key={type}
-                            onClick={() => {
-                              const current = settings.ongoingTargetTypes || allTypes;
-                              const next = isSelected 
-                                ? current.filter(t => t !== type)
-                                : [...current, type];
-                              updateNagging('ongoingTargetTypes', next);
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1.5 ${
-                              isSelected 
-                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
-                                : 'bg-slate-100 text-slate-400'
-                            }`}
-                          >
-                            <Icon className="w-3 h-3" />
-                            {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
-                             type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">알림 간격 설정</label>
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="number"
-                        min="1"
-                        max="60"
-                        value={settings.ongoingInterval || ''}
-                        onChange={(e) => updateNagging('ongoingInterval', e.target.value === '' ? '' : parseInt(e.target.value))}
-                        onBlur={() => {
-                          if (!settings.ongoingInterval || (typeof settings.ongoingInterval === 'number' && settings.ongoingInterval < 1)) {
-                            updateNagging('ongoingInterval', 1);
-                          }
-                        }}
-                        className="w-16 text-center text-sm font-black p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                      />
-                      <span className="text-xs font-black text-slate-400">분 마다</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
-                    <input 
-                      type="text"
-                      value={settings.ongoingMessage}
-                      onChange={(e) => updateNagging('ongoingMessage', e.target.value)}
-                      className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 3-2. 루틴 종료 전 알림 */}
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1 pr-4">
-                  <h3 className="text-base font-black text-slate-800">루틴 종료 전 알림</h3>
-                  <p className="text-[11px] font-bold text-slate-400 leading-tight">루틴 시간이 종료되기 전의 알림입니다.</p>
-                </div>
-                <button 
-                  onClick={() => updateNagging('beforeEndEnabled', !settings.beforeEndEnabled)}
-                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.beforeEndEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.beforeEndEnabled ? 'left-7' : 'left-1'}`} />
-                </button>
-              </div>
-              {settings.beforeEndEnabled && (
-                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
-                    <div className="flex gap-2">
-                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
-                        const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
-                        const isSelected = (settings.beforeEndTargetTypes || allTypes).includes(type);
-                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
-                        return (
-                          <button
-                            key={type}
-                            onClick={() => {
-                              const current = settings.beforeEndTargetTypes || allTypes;
-                              const next = isSelected 
-                                ? current.filter(t => t !== type)
-                                : [...current, type];
-                              updateNagging('beforeEndTargetTypes', next);
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1.5 ${
-                              isSelected 
-                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
-                                : 'bg-slate-100 text-slate-400'
-                            }`}
-                          >
-                            <Icon className="w-3 h-3" />
-                            {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
-                             type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">알림 시점 설정</label>
-                    <select 
-                      value={settings.beforeEndTime}
-                      onChange={(e) => updateNagging('beforeEndTime', parseInt(e.target.value))}
-                      className="w-32 text-sm font-black p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                    >
-                      {[1,2,3,4,5,6,7,8,9,10].map(m => (
-                        <option key={m} value={m}>{m}분 전</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
-                    <input 
-                      type="text"
-                      value={settings.beforeEndMessage}
-                      onChange={(e) => updateNagging('beforeEndMessage', e.target.value)}
-                      className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 3-3. 루틴 종료 알림 */}
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1 pr-4">
-                  <h3 className="text-base font-black text-slate-800">루틴 종료 알림</h3>
-                  <p className="text-[11px] font-bold text-slate-400 leading-tight">사용자가 설정한 시간이 종료되었을 때의 알림입니다.</p>
-                </div>
-                <button 
-                  onClick={() => updateNagging('endEnabled', !settings.endEnabled)}
-                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.endEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.endEnabled ? 'left-7' : 'left-1'}`} />
-                </button>
-              </div>
-              {settings.endEnabled && (
-                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">루틴 유형별 적용 여부</label>
-                    <div className="flex gap-2">
-                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
-                        const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
-                        const isSelected = (settings.endTargetTypes || allTypes).includes(type);
-                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
-                        return (
-                          <button
-                            key={type}
-                            onClick={() => {
-                              const current = settings.endTargetTypes || allTypes;
-                              const next = isSelected 
-                                ? current.filter(t => t !== type)
-                                : [...current, type];
-                              updateNagging('endTargetTypes', next);
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1.5 ${
-                              isSelected 
-                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
-                                : 'bg-slate-100 text-slate-400'
-                            }`}
-                          >
-                            <Icon className="w-3 h-3" />
-                            {type === TaskType.TIME_INDEPENDENT ? '시간무관루틴' : 
-                             type === TaskType.TIME_LIMITED ? '시간제한루틴' : '시간축적루틴'}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">안내 문구 설정</label>
-                    <input 
-                      type="text"
-                      value={settings.endMessage}
-                      onChange={(e) => updateNagging('endMessage', e.target.value)}
-                      className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 3-4. 루틴 종료 후 알림 */}
-            <div className="p-[15px] bg-white rounded-[15px] space-y-[15px] shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1 pr-4">
-                  <h3 className="text-base font-black text-slate-800">{t('nagging.overTimeTitle')}</h3>
-                  <p className="text-[11px] font-bold text-slate-400 leading-tight">{t('nagging.overTimeDesc')}</p>
-                </div>
-                <button 
-                  onClick={() => updateNagging('overTimeEnabled', !settings.overTimeEnabled)}
-                  className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${settings.overTimeEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.overTimeEnabled ? 'left-7' : 'left-1'}`} />
-                </button>
-              </div>
-              {settings.overTimeEnabled && (
-                <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.overTimeTypes')}</label>
-                    <div className="flex gap-2">
-                      {[TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED].map(type => {
-                        const allTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
-                        const isSelected = (settings.overTimeTargetTypes || allTypes).includes(type);
-                        const Icon = type === TaskType.TIME_INDEPENDENT ? Clock : type === TaskType.TIME_ACCUMULATED ? BrickWall : Hourglass;
-                        return (
-                          <button
-                            key={type}
-                            onClick={() => {
-                              const current = settings.overTimeTargetTypes || allTypes;
-                              const next = isSelected 
-                                ? current.filter(t => t !== type)
-                                : [...current, type];
-                              updateNagging('overTimeTargetTypes', next);
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1.5 ${
-                              isSelected 
-                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' 
-                                : 'bg-slate-100 text-slate-400'
-                            }`}
-                          >
-                            <Icon className="w-3 h-3" />
-                            {type === TaskType.TIME_INDEPENDENT ? t('taskType.TIME_INDEPENDENT') : 
-                             type === TaskType.TIME_LIMITED ? t('taskType.TIME_LIMITED') : t('taskType.TIME_ACCUMULATED')}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.overTimeInterval')}</label>
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="number"
-                        min="1"
-                        max="60"
-                        value={settings.overTimeInterval || ''}
-                        onChange={(e) => updateNagging('overTimeInterval', e.target.value === '' ? '' : parseInt(e.target.value))}
-                        onBlur={() => {
-                          if (!settings.overTimeInterval || (typeof settings.overTimeInterval === 'number' && settings.overTimeInterval < 1)) {
-                            updateNagging('overTimeInterval', 1);
-                          }
-                        }}
-                        className="w-16 text-center text-sm font-black p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                      />
-                      <span className="text-xs font-black text-slate-400">{t('nagging.minutesEach')}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.overTimeMessageLabel')}</label>
-                    <input 
-                      type="text"
-                      value={settings.overTimeMessage}
-                      onChange={(e) => updateNagging('overTimeMessage', e.target.value)}
-                      className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex gap-3 mt-6">
-            <button 
-              onClick={handleNaggingBack}
-              className="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-[15px] hover:bg-slate-200 transition-all"
-            >
-              {t('common.cancel')}
-            </button>
-            <button 
-              onClick={handleNaggingSave}
-              className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-            >
-              {t('common.save')}
-            </button>
-          </div>
-        </div>
-      );
-    }
     const chunk = userData.routineChunks.find(c => c.id === settingsSubView.chunkId);
     if (!chunk) return null;
 
     return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar">
+      <div className={`flex flex-col ${mode === 'modal' ? 'h-full overflow-hidden' : ''}`}>
+        <div className={`flex-grow pr-2 custom-scrollbar ${mode === 'modal' ? 'overflow-y-auto overscroll-contain' : ''}`}>
           <RoutineGroupFormView 
             addChunk={addChunk}
             updateChunk={updateFullChunk}
@@ -5945,7 +5096,6 @@ export default function App() {
                 userData={userData} 
                 currentTime={currentTime}
                 effectiveDate={effectiveDate}
-                deleteReview={deleteReview}
               />
             </motion.div>
           ) : activeTab === 'execution' ? (
@@ -5961,18 +5111,7 @@ export default function App() {
                 setUserData={setUserData}
                 selectedChunkId={selectedChunkId}
                 setStatsKey={setStatsKey}
-                setActiveTab={(tab) => {
-                  if (tab === 'home' && selectedChunkId) {
-                    const chunk = userData.routineChunks.find(c => c.id === selectedChunkId);
-                    if (chunk) {
-                      const status = getChunkStatus(chunk);
-                      if (status === '완벽' || status === '완료') {
-                        setJustFinishedGroupId(selectedChunkId);
-                      }
-                    }
-                  }
-                  setActiveTab(tab);
-                }}
+                setActiveTab={setActiveTab}
                 currentTime={currentTime}
                 effectiveDate={effectiveDate}
                 todayStr={todayStr}
@@ -6262,7 +5401,7 @@ export default function App() {
               </p>
 
               <div className="w-full space-y-2.5 mb-5 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar overscroll-contain">
-                {modalSuggestions.map((sug) => {
+                {modalSuggestions.map((sug, idx) => {
                   const chunk = userData.routineChunks.find(c => c.id === sug.chunkId);
                   const task = chunk?.tasks.find(t => t.id === sug.taskId);
                   const isTrigger = chunk && chunk.tasks.length > 0 && chunk.tasks[0].id === sug.taskId;
@@ -6303,7 +5442,7 @@ export default function App() {
 
                   return (
                     <button
-                      key={`${sug.chunkId}-${sug.taskId}`}
+                      key={`${sug.chunkId}-${sug.taskId}-${idx}`}
                       onClick={() => handleSelectNextSuggestedTask(sug.chunkId, sug.taskId)}
                       className="w-full p-4 bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/40 rounded-2xl text-left transition-all active:scale-[0.98] group flex items-center justify-between gap-3"
                     >
@@ -6567,7 +5706,6 @@ export default function App() {
                 <StatsView
                   userData={userData}
                   currentTime={currentTime}
-                  deleteReview={deleteReview}
                   initialSelectedTaskId={selectedTaskForStats}
                   isSingleTaskStatsOnly={true}
                 />

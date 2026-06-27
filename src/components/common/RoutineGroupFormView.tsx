@@ -692,7 +692,7 @@ export const RoutineGroupFormView: React.FC<{
       setEditingRoutineIndex(null);
       setIsEditModalOpen(false);
     } else {
-      setRoutineList([...routineList, { ...taskToSave, id: `new-rt-${Date.now()}` }]);
+      setRoutineList([...routineList, { ...taskToSave, id: `new-rt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` }]);
       setRoutineAddedMessage(t('statsModal.routineAdded', { name: taskToSave.text }));
     }
     setCurrentRoutineInput({ text: '', duration: 10, type: TaskType.TIME_LIMITED, scheduledDays: scheduledDays, checklist: [] });
