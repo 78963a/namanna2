@@ -76,7 +76,7 @@ export const ko = {
     deleteRoutineRecordsDesc: "현재까지 기록된 모든 루틴 기록을 삭제합니다. 루틴 설정은 유지합니다.",
     introAndSupport: "소개 및 지원",
     versionCheck: "버전정보 확인",
-    versionCheckDesc: "2026. 6. 28. 오후 7:25 업데이트",
+    versionCheckDesc: "2026. 6. 29. 오전 7:11 업데이트",
     privacyPolicy: "개인정보 처리방침 Privacy Policy",
     privacyPolicyDesc: "앱의 개인정보 취급 방침을 확인합니다.",
     supportUrl: "지원 Support URL",

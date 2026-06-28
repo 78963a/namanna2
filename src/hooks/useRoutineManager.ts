@@ -427,6 +427,77 @@ export const useRoutineManager = ({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
+  // Daily Reset Logic when date changes or on mount
+  useEffect(() => {
+    if (!isDataLoaded) return;
+
+    const performDailyReset = async () => {
+      const lastReset = userData.lastResetDate;
+      
+      // 1. 처음 앱을 실행하여 lastResetDate가 아예 없는 경우
+      if (!lastReset) {
+        console.log(`[Daily Reset] No lastResetDate found. Setting lastResetDate to current today: ${todayStr}`);
+        setUserData(prev => ({
+          ...prev,
+          lastResetDate: todayStr
+        }));
+        return;
+      }
+
+      // 2. 이미 오늘 날짜로 리셋된 경우
+      if (lastReset === todayStr) return;
+
+      console.log(`[Daily Reset Triggered] Last Reset Date: ${lastReset}, Today: ${todayStr}`);
+
+      setUserData(prev => {
+        // A. 기존 날짜(lastReset)의 데이터를 히스토리와 동기화하여 저장
+        const syncedData = syncHistory(prev, lastReset);
+
+        // B. 루틴 상태를 미실행(NOT_STARTED) 및 진행률 리셋
+        const resetChunks = syncedData.routineChunks.map(chunk => {
+          const resetTasks = chunk.tasks.map(task => {
+            return {
+              ...task,
+              completed: false,
+              startTime: undefined,
+              endTime: undefined,
+              duration: undefined,
+              accumulatedDuration: 0,
+              isPaused: false,
+              status: TaskStatus.NOT_STARTED,
+              closingNote: undefined,
+              satisfaction: undefined,
+              laterTimestamp: undefined
+            };
+          });
+
+          // 각 청크의 activeTaskId는 첫 번째 태스크 ID로 설정
+          const firstTask = resetTasks[0];
+          
+          return {
+            ...chunk,
+            tasks: resetTasks,
+            activeTaskId: firstTask ? firstTask.id : undefined,
+            completedAt: undefined
+          };
+        });
+
+        // C. 일일 캐릭터 클릭 기회 횟수를 5회로 리셋
+        const defaultAvailableCount = 5;
+
+        return {
+          ...syncedData,
+          routineChunks: resetChunks,
+          lastResetDate: todayStr,
+          availableCheckCheckCount: defaultAvailableCount,
+          lastCheckInBonusCount: 0 // 보너스 수령 카운트도 초기화
+        };
+      });
+    };
+
+    performDailyReset();
+  }, [isDataLoaded, todayStr]);
+
   // 1-second interval for clock and notifications
   useEffect(() => {
     const timer = setInterval(() => {
