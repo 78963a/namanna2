@@ -75,6 +75,8 @@ export const ko = {
     deleteRoutineRecords: "루틴 기록 삭제",
     deleteRoutineRecordsDesc: "현재까지 기록된 모든 루틴 기록을 삭제합니다. 루틴 설정은 유지합니다.",
     introAndSupport: "소개 및 지원",
+    versionCheck: "버전정보 확인",
+    versionCheckDesc: "2026. 6. 28. 오후 7:25 업데이트",
     privacyPolicy: "개인정보 처리방침 Privacy Policy",
     privacyPolicyDesc: "앱의 개인정보 취급 방침을 확인합니다.",
     supportUrl: "지원 Support URL",
@@ -113,12 +115,40 @@ export const ko = {
     restoreConfirm: "선택한 백업 파일로 기존 데이터를 모두 덮어씌웁니다. 이 작업은 되돌릴 수 없으며 앱이 새로고침됩니다. 계속하시겠습니까?",
     overwrite: "덮어쓰기",
     restoreFailed: "데이터를 완전히 가져오지 못했습니다.",
-    fileReadError: "파일을 읽는 중 오류가 발생했습니다."
+    fileReadError: "파일을 읽는 중 오류가 발생했습니다.",
+    groupNamePlaceholderSimple: "그룹 이름",
+    groupPurposePlaceholderSimple: "그룹 목적",
+    edit: "수정"
   },
   stats: {
     wakeUpStats: "기상시각 통계",
     achievementStats: "달성률 통계",
-    usageStats: "사용시간 통계"
+    usageStats: "사용시간 통계",
+    avg7: "7일 평균",
+    avg30: "30일 평균",
+    historyYear: "{{year}}년 기록",
+    date: "날짜",
+    targetTime: "목표시각",
+    wakeUpTime: "기상시각",
+    status: "상태",
+    noRecords: "기록된 기상시각이 없습니다.",
+    avgAchievement7: "최근 7일 평균 달성률",
+    avgDuration: "평균 소요시간",
+    sum: "합계",
+    avgAchievement30: "최근 30일 평균 달성률",
+    historyRecent7: "최근 7일 기록",
+    achievementRate: "달성률",
+    routineBreakdown: "수행 현황",
+    startEnd: "시작/종료",
+    allRecords: "모든 기록 보기",
+    groupStats: "루틴 그룹별 통계",
+    groupStatsDesc: "각 루틴 그룹의 평균 수행 시간과 달성률입니다.",
+    avgStartTime: "평균 시작",
+    avgEndTime: "평균 종료",
+    usageTimeStats: "누적 사용시간",
+    usageStatsDesc: "루틴을 실행하는 동안 앱을 활용한 총 시간입니다. 효율적인 시간 배분과 집중도 분석에 도움이 됩니다.",
+    yearTitle: "{{year}}년 기록",
+    noUsageRecords: "기록된 사용 시간이 없습니다."
   },
   status: {
     "비활성": "비활성",
@@ -126,7 +156,10 @@ export const ko = {
     "완벽": "완벽",
     "완료": "완료",
     "실행중": "실행중",
-    "전체완료": "전체완료"
+    "전체완료": "전체완료",
+    "달성": "달성",
+    "지각": "지각",
+    "미기록": "미기록"
   },
   home: {
     targetWakeUpTime: "목표 기상 시간",
@@ -213,6 +246,11 @@ export const ko = {
     mediaAlbum: "안내 음성"
   },
   nagging: {
+    defaultStartMessage: "task 시작합니다",
+    defaultOngoingMessage: "task가 n분째 진행중입니다",
+    defaultBeforeEndMessage: "task 종료 r분 전입니다.",
+    defaultEndMessage: "task 시간이 지났습니다.",
+    defaultOverTimeMessage: "name님, task가 m분 지났어요.",
     cancelTitle: "변경 취소 확인",
     cancelMessage: "변경 사항이 저장되지 않았습니다. 취소하시겠습니까?",
     cancelConfirm: "취소하고 나가기",
@@ -221,6 +259,8 @@ export const ko = {
     backTitle: "뒤로가기",
     title: "잔소리 기능 설정",
     varsTitle: "사용 가능한 변수",
+    varsWarningTitle: "변수 사용 시 유의사항",
+    varsWarningDesc: "'name', 'task', 'n', 'r', 'm' 단어들은 시스템 변수로 예약되어 있습니다. 변수 이름 앞뒤에 불필요한 공백을 두지 마세요 (예: 'task ' 또는 ' n '). 또한 영어 문장 내에서 실제 'task'라는 단어를 사용하고 싶다면, 시스템이 해당 단어를 루틴 제목으로 자동 치환하는 것을 방지하기 위해 'activity', 'todo', 'job' 등 다른 대체 단어를 사용해 주세요.",
     varsName: "사용자 이름",
     varsTask: "루틴 제목",
     varsElapsed: "시작 후 경과 분",
@@ -247,12 +287,7 @@ export const ko = {
     endTitle: "루틴 종료 알림",
     endDesc: "사용자가 설정한 시간이 종료되었을 때의 알림입니다.",
     overtimeTitle: "루틴 종료 후 알림",
-    overtimeDesc: "설정 시간이 경과한 후에도 지속적으로 안내합니다.",
-    default_startMessage: "task 시작합니다",
-    default_ongoingMessage: "task이/가 n분째 진행중입니다",
-    default_beforeEndMessage: "task 종료 r분 전입니다.",
-    default_endMessage: "task 시간이 지났습니다.",
-    default_overTimeMessage: "name님, task이/가 m분 지났어요."
+    overtimeDesc: "설정 시간이 경과한 후에도 지속적으로 안내합니다."
   },
   sound: {
     cancelTitle: "변경 취소 확인",

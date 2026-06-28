@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Volume2, AlertCircle, Clock, BrickWall, Hourglass } from 'lucide-react';
 import { NaggingSettings, UserData, TaskType } from '../../types';
+import { getNaggingDefaultSettings } from '../../utils/naggingDefaults';
 
 interface NaggingSettingsViewProps {
   userData: UserData;
@@ -26,27 +27,8 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
   setNaggingSuccessMessage,
   setSettingsSubView,
 }) => {
-  const { t } = useTranslation();
-  const defaultSettings: NaggingSettings = {
-    startEnabled: false,
-    restartEnabled: false,
-    startMessage: 'task',
-    ongoingEnabled: false,
-    ongoingInterval: 1,
-    ongoingMessage: 'task이/가 n분째 진행중입니다',
-    ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-    beforeEndEnabled: false,
-    beforeEndTime: 1,
-    beforeEndMessage: 'task 종료 r분 전입니다.',
-    beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-    endEnabled: false,
-    endMessage: 'task 시간이 지났습니다.',
-    endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-    overTimeEnabled: false,
-    overTimeInterval: 1,
-    overTimeMessage: 'name님, task이/가 m분 지났어요.',
-    overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
-  };
+  const { t, i18n } = useTranslation();
+  const defaultSettings = getNaggingDefaultSettings(i18n.language || 'ko');
 
   const settings = localNaggingSettings || {
     ...defaultSettings,
@@ -85,10 +67,18 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
 
   const handleNaggingSave = () => {
     if (localNaggingSettings) {
-      setUserData(prev => ({
-        ...prev,
-        naggingSettings: localNaggingSettings
-      }));
+      const currentLang = i18n.language || 'ko';
+      setUserData(prev => {
+        const naggingSettingsByLang = prev.naggingSettingsByLang || {};
+        return {
+          ...prev,
+          naggingSettings: localNaggingSettings,
+          naggingSettingsByLang: {
+            ...naggingSettingsByLang,
+            [currentLang]: localNaggingSettings
+          }
+        };
+      });
       setIsNaggingDirty(false);
       setNaggingSuccessMessage(t('nagging.saveSuccess'));
     }
@@ -123,15 +113,28 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
             </div>
           </div>
 
-          <div className="space-y-1.5 pt-1 border-t border-indigo-200/50">
-            <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
-              <AlertCircle className="w-4 h-4 text-indigo-600" /> {t('nagging.josaCorrectionTitle')}
-            </h3>
-            <div className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
-              {t('nagging.josaCorrectionDesc')}
-              <p className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">{t('nagging.josaSupported')}</p>
+          {i18n.language?.startsWith('en') && (
+            <div className="space-y-1 pt-2 border-t border-indigo-200/50">
+              <h4 className="text-[11px] font-black text-amber-700 flex items-center gap-1.5">
+                ⚠️ {t('nagging.varsWarningTitle')}
+              </h4>
+              <div className="text-[10px] font-bold text-amber-700/90 leading-relaxed bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/60 shadow-sm">
+                {t('nagging.varsWarningDesc')}
+              </div>
             </div>
-          </div>
+          )}
+
+          {(i18n.language?.startsWith('ko') || (!i18n.language?.startsWith('ja') && !i18n.language?.startsWith('en'))) && (
+            <div className="space-y-1.5 pt-1 border-t border-indigo-200/50">
+              <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-indigo-600" /> {t('nagging.josaCorrectionTitle')}
+              </h3>
+              <div className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
+                {t('nagging.josaCorrectionDesc')}
+                <p className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">{t('nagging.josaSupported')}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 3-1. 루틴 시작시 알림 */}

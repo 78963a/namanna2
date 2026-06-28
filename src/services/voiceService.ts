@@ -134,11 +134,15 @@ class VoiceService {
     });
 
     // 2. Replace remaining solo variables
-    msg = msg.replace(/name/g, name);
-    msg = msg.replace(/task/g, task);
-    msg = msg.replace(/n/g, n.toString());
-    msg = msg.replace(/m/g, m.toString());
-    msg = msg.replace(/r/g, r.toString());
+    const placeholderRegex = /(?<![a-zA-Z])(name|task|n|m|r)(?![a-zA-Z])/g;
+    msg = msg.replace(placeholderRegex, (match) => {
+      if (match === 'name') return name;
+      if (match === 'task') return task;
+      if (match === 'n') return n.toString();
+      if (match === 'm') return m.toString();
+      if (match === 'r') return r.toString();
+      return match;
+    });
 
     this.speak(msg);
   }

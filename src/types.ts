@@ -194,6 +194,7 @@ export interface UserData {
   isVoiceEnabled?: boolean;
   isWakeUpAlarmEnabled?: boolean;
   naggingSettings?: NaggingSettings;
+  naggingSettingsByLang?: { [lang: string]: NaggingSettings };
   soundSettings?: SoundEffectSettings;
   hideAnytimeTimer?: boolean;
   autoNextAccumulatedRoutine?: boolean;

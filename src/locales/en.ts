@@ -75,6 +75,8 @@ export const en = {
     deleteRoutineRecords: "Delete Routine Records",
     deleteRoutineRecordsDesc: "Delete all routine completion history. Routine settings will remain.",
     introAndSupport: "Introduction & Support",
+    versionCheck: "Check Version Info",
+    versionCheckDesc: "Updated on June 28, 2026",
     privacyPolicy: "Privacy Policy",
     privacyPolicyDesc: "View the privacy policy for this app.",
     supportUrl: "Support URL",
@@ -113,12 +115,40 @@ export const en = {
     restoreConfirm: "This will overwrite all current data with the selected backup file. This action cannot be undone and the app will reload. Do you want to proceed?",
     overwrite: "Overwrite",
     restoreFailed: "Failed to fully import data.",
-    fileReadError: "Error reading file."
+    fileReadError: "Error reading file.",
+    groupNamePlaceholderSimple: "Group Name",
+    groupPurposePlaceholderSimple: "Group Purpose",
+    edit: "Edit"
   },
   stats: {
     wakeUpStats: "Wake-up Stats",
     achievementStats: "Achievement Stats",
-    usageStats: "Usage Stats"
+    usageStats: "Usage Stats",
+    avg7: "7-day Avg",
+    avg30: "30-day Avg",
+    historyYear: "{{year}} Records",
+    date: "Date",
+    targetTime: "Target",
+    wakeUpTime: "Wake-up",
+    status: "Status",
+    noRecords: "No wake-up records found.",
+    avgAchievement7: "7-day Avg Achievement",
+    avgDuration: "Avg Duration",
+    sum: "Total",
+    avgAchievement30: "30-day Avg Achievement",
+    historyRecent7: "Recent 7 Days",
+    achievementRate: "Rate",
+    routineBreakdown: "Routines",
+    startEnd: "Start / End",
+    allRecords: "View All Records",
+    groupStats: "Stats by Routine Group",
+    groupStatsDesc: "Average duration and achievement rate for each routine group.",
+    avgStartTime: "Avg Start",
+    avgEndTime: "Avg End",
+    usageTimeStats: "Cumulative Usage Time",
+    usageStatsDesc: "Total time spent using the app during routines. Helps you analyze focus and manage time efficiently.",
+    yearTitle: "{{year}} Usage Records",
+    noUsageRecords: "No usage records found."
   },
   status: {
     "비활성": "Inactive",
@@ -126,7 +156,10 @@ export const en = {
     "완벽": "Perfect",
     "완료": "Completed",
     "실행중": "In Progress",
-    "전체완료": "All Completed"
+    "전체완료": "All Completed",
+    "달성": "Success",
+    "지각": "Late",
+    "미기록": "No Record"
   },
   home: {
     targetWakeUpTime: "Target Wake-up Time",
@@ -213,6 +246,11 @@ export const en = {
     mediaAlbum: "Guide Voice"
   },
   nagging: {
+    defaultStartMessage: "Starting task",
+    defaultOngoingMessage: "task has been in progress for n minutes",
+    defaultBeforeEndMessage: "r minutes remaining before task ends.",
+    defaultEndMessage: "task time has passed.",
+    defaultOverTimeMessage: "name, task is m minutes overdue.",
     cancelTitle: "Confirm Cancel",
     cancelMessage: "Changes have not been saved. Are you sure you want to cancel?",
     cancelConfirm: "Cancel and Exit",
@@ -221,6 +259,8 @@ export const en = {
     backTitle: "Back",
     title: "Nagging Settings",
     varsTitle: "Available Variables",
+    varsWarningTitle: "Notice on Variable Replacement",
+    varsWarningDesc: "The words 'name', 'task', 'n', 'r', and 'm' are reserved as system variables. Do not write them with extra spaces (like 'name ', 'task ', or ' n '). Also, if you want to use the literal word \"task\" in English sentences, please use alternative words like 'activity', 'todo', or 'job' to avoid unintended variable replacement.",
     varsName: "User Name",
     varsTask: "Routine Title",
     varsElapsed: "Minutes Elapsed",
@@ -247,12 +287,7 @@ export const en = {
     endTitle: "Notification on Routine End",
     endDesc: "Notification when the routine's set duration is completed.",
     overtimeTitle: "Routine Overtime Notification",
-    overtimeDesc: "Keep notifying periodically after the set duration has elapsed.",
-    default_startMessage: "Starting task",
-    default_ongoingMessage: "task is in progress for n minutes",
-    default_beforeEndMessage: "r minutes remaining before task ends.",
-    default_endMessage: "task time is up.",
-    default_overTimeMessage: "name, task is m minutes overdue."
+    overtimeDesc: "Keep notifying periodically after the set duration has elapsed."
   },
   sound: {
     cancelTitle: "Confirm Cancel",

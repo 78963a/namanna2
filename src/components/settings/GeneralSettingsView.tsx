@@ -1304,6 +1304,13 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
         </div>
 
         <div className="space-y-4 pt-1">
+          <div 
+            className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl text-left"
+          >
+            <span className="text-sm font-black text-slate-700 mb-1">{t('settings.versionCheck')}</span>
+            <span className="text-[12px] font-bold text-slate-400 leading-tight">{t('settings.versionCheckDesc')}</span>
+          </div>
+
           <button 
             onClick={() => {}}
             className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"

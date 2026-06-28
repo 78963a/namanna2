@@ -103,7 +103,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   if (settingsSubView.type === 'groupStats') {
     return (
-      <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-bottom-[50px] duration-300 overscroll-contain">
+      <div className={`flex flex-col ${mode === 'modal' ? 'h-full overflow-y-auto overscroll-contain' : 'h-auto'} custom-scrollbar animate-in fade-in slide-in-from-bottom-[50px] duration-300`}>
         <StatsView
           userData={userData}
           currentTime={currentTime}
@@ -117,7 +117,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   if (settingsSubView.type === 'main' || settingsSubView.type === 'sound' || settingsSubView.type === 'nagging' || (activeTab === 'settings' && settingsSubView.type === 'detail')) {
     return (
-      <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className={`flex flex-col ${mode === 'modal' ? 'h-full overflow-hidden' : 'h-auto'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
         {/* Folder Tab Containers */}
         <div className="flex px-4 items-end relative z-20 flex-shrink-0">
           {/* Left Tab: 일반설정 */}
@@ -194,8 +194,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Main Folder Content Body */}
-        <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 flex-grow flex flex-col">
-          <div className="overflow-y-auto p-[15px] custom-scrollbar flex-grow overscroll-contain">
+        <div className={`bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 relative z-10 flex-grow flex flex-col ${mode === 'modal' ? 'overflow-hidden' : ''}`}>
+          <div className={`p-[15px] custom-scrollbar flex-grow ${mode === 'modal' ? 'overflow-y-auto overscroll-contain' : ''}`}>
             <AnimatePresence mode="wait">
               {activeSettingsTab === 'general' ? (
                 settingsSubView.type === 'sound' ? (
@@ -289,8 +289,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   if (!chunk) return null;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar">
+    <div className={`flex flex-col ${mode === 'modal' ? 'h-full overflow-hidden' : 'h-auto'}`}>
+      <div className={`flex-grow pr-2 custom-scrollbar ${mode === 'modal' ? 'overflow-y-auto' : ''}`}>
         <RoutineGroupFormView 
           addChunk={addChunk}
           updateChunk={updateFullChunk}
