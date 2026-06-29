@@ -1208,7 +1208,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
             onClick={handleExportCSV}
             className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
           >
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-blue-200 transition-colors">
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-blue-200 transition-colors flex-shrink-0">
               <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div className="flex flex-col">
@@ -1221,7 +1221,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
             onClick={handleExportData}
             className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
           >
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-indigo-200 transition-colors">
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover:border-indigo-200 transition-colors flex-shrink-0">
               <Download className="w-5 h-5 text-indigo-600" />
             </div>
             <div className="flex flex-col">
@@ -1240,7 +1240,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
             <button 
               className="w-full flex items-center gap-4 p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl group-hover/restore:bg-indigo-50 group-hover/restore:border-indigo-200 transition-all text-left group-active/restore:translate-y-[2px] group-active/restore:border-b-[2px] group-active/restore:pb-[18px] mb-[2px] group pointer-events-none"
             >
-              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover/restore:border-indigo-200 transition-colors">
+              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 group-hover/restore:border-indigo-200 transition-colors flex-shrink-0">
                 <Upload className="w-5 h-5 text-indigo-600" />
               </div>
               <div className="flex flex-col">

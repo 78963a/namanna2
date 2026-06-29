@@ -242,6 +242,16 @@ export const useRoutineManager = ({
     }
   }, [i18n.language, isDataLoaded]);
 
+  // Automatically clear deletionMessage after 3 seconds (Toast message auto-close)
+  useEffect(() => {
+    if (deletionMessage) {
+      const timer = setTimeout(() => {
+        setDeletionMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [deletionMessage]);
+
   // Async Load and migration from localStorage to localForage on mount
   useEffect(() => {
     const loadStateAndMigrate = async () => {

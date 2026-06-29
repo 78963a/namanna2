@@ -101,6 +101,13 @@ export interface RoutineGroupHistoryEntry {
   closingNote?: string;
 }
 
+export interface NextRoutineSuggestion {
+  chunkId: string;
+  chunkName: string;
+  taskId: string;
+  taskName: string;
+}
+
 export interface TaskHistoryEntry {
   date: string;
   taskId: string;

@@ -9,29 +9,21 @@ import localForage from 'localforage';
 import { 
   Sun,
   CheckCircle2, 
-  Circle, 
-  CircleDot,
-  PauseCircle,
   Settings, 
   Trash2, 
   Clock,
   ChevronRight,
   BarChart3,
   Home,
-  AlertCircle,
-  BellOff,
   Play,
   Timer,
   X,
   RotateCcw,
   PlusCircle,
   Check,
-  CheckCheck,
-  CircleMinus,
   Volume2,
   VolumeX,
   Save,
-  ArrowBigRightDash,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -51,7 +43,8 @@ import {
   RoutineGroupHistoryEntry,
   TaskHistoryEntry,
   NaggingSettings,
-  SoundEffectSettings
+  SoundEffectSettings,
+  NextRoutineSuggestion
 } from './types';
 import phrases from './phrases.json';
 import { SettingsView } from './components/settings/SettingsView';
@@ -86,6 +79,8 @@ import { ExecutionView } from './components/common/ExecutionView';
 import { RoutineGroupFormView } from './components/common/RoutineGroupFormView';
 // import { AddRoutineGroupView } from './components/views/AddRoutineGroupView';
 import { ConfirmModal } from './components/common/ConfirmModal';
+import { PermissionGuideModal, NotificationDeniedModal } from './components/common/PermissionGuideModal';
+import { NextRoutineGroupModal, InteractionBlockOverlay } from './components/common/NextRoutineGroupModal';
 import { PerfectDayAnimation } from './PerfectDayAnimation';
 import { TodayEndAnimation } from './TodayEndAnimation';
 // import { TaskInputSection } from './components/routine/TaskInputSection';
@@ -115,13 +110,6 @@ export const OldExecutionView = () => {
 
 
 // --- Helper Components ---
-
-interface NextRoutineSuggestion {
-  chunkId: string;
-  chunkName: string;
-  taskId: string;
-  taskName: string;
-}
 
 // [디자인 수정 구역: 홈화면 및 실행화면 글꼴설정]
 export const FONT_SETTINGS = {
@@ -2095,180 +2083,26 @@ export default function App() {
         soundSettings={userData.soundSettings}
       />
 
-      {/* 다음 루틴 그   {/* Bottom Sheet Container */}
-      <AnimatePresence>
-        {showNextRoutineModal && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm touch-none"
-              onClick={() => setShowNextRoutineModal(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-sm bg-white rounded-[25px] overflow-hidden shadow-2xl z-10 p-6 text-center space-y-4"
-            >
-              <div className="mx-auto w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-2">
-                <ArrowBigRightDash className="w-8 h-8 text-indigo-500" />
-              </div>
-              <h3 className="text-xl font-black text-slate-800">{t('alarm.nextRoutineTitle')}</h3>
-              <p className="text-sm font-bold text-slate-500 leading-relaxed">
-                {t('alarm.nextRoutineDesc')}
-              </p>
-
-              <div className="w-full space-y-2.5 mb-5 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar overscroll-contain">
-                {modalSuggestions.map((sug, idx) => {
-                  const chunk = userData.routineChunks.find(c => c.id === sug.chunkId);
-                  const task = chunk?.tasks.find(t => t.id === sug.taskId);
-                  const isTrigger = chunk && chunk.tasks.length > 0 && chunk.tasks[0].id === sug.taskId;
-
-                  // Render appropriate check performance/status circle
-                  let iconElement;
-                  if (task) {
-                    if (task.status === TaskStatus.PERFECT) {
-                      iconElement = (
-                        <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
-                          <Circle className="absolute inset-0 w-full h-full text-indigo-600" />
-                          <CheckCheck className="absolute w-[60%] h-[60%] text-indigo-600" strokeWidth={3} />
-                        </div>
-                      );
-                    } else if (task.completed || task.status === TaskStatus.COMPLETED) {
-                      iconElement = (
-                        <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
-                          <Circle className="absolute inset-0 w-full h-full text-indigo-600" />
-                          <Check className="w-3 h-3 text-indigo-600" strokeWidth={3} />
-                        </div>
-                      );
-                    } else if (task.status === TaskStatus.SKIP) {
-                      iconElement = <CircleMinus className="w-5 h-5 text-[#CC9900] shrink-0" />;
-                    } else if (task.isPaused) {
-                      iconElement = <PauseCircle className="w-5 h-5 text-amber-500 shrink-0" />;
-                    } else if (task.startTime) {
-                      iconElement = <CircleDot className="w-5 h-5 text-indigo-500 animate-pulse shrink-0" />;
-                    } else {
-                      // Normal not started
-                      iconElement = <Circle className="w-5 h-5 text-slate-300 shrink-0" />;
-                    }
-                  } else {
-                    iconElement = <Circle className="w-5 h-5 text-slate-300 shrink-0" />;
-                  }
-
-                  const taskIndex = chunk ? chunk.tasks.findIndex(t => t.id === sug.taskId) : -1;
-                  const sequenceNumber = taskIndex !== -1 ? taskIndex + 1 : '';
-
-                  return (
-                    <button
-                      key={`${sug.chunkId}-${sug.taskId}-${idx}`}
-                      onClick={() => handleSelectNextSuggestedTask(sug.chunkId, sug.taskId)}
-                      className="w-full p-4 bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/40 rounded-2xl text-left transition-all active:scale-[0.98] group flex items-center justify-between gap-3"
-                    >
-                      <div className="flex items-center gap-3 text-left overflow-hidden">
-                        <div className="flex-shrink-0">
-                          {iconElement}
-                        </div>
-                        <div className="flex flex-col gap-0.5 text-left overflow-hidden">
-                          <span className="text-[10px] font-black tracking-wider text-indigo-500 uppercase truncate">
-                            {sug.chunkName}
-                          </span>
-                          <span className="text-sm font-black text-slate-700 group-hover:text-indigo-800 transition-colors truncate">
-                            {sequenceNumber}. {isTrigger && "⚡"}{sug.taskName}
-                          </span>
-                        </div>
-                      </div>
-                      <ArrowBigRightDash className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-all group-hover:translate-x-1 shrink-0" />
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                onClick={() => setShowNextRoutineModal(false)}
-                className="w-full p-4 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-2xl text-center text-sm font-black text-slate-500 transition-all active:scale-[0.98]"
-              >
-                {t('alarm.notNow')}
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* 다음 루틴 그룹 자동 진행 안내 모달 (Refactored to NextRoutineGroupModal) */}
+      <NextRoutineGroupModal
+        isOpen={showNextRoutineModal}
+        onClose={() => setShowNextRoutineModal(false)}
+        userData={userData}
+        modalSuggestions={modalSuggestions}
+        onSelectSuggestedTask={handleSelectNextSuggestedTask}
+      />
 
       {/* 알림 권한 안내 모달 */}
-      <AnimatePresence>
-        {showPermissionGuide && (
-          <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm touch-none"
-              onClick={() => setShowPermissionGuide(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-sm bg-white rounded-[25px] overflow-hidden shadow-2xl z-10"
-            >
-              <div className="p-6 text-center space-y-4">
-                <div className="mx-auto w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-2">
-                  <BellOff className="w-8 h-8 text-amber-500" />
-                </div>
-                <h3 className="text-xl font-black text-slate-800">{t('alarm.permissionRequiredTitle')}</h3>
-                <div className="text-sm font-bold text-slate-500 leading-relaxed text-left bg-slate-50 p-4 rounded-2xl">
-                  {t('alarm.permissionRequiredDesc')}<br/><br/>
-                </div>
-                <button 
-                  onClick={() => setShowPermissionGuide(false)}
-                  className="w-full bg-indigo-600 text-white font-black py-4 rounded-[15px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-                >
-                  {t('alarm.permissionConfirm')}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <PermissionGuideModal 
+        isOpen={showPermissionGuide} 
+        onClose={() => setShowPermissionGuide(false)} 
+      />
 
       {/* 알림 권한 거부 시 자동 비활성 안내 모달 */}
-      <AnimatePresence>
-        {permissionNotificationMessage && (
-          <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm touch-none"
-              onClick={() => setPermissionNotificationMessage(null)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-sm bg-white rounded-[25px] overflow-hidden shadow-2xl z-10"
-            >
-              <div className="p-6 text-center space-y-4">
-                <div className="mx-auto w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mb-2">
-                  <AlertCircle className="w-8 h-8 text-rose-500" />
-                </div>
-                <h3 className="text-xl font-black text-slate-800">{t('alarm.disableNoticeTitle')}</h3>
-                <p className="text-sm font-bold text-slate-500 leading-relaxed">
-                  {permissionNotificationMessage}
-                </p>
-                <button 
-                  onClick={() => setPermissionNotificationMessage(null)}
-                  className="w-full bg-slate-900 text-white font-black py-4 rounded-[15px] hover:bg-slate-800 transition-all shadow-lg"
-                >
-                  {t('alarm.ok')}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <NotificationDeniedModal 
+        message={permissionNotificationMessage} 
+        onClose={() => setPermissionNotificationMessage(null)} 
+      />
 
       {/* Deletion Message Toast */}
       <AnimatePresence>
@@ -2435,10 +2269,8 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* 2초간 화면 상호작용 및 메뉴 클릭 방지 오버레이 */}
-      {isWaitingForNextRoutineModal && (
-        <div className="fixed inset-0 z-[100000] bg-transparent cursor-wait pointer-events-auto" />
-      )}
+      {/* 다음 루틴 그룹 진행 전 2초간 화면 터치 및 상호작용(메뉴 클릭)을 방지하는 투명 오버레이 */}
+      <InteractionBlockOverlay isWaiting={isWaitingForNextRoutineModal} />
     </div>
   );
 }
