@@ -17,8 +17,6 @@ import {
 import { Task, TaskType, TaskStatus } from '../../types';
 import { calculateTaskDuration } from '../../utils';
 
-import { voiceService } from '../../services/voiceService';
-
 interface RoutineTitleLineProps {
   task: Task;
   index: number;
@@ -200,11 +198,10 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
       {showActivate && (
         <button
           onClick={(e) => {
-            voiceService.unlock();
             e.stopPropagation();
             onActivate(task.id);
           }}
-          className="flex-shrink-0 px-2 py-1 bg-amber-50 text-amber-600 rounded-md text-[10px] font-black hover:bg-amber-100 transition-all"
+          className="flex-shrink-0 px-2 py-1 bg-amber-50 text-amber-600 rounded-md text-[10px] font-black hover:bg-amber-100 transition-all cursor-pointer touch-manipulation"
         >
           {t('home.activate')}
         </button>
@@ -213,11 +210,10 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
       {showStartResume && (
         <button
           onClick={(e) => {
-            voiceService.unlock();
             e.stopPropagation();
             onDoFirst(task.id);
           }}
-          className="flex-shrink-0 px-2 py-1 bg-sky-50 text-sky-600 rounded-md text-[10px] font-black hover:bg-sky-100 transition-all"
+          className="flex-shrink-0 px-2 py-1 bg-sky-50 text-sky-600 rounded-md text-[10px] font-black hover:bg-sky-100 transition-all cursor-pointer touch-manipulation"
         >
           {startResumeLabel}
         </button>
@@ -226,11 +222,10 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
       {showRestart && (
         <button
           onClick={(e) => {
-            voiceService.unlock();
             e.stopPropagation();
             onRestart(task.id);
           }}
-          className="flex-shrink-0 px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-black hover:bg-indigo-100 transition-all"
+          className="flex-shrink-0 px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-black hover:bg-indigo-100 transition-all cursor-pointer touch-manipulation"
         >
           {t('routine.restart')}
         </button>

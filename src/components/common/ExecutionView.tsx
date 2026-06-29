@@ -106,7 +106,8 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
   isCheckCheckAvailable: _ignoredIsCheckCheckAvailable,
   setConfirmModal,
   setStatsKey,
-  setSelectedTaskForStats
+  setSelectedTaskForStats,
+  onGroupCompleted
 }) => {
   // --- [Hook declarations FIRST to comply with React rules] ---
   const {
@@ -517,6 +518,8 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
   };
 
   const handleFinalSave = (phrase: string) => {
+    const completedChunkId = selectedChunkId;
+
     if (selectedChunkId) {
       setUserData(prev => {
         const newGroupHistory = [...(prev.routineGroupHistory || [])];
@@ -554,6 +557,10 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
     setSelectedChunkId(null);
     setActiveTab('home');
     setAnimationStage('none');
+
+    if (completedChunkId && onGroupCompleted) {
+      onGroupCompleted(completedChunkId);
+    }
   };
 
   if (isCompleted && animationStage !== 'none') {

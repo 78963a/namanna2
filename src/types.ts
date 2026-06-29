@@ -247,6 +247,8 @@ export interface HomeViewProps {
   globalActiveTask: { chunkId: string; task: Task } | null;
   setConfirmModal: (modal: any) => void;
   onEnterExecution: (chunkId: string) => void;
+  onRestart?: (taskId: string) => void;
+  togglePauseTask?: (taskId: string, forceStart?: boolean) => void;
 }
 
 export interface StatsViewProps {
@@ -281,6 +283,8 @@ export interface ExecutionViewProps {
   setConfirmModal: (modal: any) => void;
   setStatsKey?: React.Dispatch<React.SetStateAction<number>>;
   setSelectedTaskForStats?: (id: string | null) => void;
+  onEnterExecution?: (chunkId: string) => void;
+  onGroupCompleted?: (chunkId: string) => void;
 }
 
 export interface AddRoutineGroupViewProps {

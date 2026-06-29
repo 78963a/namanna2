@@ -65,7 +65,7 @@ import { RoutineGroupFormView } from './components/common/RoutineGroupFormView';
 // import { AddRoutineGroupView } from './components/views/AddRoutineGroupView';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { PermissionGuideModal, NotificationDeniedModal } from './components/common/PermissionGuideModal';
-import { NextRoutineGroupModal, InteractionBlockOverlay } from './components/common/NextRoutineGroupModal';
+import { NextRoutineGroupModal } from './components/common/NextRoutineGroupModal';
 import { PerfectDayAnimation } from './PerfectDayAnimation';
 import { TodayEndAnimation } from './TodayEndAnimation';
 // import { TaskInputSection } from './components/routine/TaskInputSection';
@@ -175,8 +175,7 @@ export default function App() {
   const [statsKey, setStatsKey] = useState(0);
   const [showNextRoutineModal, setShowNextRoutineModal] = useState(false);
   const [selectedTaskForStats, setSelectedTaskForStats] = useState<string | null>(null);
-  const [modalSuggestions] = useState<NextRoutineSuggestion[]>([]);
-  const [isWaitingForNextRoutineModal, setIsWaitingForNextRoutineModal] = useState(false);
+  const [modalSuggestions, setModalSuggestions] = useState<NextRoutineSuggestion[]>([]);
   const nextRoutineTimerRef = useRef<any>(null);
 
   // Clean up nextroutine timer on unmount
@@ -188,12 +187,11 @@ export default function App() {
     };
   }, []);
 
-  // Clear nextroutine timer and waiting state if leaving the home tab
+  // Clear nextroutine timer if leaving the home tab
   useEffect(() => {
     if (activeTab !== 'home' && nextRoutineTimerRef.current) {
       clearTimeout(nextRoutineTimerRef.current);
       nextRoutineTimerRef.current = null;
-      setIsWaitingForNextRoutineModal(false);
     }
   }, [activeTab]);
 
@@ -1032,6 +1030,60 @@ export default function App() {
     }
   };
 
+  const handleGroupCompleted = (completedChunkId: string) => {
+    if (userData.nextRoutineGroupGuidanceEnabled) {
+      const scheduledGroups = userData.routineChunks.filter(c => {
+        const isScheduled = isChunkScheduledToday(c, effectiveDate, userData);
+        if (!isScheduled) return false;
+        const scheduledTasks = c.tasks.filter(t => isTaskScheduledToday(t, c, effectiveDate, userData));
+        return scheduledTasks.length > 0;
+      });
+
+      const uncompletedGroups = scheduledGroups.filter(c => {
+        if (c.id === completedChunkId) return false;
+        const scheduledTasks = c.tasks.filter(t => isTaskScheduledToday(t, c, effectiveDate, userData));
+        const allFinished = scheduledTasks.every(t => t.completed || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT || t.status === TaskStatus.SKIP);
+        return !allFinished;
+      });
+
+      if (uncompletedGroups.length > 0) {
+        const suggestions: NextRoutineSuggestion[] = [];
+        for (const c of uncompletedGroups) {
+          const scheduledTasks = c.tasks.filter(t => isTaskScheduledToday(t, c, effectiveDate, userData));
+          const isFinished = (t: Task) => t.completed || t.status === TaskStatus.PERFECT || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.SKIP;
+          
+          let targetTask = c.activeTaskId ? scheduledTasks.find(t => t.id === c.activeTaskId && !isFinished(t)) : undefined;
+          if (!targetTask) {
+            targetTask = scheduledTasks.find(t => t.startTime && !t.isPaused && !isFinished(t));
+          }
+          if (!targetTask) {
+            targetTask = scheduledTasks.find(t => (t.status === TaskStatus.IN_PROGRESS || t.isPaused || (t.accumulatedDuration || 0) > 0) && !isFinished(t));
+            if (!targetTask) {
+              targetTask = scheduledTasks.find(t => !t.startTime && !isFinished(t));
+            }
+            if (!targetTask) {
+              targetTask = scheduledTasks.find(t => t.laterTimestamp && !isFinished(t));
+            }
+          }
+          
+          if (targetTask) {
+            suggestions.push({
+              chunkId: c.id,
+              chunkName: c.name,
+              taskId: targetTask.id,
+              taskName: targetTask.text,
+            });
+          }
+        }
+
+        if (suggestions.length > 0) {
+          setModalSuggestions(suggestions);
+          setShowNextRoutineModal(true);
+        }
+      }
+    }
+  };
+
   const handleCheckIn = () => {
     soundService.unlock();
     voiceService.unlock();
@@ -1694,6 +1746,8 @@ export default function App() {
                 globalActiveTask={globalActiveTask}
                 setConfirmModal={setConfirmModal}
                 onEnterExecution={handleEnterExecution}
+                onRestart={onRestart}
+                togglePauseTask={togglePauseTask}
               />
             </motion.div>
           ) : activeTab === 'stats' ? (
@@ -1743,6 +1797,8 @@ export default function App() {
                 isCheckCheckAvailable={isCheckCheckAvailable}
                 setConfirmModal={setConfirmModal}
                 setSelectedTaskForStats={setSelectedTaskForStats}
+                onEnterExecution={handleEnterExecution}
+                onGroupCompleted={handleGroupCompleted}
               />
             </motion.div>
           ) : activeTab === 'add' ? (
@@ -2175,8 +2231,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* 다음 루틴 그룹 진행 전 2초간 화면 터치 및 상호작용(메뉴 클릭)을 방지하는 투명 오버레이 */}
-      <InteractionBlockOverlay isWaiting={isWaitingForNextRoutineModal} />
     </div>
   );
 }

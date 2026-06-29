@@ -1357,6 +1357,13 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
 
       const next = {
         ...prev,
+        forcedActiveTasks: {
+          ...(prev.forcedActiveTasks || {}),
+          [todayStr]: {
+            ...(prev.forcedActiveTasks?.[todayStr] || {}),
+            [taskId]: true
+          }
+        },
         routineChunks: newChunks
       };
       return syncHistory(next, todayStr);
@@ -1428,6 +1435,13 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
 
       const next = {
         ...prev,
+        forcedActiveTasks: {
+          ...(prev.forcedActiveTasks || {}),
+          [todayStr]: {
+            ...(prev.forcedActiveTasks?.[todayStr] || {}),
+            [id]: true
+          }
+        },
         routineChunks: newChunks
       };
       return syncHistory(next, todayStr);

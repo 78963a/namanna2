@@ -34,10 +34,70 @@ export const HomeView: React.FC<HomeViewProps> = ({
   getStatusBadge: _getStatusBadge, 
   globalActiveTask, 
   setConfirmModal,
-  onEnterExecution
+  onEnterExecution,
+  onRestart,
+  togglePauseTask
 }) => {
   const { t } = useTranslation();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const handleDoFirst = (taskId: string, chunkId: string) => {
+    if (togglePauseTask) {
+      togglePauseTask(taskId);
+      _setSelectedChunkId(chunkId);
+      _setActiveTab('execution');
+    }
+  };
+
+  const handleRestart = (taskId: string, chunkId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "다시 시작하시겠습니까?",
+      message: "타이머가 0부터 다시 시작됩니다. 다시 시작하시겠습니까?",
+      confirmLabel: "다시하기",
+      cancelLabel: "취소",
+      onConfirm: () => {
+        if (onRestart) {
+          onRestart(taskId);
+          _setSelectedChunkId(chunkId);
+          _setActiveTab('execution');
+        }
+        setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
+  const handleActivate = (taskId: string, chunkId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "루틴 활성화",
+      message: "오늘은 쉬는 요일입니다. 활성화하시겠습니까?",
+      onConfirm: () => {
+        _setUserData(prev => ({
+          ...prev,
+          forcedActiveTasks: {
+            ...prev.forcedActiveTasks,
+            [todayStr]: {
+              ...(prev.forcedActiveTasks?.[todayStr] || {}),
+              [taskId]: true
+            }
+          },
+          routineChunks: prev.routineChunks.map(c => {
+            if (c.id === chunkId) {
+              return {
+                ...c,
+                activeTaskId: taskId
+              };
+            }
+            return c;
+          })
+        }));
+        _setSelectedChunkId(chunkId);
+        _setActiveTab('execution');
+        setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
 
   const toggleExpand = (e: React.MouseEvent, chunkId: string) => {
     e.stopPropagation();
@@ -314,6 +374,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         currentTime={currentTime}
                         chunkTasks={chunk.tasks}
                         isScheduledToday={isTaskScheduledToday(task, chunk, effectiveDate, userData)}
+                        onRestart={(id) => handleRestart(id, chunk.id)}
+                        onDoFirst={(id) => handleDoFirst(id, chunk.id)}
+                        onActivate={(id) => handleActivate(id, chunk.id)}
+                        activeTaskId={globalActiveTask?.chunkId === chunk.id ? globalActiveTask.task.id : chunk.activeTaskId}
                       />
                     </div>
                   ))}
