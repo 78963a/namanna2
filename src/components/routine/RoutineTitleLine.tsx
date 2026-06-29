@@ -204,7 +204,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
             e.stopPropagation();
             onActivate(task.id);
           }}
-          className="flex-shrink-0 px-2 py-1 bg-amber-50 text-amber-600 rounded-md text-[10px] font-black hover:bg-amber-100 transition-all"
+          className="flex-shrink-0 px-4 py-2.5 sm:px-2 sm:py-1 bg-amber-50 text-amber-600 rounded-md text-xs sm:text-[10px] font-black hover:bg-amber-100 transition-all min-h-[44px] sm:min-h-0 flex items-center justify-center"
         >
           {t('home.activate')}
         </button>
@@ -217,7 +217,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
             e.stopPropagation();
             onDoFirst(task.id);
           }}
-          className="flex-shrink-0 px-2 py-1 bg-sky-50 text-sky-600 rounded-md text-[10px] font-black hover:bg-sky-100 transition-all"
+          className="flex-shrink-0 px-4 py-2.5 sm:px-2 sm:py-1 bg-sky-50 text-sky-600 rounded-md text-xs sm:text-[10px] font-black hover:bg-sky-100 transition-all min-h-[44px] sm:min-h-0 flex items-center justify-center"
         >
           {startResumeLabel}
         </button>
@@ -230,7 +230,7 @@ export const RoutineTitleLine: React.FC<RoutineTitleLineProps> = ({
             e.stopPropagation();
             onRestart(task.id);
           }}
-          className="flex-shrink-0 px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-black hover:bg-indigo-100 transition-all"
+          className="flex-shrink-0 px-4 py-2.5 sm:px-2 sm:py-1 bg-indigo-50 text-indigo-600 rounded-md text-xs sm:text-[10px] font-black hover:bg-indigo-100 transition-all min-h-[44px] sm:min-h-0 flex items-center justify-center"
         >
           {t('routine.restart')}
         </button>

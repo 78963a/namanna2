@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import localForage from 'localforage';
 import { 
   Sun,
   CheckCircle2, 
@@ -36,12 +35,7 @@ import {
   TaskType, 
   Task, 
   RoutineChunk, 
-  UserData, 
-  SettingsSubView,
   TaskStatus,
-  WakeUpTimeHistoryEntry,
-  RoutineGroupHistoryEntry,
-  TaskHistoryEntry,
   NaggingSettings,
   SoundEffectSettings,
   NextRoutineSuggestion
@@ -49,24 +43,15 @@ import {
 import phrases from './phrases.json';
 import { SettingsView } from './components/settings/SettingsView';
 import { 
-  STORAGE_KEY 
-} from './constants';
-import { 
   isChunkScheduledToday, 
   isTaskScheduledToday, 
-  isTaskTargetForStats,
   formatDate, 
-  getEffectiveDate,
-  getEffectiveDateObject,
   getDaysBetween,
-  getJosa,
   calculateTaskDuration
 } from './utils';
 import { CheckCheckIcon } from './components/CheckCheckIcon';
-import { useCheckCheckBox } from './hooks/useCheckCheckBox';
 import { useRoutineManager } from './hooks/useRoutineManager';
 import { useNaggingEngine } from './hooks/useNaggingEngine';
-import { getNaggingDefaultSettings } from './utils/naggingDefaults';
 import { voiceService } from './services/voiceService';
 import { soundService } from './services/soundService';
 import { notificationService } from './services/notificationService';
@@ -181,83 +166,7 @@ export const FONT_SETTINGS = {
   }
 };
 
-const playAudioAsync = (path: string, isEnabled: boolean): Promise<void> => {
-  return new Promise<void>((resolve) => {
-    if (!isEnabled) {
-      resolve();
-      return;
-    }
-    try {
-      const resolveFullPath = (p: string): string => {
-        if (p.startsWith('http') || p.startsWith('data:')) return p;
-        let adjustedPath = p;
-        if (p.startsWith('public/')) {
-          adjustedPath = '/' + p.slice(7);
-        }
-        if (adjustedPath.includes('bbo-yong.mp3')) {
-          return 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
-        }
-        const baseUrl = (import.meta.env && import.meta.env.BASE_URL) || '/';
-        const normalizedPath = adjustedPath.startsWith('/') ? adjustedPath.slice(1) : adjustedPath;
-        return baseUrl.endsWith('/') ? `${baseUrl}${normalizedPath}` : `${baseUrl}/${normalizedPath}`;
-      };
-
-      const fullPath = resolveFullPath(path);
-      const audio = new Audio(fullPath);
-      audio.preload = 'auto';
-      audio.addEventListener('ended', () => resolve());
-      audio.addEventListener('error', () => resolve());
-      audio.play().catch((err) => {
-        console.warn('Audio play failed in auto-next sequential player:', err);
-        resolve();
-      });
-    } catch (e) {
-      console.error(e);
-      resolve();
-    }
-  });
-};
-
-const speakAsync = (message: string, isEnabled: boolean, variables?: any): Promise<void> => {
-  return new Promise<void>((resolve) => {
-    if (!isEnabled || !message || typeof window === 'undefined' || !window.speechSynthesis) {
-      resolve();
-      return;
-    }
-    try {
-      const synth = window.speechSynthesis;
-      synth.cancel();
-      let msg = message;
-      if (variables) {
-        const { name = '', task = '', n = 0, m = 0, r = 0 } = variables;
-        const josaRegex = /(name|task)(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이야\/야|이다\/다)/g;
-        msg = msg.replace(josaRegex, (_match, variable, p1) => {
-          const val = variable === 'name' ? name : task;
-          return val + getJosa(val, p1 as any);
-        });
-        msg = msg.replace(/name/g, name);
-        msg = msg.replace(/task/g, task);
-        msg = msg.replace(/n/g, n.toString());
-        msg = msg.replace(/m/g, m.toString());
-        msg = msg.replace(/r/g, r.toString());
-      }
-
-      const utterance = new SpeechSynthesisUtterance(msg);
-      utterance.lang = 'ko-KR';
-      const voices = synth.getVoices();
-      const voice = voices.find(v => v.lang === 'ko-KR' || v.lang.startsWith('ko')) || voices[0];
-      if (voice) {
-        utterance.voice = voice;
-      }
-      utterance.onend = () => resolve();
-      utterance.onerror = () => resolve();
-      synth.speak(utterance);
-    } catch (e) {
-      console.error(e);
-      resolve();
-    }
-  });
-};
+// Sequential helpers removed as they are moved to useRoutineManager hook
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -346,7 +255,6 @@ export default function App() {
     todayStr,
     effectiveDate,
     currentTime,
-    isForeground,
     userData,
     activityLog,
     lastCompletedTaskName,
@@ -368,7 +276,6 @@ export default function App() {
     setActiveAlarmChunk,
     setResetPauseModal,
     setBackupMessage,
-    setLastCompletedTaskName,
     setDeletionMessage,
 
     addAvailableCheckCheckPoints,
@@ -379,7 +286,6 @@ export default function App() {
     startTask,
     togglePauseTask,
     addChunk,
-    updateChunk,
     deleteChunk,
     syncHistory,
     handleCheckCheckClick,

@@ -16,11 +16,8 @@ import {
 import phrases from '../phrases.json';
 import { STORAGE_KEY } from '../constants';
 import { 
-  isChunkScheduledToday, 
   isTaskScheduledToday, 
-  isTaskTargetForStats,
   formatDate, 
-  getEffectiveDate,
   getEffectiveDateObject,
   calculateTaskDuration,
   getJosa
@@ -121,11 +118,8 @@ export interface UseRoutineManagerProps {
   selectedChunkId: string | null;
 }
 
-export const useRoutineManager = ({
-  activeTab,
-  selectedChunkId,
-}: UseRoutineManagerProps) => {
-  const { t, i18n } = useTranslation();
+export const useRoutineManager = (_props: UseRoutineManagerProps) => {
+  const { i18n } = useTranslation();
 
   // --- Core States ---
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -934,7 +928,6 @@ export const useRoutineManager = ({
     voiceService.unlock();
     const now = new Date();
     const nowStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-    let newlyCompletedGroup = false;
 
     setUserData(prev => {
       let foundTask: Task | null = null;
@@ -1036,7 +1029,6 @@ export const useRoutineManager = ({
             let newCompletionDates = chunk.completionDates || [];
             if (allCompleted && !newCompletionDates.includes(todayStr)) {
               newCompletionDates = [...newCompletionDates, todayStr];
-              newlyCompletedGroup = true;
             } else if (!allCompleted && newCompletionDates.includes(todayStr)) {
               newCompletionDates = newCompletionDates.filter(d => d !== todayStr);
             }
@@ -1282,7 +1274,7 @@ export const useRoutineManager = ({
     });
   };
 
-  const startTask = (taskId: string, resetTimer: boolean = true, forceStart: boolean = false) => {
+  const startTask = (taskId: string, resetTimer: boolean = true, _forceStart: boolean = false) => {
     soundService.unlock();
     voiceService.unlock();
     const now = new Date();
@@ -1361,7 +1353,7 @@ export const useRoutineManager = ({
     });
   };
 
-  const togglePauseTask = (id: string, forceStart: boolean = false) => {
+  const togglePauseTask = (id: string, _forceStart: boolean = false) => {
     soundService.unlock();
     voiceService.unlock();
     const now = new Date();
