@@ -268,7 +268,16 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
               ...(prev.forcedActiveTasks?.[todayStr] || {}),
               [taskId]: true
             }
-          }
+          },
+          routineChunks: prev.routineChunks.map(c => {
+            if (c.id === chunk.id) {
+              return {
+                ...c,
+                activeTaskId: taskId
+              };
+            }
+            return c;
+          })
         }));
         setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
       }

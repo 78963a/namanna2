@@ -1322,6 +1322,7 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
                 duration: undefined,
                 status: TaskStatus.IN_PROGRESS,
                 isPaused: false,
+                completed: false,
                 laterTimestamp: undefined,
                 accumulatedDuration: resetTimer ? undefined : task.accumulatedDuration
               };
@@ -1336,8 +1337,17 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
             return task;
           });
 
+          const allCompleted = newTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
+          let newCompletionDates = chunk.completionDates || [];
+          if (allCompleted && !newCompletionDates.includes(todayStr)) {
+            newCompletionDates = [...newCompletionDates, todayStr];
+          } else if (!allCompleted && newCompletionDates.includes(todayStr)) {
+            newCompletionDates = newCompletionDates.filter(d => d !== todayStr);
+          }
+
           return {
             ...chunk,
+            completionDates: newCompletionDates,
             activeTaskId: taskId,
             tasks: newTasks
           };
@@ -1384,6 +1394,7 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
                 isPaused: wasRunning,
                 startTime: wasRunning ? undefined : nowStr,
                 accumulatedDuration: accumulated,
+                completed: false,
                 status: TaskStatus.IN_PROGRESS
               };
             } else if (task.status === TaskStatus.IN_PROGRESS || (task.startTime && !task.isPaused)) {
@@ -1397,8 +1408,17 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
             return task;
           });
 
+          const allCompleted = newTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
+          let newCompletionDates = chunk.completionDates || [];
+          if (allCompleted && !newCompletionDates.includes(todayStr)) {
+            newCompletionDates = [...newCompletionDates, todayStr];
+          } else if (!allCompleted && newCompletionDates.includes(todayStr)) {
+            newCompletionDates = newCompletionDates.filter(d => d !== todayStr);
+          }
+
           return {
             ...chunk,
+            completionDates: newCompletionDates,
             activeTaskId: id,
             tasks: newTasks
           };
