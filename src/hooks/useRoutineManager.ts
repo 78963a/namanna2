@@ -1333,9 +1333,9 @@ export const useRoutineManager = ({
                 laterTimestamp: undefined,
                 accumulatedDuration: resetTimer ? undefined : task.accumulatedDuration
               };
-            } else if (task.status === TaskStatus.IN_PROGRESS) {
+            } else if (task.status === TaskStatus.IN_PROGRESS || (task.startTime && !task.isPaused)) {
               const updated = { ...task };
-              updated.isPaused = !!updated.startTime || (updated.isPaused && (updated.accumulatedDuration || 0) > 0);
+              updated.isPaused = true;
               updated.accumulatedDuration = calculateTaskDuration(updated, now);
               updated.startTime = undefined;
               updated.status = TaskStatus.NOT_STARTED;
@@ -1394,9 +1394,9 @@ export const useRoutineManager = ({
                 accumulatedDuration: accumulated,
                 status: TaskStatus.IN_PROGRESS
               };
-            } else if (task.status === TaskStatus.IN_PROGRESS) {
+            } else if (task.status === TaskStatus.IN_PROGRESS || (task.startTime && !task.isPaused)) {
               const updated = { ...task };
-              updated.isPaused = !!updated.startTime || (updated.isPaused && (updated.accumulatedDuration || 0) > 0);
+              updated.isPaused = true;
               updated.accumulatedDuration = calculateTaskDuration(updated, now);
               updated.startTime = undefined;
               updated.status = TaskStatus.NOT_STARTED;
@@ -1407,6 +1407,7 @@ export const useRoutineManager = ({
 
           return {
             ...chunk,
+            activeTaskId: id,
             tasks: newTasks
           };
         }
