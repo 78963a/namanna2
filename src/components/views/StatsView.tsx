@@ -2353,7 +2353,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <h2 className="text-lg font-black text-slate-800">{t('stats.usageTimeStats')}</h2>
                   </div>
                   <div className="bg-emerald-50/50 p-4 rounded-[15px] border border-emerald-100/50">
-                    <p className="text-[12px] font-bold text-emerald-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: t('stats.usageStatsDesc') }} />
+                    <p className="text-[12px] font-bold text-emerald-700 leading-relaxed whitespace-pre-line" dangerouslySetInnerHTML={{ __html: t('stats.usageStatsDesc') }} />
                   </div>
 
                   <div className="space-y-6">

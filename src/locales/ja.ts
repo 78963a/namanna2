@@ -121,9 +121,9 @@ export const ja = {
     edit: "編集"
   },
   stats: {
-    wakeUpStats: "起床時刻統計",
+    wakeUpStats: "起床時間記録",
     achievementStats: "達成率統計",
-    usageStats: "使用時間統計",
+    usageStats: "使用時間記録",
     avg7: "7日平均",
     avg30: "30日平均",
     historyYear: "{{year}}年の記録",
@@ -146,7 +146,7 @@ export const ja = {
     avgStartTime: "平均開始",
     avgEndTime: "平均終了",
     usageTimeStats: "累計使用時間",
-    usageStatsDesc: "ルーティン実行中にアプリを使用していた合計時間です。効率的な時間配分と集中度の分析に役立ちます。",
+    usageStatsDesc: "0時から24時までの1日間のアプリ使用時間を表示します。\n 赤色：アプリを使用しながらタイマーが作動した時間。オレンジ色：バックグラウンドでタイマーが作動した時間。黄色：アプリを開いていたがタイマーが作動しなかった時間。黒色：アプリを使用せずに経過した時間。",
     yearTitle: "{{year}}年の使用記録",
     noUsageRecords: "記録された使用時間がありません。"
   },

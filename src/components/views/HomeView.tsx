@@ -31,7 +31,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
   startTask: _startTask,
   toggleInactive, 
   getChunkStatus, 
-  getStatusBadge: _getStatusBadge, 
   globalActiveTask, 
   setConfirmModal,
   onEnterExecution,
@@ -40,6 +39,31 @@ export const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const { t } = useTranslation();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const getStatusBadge = (status: string, completedCount?: number, scheduledCount?: number) => {
+    let statusColor = 'bg-slate-100 text-slate-500';
+    if (status === '비활성') {
+      statusColor = 'bg-slate-100 text-slate-400';
+    } else if (status === '미실행') {
+      statusColor = 'bg-slate-100 text-slate-500';
+    } else if (status === '완벽') {
+      statusColor = 'bg-emerald-100 text-emerald-600';
+    } else if (status === '완료') {
+      statusColor = 'bg-indigo-100 text-indigo-600';
+    } else if (status === '실행중') {
+      statusColor = 'bg-amber-100 text-amber-600';
+    }
+
+    const countText = completedCount !== undefined && scheduledCount !== undefined 
+      ? ` (${completedCount}/${scheduledCount})` 
+      : '';
+
+    return (
+      <span className={`text-[10px] font-black px-2 py-0.5 rounded-[10px] ${statusColor}`}>
+        {t('status.' + status, status)}{countText}
+      </span>
+    );
+  };
 
   const handleDoFirst = (taskId: string, chunkId: string) => {
     if (togglePauseTask) {
@@ -208,19 +232,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
             const isInactive = status === '비활성';
 
             const displayStatus = status;
-            let statusColor = 'bg-slate-100 text-slate-500';
-            
-            if (isInactive) {
-              statusColor = 'bg-slate-100 text-slate-400';
-            } else if (displayStatus === '미실행') {
-              statusColor = 'bg-slate-100 text-slate-500';
-            } else if (displayStatus === '완벽') {
-              statusColor = 'bg-emerald-100 text-emerald-600';
-            } else if (displayStatus === '완료') {
-              statusColor = 'bg-indigo-100 text-indigo-600';
-            } else if (displayStatus === '실행중') {
-              statusColor = 'bg-amber-100 text-amber-600';
-            }
           
             // [코멘트] 루틴그룹 박스 배경색 설정 (상태에 따라 연한 배경색 적용)
             // 미실행: bg-white | 실행중: bg-amber-100 | 완료: bg-emerald-50 | 완벽: bg-emerald-50 | 비활성: bg-slate-50
@@ -264,9 +275,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <div className="p-[15px] relative">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-[10px] ${statusColor}`}>
-                      {t('status.' + displayStatus, displayStatus)} ({completedTasks.length}/{scheduledTasks.length})
-                    </span>
+                    {getStatusBadge(displayStatus, completedTasks.length, scheduledTasks.length)}
                   </div>
                   {!isFullyCompleted && (
                     <button

@@ -243,7 +243,6 @@ export interface HomeViewProps {
   startTask: (taskId: string) => void;
   toggleInactive: (chunkId: string) => void;
   getChunkStatus: (chunk: RoutineChunk) => string;
-  getStatusBadge: (status: string) => React.ReactNode;
   globalActiveTask: { chunkId: string; task: Task } | null;
   setConfirmModal: (modal: any) => void;
   onEnterExecution: (chunkId: string) => void;

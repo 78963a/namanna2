@@ -121,9 +121,9 @@ export const en = {
     edit: "Edit"
   },
   stats: {
-    wakeUpStats: "Wake-up Stats",
+    wakeUpStats: "Wake-up Record",
     achievementStats: "Achievement Stats",
-    usageStats: "Usage Stats",
+    usageStats: "Usage Record",
     avg7: "7-day Avg",
     avg30: "30-day Avg",
     historyYear: "{{year}} Records",
@@ -146,7 +146,7 @@ export const en = {
     avgStartTime: "Avg Start",
     avgEndTime: "Avg End",
     usageTimeStats: "Cumulative Usage Time",
-    usageStatsDesc: "Total time spent using the app during routines. Helps you analyze focus and manage time efficiently.",
+    usageStatsDesc: "Shows the app usage time for a 24-hour day from 0:00 to 24:00.\n Red: Time the timer ran while using the app. Orange: Time the timer ran in the background. Yellow: Time the app was open but the timer was not running. Black: Time passed without using the app.",
     yearTitle: "{{year}} Usage Records",
     noUsageRecords: "No usage records found."
   },

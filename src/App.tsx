@@ -25,7 +25,6 @@ import {
   Save,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import confetti from 'canvas-confetti';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 
@@ -40,12 +39,10 @@ import {
   SoundEffectSettings,
   NextRoutineSuggestion
 } from './types';
-import phrases from './phrases.json';
 import { SettingsView } from './components/settings/SettingsView';
 import { 
   isChunkScheduledToday, 
   isTaskScheduledToday, 
-  formatDate, 
   getDaysBetween,
   calculateTaskDuration
 } from './utils';
@@ -55,6 +52,7 @@ import { useNaggingEngine } from './hooks/useNaggingEngine';
 import { voiceService } from './services/voiceService';
 import { soundService } from './services/soundService';
 import { notificationService } from './services/notificationService';
+import { useCheckIn } from './hooks/useCheckIn';
 
 // --- Application ---
 import { HeaderBox } from './components/layout/HeaderBox';
@@ -170,12 +168,21 @@ export const FONT_SETTINGS = {
 
 export default function App() {
   const { t, i18n } = useTranslation();
+
+  // i18n 언어 변경 시 html 태그의 lang 속성을 동기화하여 CSS 폰트 매핑이 유연하게 반응하도록 함
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = i18n.language || 'ko';
+    }
+  }, [i18n.language]);
+
   // --- State ---
   const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'execution' | 'settings' | 'add'>('home');
   const [statsKey, setStatsKey] = useState(0);
   const [showNextRoutineModal, setShowNextRoutineModal] = useState(false);
   const [selectedTaskForStats, setSelectedTaskForStats] = useState<string | null>(null);
   const [modalSuggestions, setModalSuggestions] = useState<NextRoutineSuggestion[]>([]);
+  const [isWaitingForNextRoutineModal, setIsWaitingForNextRoutineModal] = useState(false);
   const nextRoutineTimerRef = useRef<any>(null);
 
   // Clean up nextroutine timer on unmount
@@ -189,9 +196,12 @@ export default function App() {
 
   // Clear nextroutine timer if leaving the home tab
   useEffect(() => {
-    if (activeTab !== 'home' && nextRoutineTimerRef.current) {
-      clearTimeout(nextRoutineTimerRef.current);
-      nextRoutineTimerRef.current = null;
+    if (activeTab !== 'home') {
+      if (nextRoutineTimerRef.current) {
+        clearTimeout(nextRoutineTimerRef.current);
+        nextRoutineTimerRef.current = null;
+      }
+      setIsWaitingForNextRoutineModal(false);
     }
   }, [activeTab]);
 
@@ -212,7 +222,6 @@ export default function App() {
   const lastProcessedStartTimeRef = useRef<string | null>(null);
 
   const [selectedChunkId, setSelectedChunkId] = useState<string | null>(null);
-  const [showCheckInCelebration, setShowCheckInCelebration] = useState(false);
    const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
     (typeof window !== 'undefined' && 'Notification' in window && window.Notification) ? window.Notification.permission : 'default'
   );
@@ -292,17 +301,22 @@ export default function App() {
     selectedChunkId,
   });
 
+  const {
+    showCheckInCelebration,
+    handleCheckIn,
+    handleLateCheckIn,
+  } = useCheckIn({
+    userData,
+    setUserData,
+    currentTime,
+    todayStr,
+    effectiveDate,
+    syncHistory,
+  });
+
   const onRestart = (taskId: string) => {
     startTask(taskId, true);
   };
-
-
-
-
-
-
-
-
   
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -869,22 +883,6 @@ export default function App() {
   }, [userData.routineChunks]);
 
 
-  const canCheckIn = useMemo(() => {
-    if (userData.lastCheckInDate === todayStr) return false;
-    
-    const [targetH, targetM] = userData.targetWakeUpTime.split(':').map(Number);
-    const targetDate = new Date(effectiveDate);
-    targetDate.setHours(targetH, targetM, 0, 0);
-    
-    const diffMinutes = (currentTime.getTime() - targetDate.getTime()) / (1000 * 60);
-    // [코멘트] phrases.json의 wakeUpCheckInSettings 설정을 따름
-    const earlyLimit = phrases.wakeUpCheckInSettings?.earlyWindowMinutes || 30;
-    const lateLimit = phrases.wakeUpCheckInSettings?.lateWindowMinutes || 10;
-    
-    return diffMinutes >= -earlyLimit && diffMinutes <= lateLimit;
-  }, [userData.targetWakeUpTime, userData.lastCheckInDate, currentTime, todayStr, effectiveDate]);
-
-
 
 
 
@@ -1077,115 +1075,19 @@ export default function App() {
         }
 
         if (suggestions.length > 0) {
-          setModalSuggestions(suggestions);
-          setShowNextRoutineModal(true);
+          setIsWaitingForNextRoutineModal(true);
+          if (nextRoutineTimerRef.current) {
+            clearTimeout(nextRoutineTimerRef.current);
+          }
+          nextRoutineTimerRef.current = setTimeout(() => {
+            setIsWaitingForNextRoutineModal(false);
+            setModalSuggestions(suggestions);
+            setShowNextRoutineModal(true);
+          }, 2000);
         }
       }
     }
   };
-
-  const handleCheckIn = () => {
-    soundService.unlock();
-    voiceService.unlock();
-    if (!canCheckIn) return;
-
-    let newStreak = userData.streak;
-    const yesterday = new Date(effectiveDate);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = formatDate(yesterday);
-
-    if (userData.lastCheckInDate === yesterdayStr) {
-      newStreak += 1;
-    } else if (userData.lastCheckInDate === null || userData.lastCheckInDate !== todayStr) {
-      newStreak = 1;
-    }
-
-    const checkInTimeStr = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
-
-    setUserData(prev => {
-      // 기상 체크인 성공 시 캐릭터 누르기 기회 8회 가산!
-      const currentAvailable = prev.availableCheckCheckCount !== undefined ? prev.availableCheckCheckCount : 5;
-      
-      const next = {
-        ...prev,
-        streak: newStreak,
-        lastCheckInDate: todayStr,
-        availableCheckCheckCount: currentAvailable + 8, // 8회 추가
-        lastCheckInBonusCount: 0, // 오늘 체크인 가산 횟수 초기화 (체크인 시점 기준 29분 추적용)
-        dailyCheckIn: {
-          ...(prev.dailyCheckIn || {}),
-          [todayStr]: checkInTimeStr
-        },
-        dailyTargetWakeUpTime: {
-          ...(prev.dailyTargetWakeUpTime || {}),
-          [todayStr]: prev.targetWakeUpTime
-        },
-        history: [...prev.history, { date: todayStr, time: checkInTimeStr }],
-        routineChunks: prev.routineChunks
-      };
-      return syncHistory(next, todayStr);
-    });
-
-    // Show celebration
-    setShowCheckInCelebration(true);
-    const checkInConfig = userData.soundSettings?.wakeUpCheckIn;
-    const checkInEnabled = checkInConfig ? checkInConfig.enabled : true;
-    const checkInFile = checkInConfig?.file || '/freesound_community-success-fanfare-trumpets-6185.mp3';
-    soundService.refresh(checkInFile);
-    soundService.play(checkInFile, checkInEnabled);
-    setTimeout(() => setShowCheckInCelebration(false), 3000);
-
-    // Special confetti for check-in
-    if (typeof confetti === 'function') {
-      try {
-        confetti({
-          particleCount: 100,
-          spread: 100,
-          origin: { y: 0.3 },
-          colors: ['#fbbf24', '#f59e0b', '#fcd34d', '#ffffff'],
-          shapes: ['star'],
-          scalar: 1.2
-        });
-      } catch (e) {
-        console.warn('Check-in confetti failed:', e);
-      }
-    }
-  };
-
-  const handleLateCheckIn = () => {
-    soundService.unlock();
-    voiceService.unlock();
-    const checkInTimeStr = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
-    setUserData(prev => {
-      // 지각 체크인 성공 시 캐릭터 누르기 기회 3회 가산!
-      const currentAvailable = prev.availableCheckCheckCount !== undefined ? prev.availableCheckCheckCount : 5;
-      
-      const next = {
-        ...prev,
-        lastCheckInDate: todayStr,
-        availableCheckCheckCount: currentAvailable + 3, // 3회 추가
-        lastCheckInBonusCount: 0, // 오늘 체크인 가산 횟수 초기화 (체크인 시점 기준 29분 추적용)
-        dailyCheckIn: {
-          ...(prev.dailyCheckIn || {}),
-          [todayStr]: checkInTimeStr
-        },
-        dailyTargetWakeUpTime: {
-          ...(prev.dailyTargetWakeUpTime || {}),
-          [todayStr]: prev.targetWakeUpTime
-        },
-        history: [...prev.history, { date: todayStr, time: checkInTimeStr }],
-        streak: 0,
-        routineChunks: prev.routineChunks
-      };
-      return syncHistory(next, todayStr);
-    });
-  };
-
-
-
-
-
-
 
   const resetChunk = (chunkId: string) => {
     setConfirmModal({
@@ -1358,26 +1260,6 @@ export default function App() {
     // If accumulatedDuration is set, it means it was �� 트리거]: 루틴 그룹(청크) 정보 전체 업데이트 시 기회 횟수 가산 (+1점)
     if (anyStarted) return '실행중';
     return '미실행';
-  };
-
-  const getStatusBadge = (status: string) => {
-    let color = 'bg-slate-100 text-slate-500';
-    if (status === '비활성') {
-      color = 'bg-slate-100 text-slate-400';
-    } else if (status === '미실행') {
-      color = 'bg-slate-100 text-slate-500';
-    } else if (status === '완벽') {
-      color = 'bg-emerald-100 text-emerald-600';
-    } else if (status === '완료') {
-      color = 'bg-indigo-100 text-indigo-600';
-    } else if (status === '실행중') {
-      color = 'bg-amber-100 text-amber-600';
-    }
-    return (
-      <span className={`text-[10px] font-black px-2 py-0.5 rounded-[10px] ${color}`}>
-        {status}
-      </span>
-    );
   };
 
   const updateFullChunk = (id: string, updatedData: Partial<RoutineChunk>) => {
@@ -1742,7 +1624,6 @@ export default function App() {
                 startTask={startTask}
                 toggleInactive={toggleInactive}
                 getChunkStatus={getChunkStatus}
-                getStatusBadge={getStatusBadge}
                 globalActiveTask={globalActiveTask}
                 setConfirmModal={setConfirmModal}
                 onEnterExecution={handleEnterExecution}
@@ -2052,6 +1933,7 @@ export default function App() {
         userData={userData}
         modalSuggestions={modalSuggestions}
         onSelectSuggestedTask={handleSelectNextSuggestedTask}
+        isWaiting={isWaitingForNextRoutineModal}
       />
 
       {/* 알림 권한 안내 모달 */}

@@ -121,9 +121,9 @@ export const ko = {
     edit: "수정"
   },
   stats: {
-    wakeUpStats: "기상시각 통계",
+    wakeUpStats: "기상시간 기록",
     achievementStats: "달성률 통계",
-    usageStats: "사용시간 통계",
+    usageStats: "사용시간 기록",
     avg7: "7일 평균",
     avg30: "30일 평균",
     historyYear: "{{year}}년 기록",
@@ -145,8 +145,8 @@ export const ko = {
     groupStatsDesc: "각 루틴 그룹의 평균 수행 시간과 달성률입니다.",
     avgStartTime: "평균 시작",
     avgEndTime: "평균 종료",
-    usageTimeStats: "누적 사용시간",
-    usageStatsDesc: "루틴을 실행하는 동안 앱을 활용한 총 시간입니다. 효율적인 시간 배분과 집중도 분석에 도움이 됩니다.",
+    usageTimeStats: "사용시간 기록",
+    usageStatsDesc: "0시부터 24시까지 하루동안 앱 사용시간을 보여줍니다.\n 빨간색:앱을 사용하면서 타이머가 동작한 시간. 주황색:백그라운드에서 타이머가 동작한 시간. 노란색: 앱을 켜놓았지만 타이머가 동작하지 않은 시간. 검은색:앱을 사용하지 않고 지나간 시간.",
     yearTitle: "{{year}}년 기록",
     noUsageRecords: "기록된 사용 시간이 없습니다."
   },

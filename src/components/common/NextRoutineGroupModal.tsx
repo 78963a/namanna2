@@ -18,6 +18,7 @@ interface NextRoutineGroupModalProps {
   userData: UserData;
   modalSuggestions: NextRoutineSuggestion[];
   onSelectSuggestedTask: (chunkId: string, taskId: string) => void;
+  isWaiting?: boolean;
 }
 
 export const NextRoutineGroupModal: React.FC<NextRoutineGroupModalProps> = ({
@@ -26,18 +27,9 @@ export const NextRoutineGroupModal: React.FC<NextRoutineGroupModalProps> = ({
   userData,
   modalSuggestions,
   onSelectSuggestedTask,
+  isWaiting = false,
 }) => {
   const { t } = useTranslation();
-  const [isWaiting, setIsWaiting] = React.useState(false);
-
-  const handleSelectTask = (chunkId: string, taskId: string) => {
-    setIsWaiting(true);
-    // 다음 루틴 그룹 진행 전 2초간 화면 터치 및 상호작용을 방지
-    setTimeout(() => {
-      onSelectSuggestedTask(chunkId, taskId);
-      setIsWaiting(false);
-    }, 2000);
-  };
 
   return (
     <>
@@ -108,7 +100,7 @@ export const NextRoutineGroupModal: React.FC<NextRoutineGroupModalProps> = ({
                   return (
                     <button
                       key={`${sug.chunkId}-${sug.taskId}-${idx}`}
-                      onClick={() => handleSelectTask(sug.chunkId, sug.taskId)}
+                      onClick={() => onSelectSuggestedTask(sug.chunkId, sug.taskId)}
                       className="w-full p-4 bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/40 rounded-2xl text-left transition-all active:scale-[0.98] group flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-3 text-left overflow-hidden">

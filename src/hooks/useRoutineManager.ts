@@ -113,6 +113,119 @@ const speakAsync = (message: string, isEnabled: boolean, variables?: any): Promi
   });
 };
 
+const rebuildActivityLogs = (userData: UserData, now: Date, existingLogState?: Record<string, number[]>): Record<string, number[]> => {
+  const logs: Record<string, number[]> = { 
+    ...(userData.dailyActivityLog || {}),
+    ...(existingLogState || {})
+  };
+  const [resetH] = (userData.resetTime || '00:00').split(':').map(Number);
+
+  const todayCalStr = formatDate(now);
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayCalStr = formatDate(yesterday);
+  const datesToRebuild = [yesterdayCalStr, todayCalStr];
+
+  const getCalendarDate = (effDateStr: string, timeStr: string): Date | null => {
+    if (!timeStr) return null;
+    const parts = effDateStr.split('-').map(Number);
+    if (parts.length !== 3) return null;
+    const effDate = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+    const [h, m, s] = timeStr.split(':').map(Number);
+    
+    const d = new Date(effDate);
+    if (h >= resetH) {
+      d.setHours(h, m, s || 0, 0);
+    } else {
+      d.setDate(d.getDate() + 1);
+      d.setHours(h, m, s || 0, 0);
+    }
+    return d;
+  };
+
+  const getResetTimeOfDate = (effDateStr: string): Date | null => {
+    const parts = effDateStr.split('-').map(Number);
+    if (parts.length !== 3) return null;
+    const d = new Date(parts[0], parts[1] - 1, parts[2] + 1);
+    d.setHours(resetH, 0, 0, 0);
+    return d;
+  };
+
+  const currentEffDateStr = formatDate(getEffectiveDateObject(now, resetH));
+
+  datesToRebuild.forEach(calDateStr => {
+    const parts = calDateStr.split('-').map(Number);
+    if (parts.length !== 3) return;
+    
+    const existingLog = logs[calDateStr];
+    const log = existingLog ? [...existingLog] : new Array(1440).fill(0);
+
+    for (let m = 0; m < 1440; m++) {
+      const minuteDate = new Date(parts[0], parts[1] - 1, parts[2], Math.floor(m / 60), m % 60, 0, 0);
+      
+      if (minuteDate > now) {
+        log[m] = 0;
+        continue;
+      }
+
+      // 3. 이미 기록된 타임라인 색상을 이후에 추적해서 역산해서 채워넣거나 수정하지는 말아줘.
+      if (existingLog && existingLog[m] !== 0) {
+        continue;
+      }
+
+      let timerRunning = false;
+
+      userData.routineChunks.forEach(chunk => {
+        chunk.tasks.forEach(task => {
+          if (task.startTime && task.status === TaskStatus.IN_PROGRESS && !task.isPaused && !task.completed) {
+            const startCalDate = getCalendarDate(currentEffDateStr, task.startTime);
+            const resetCalDate = getResetTimeOfDate(currentEffDateStr);
+            if (startCalDate && resetCalDate) {
+              const endCalDate = now > resetCalDate ? resetCalDate : now;
+              if (minuteDate >= startCalDate && minuteDate <= endCalDate) {
+                timerRunning = true;
+              }
+            }
+          }
+        });
+      });
+
+      if (userData.taskHistory) {
+        userData.taskHistory.forEach(entry => {
+          if (entry.startTime) {
+            const startCalDate = getCalendarDate(entry.date, entry.startTime);
+            let endCalDate: Date | null = null;
+            if (entry.endTime) {
+              endCalDate = getCalendarDate(entry.date, entry.endTime);
+            } else if (entry.duration) {
+              if (startCalDate) {
+                endCalDate = new Date(startCalDate.getTime() + entry.duration * 1000);
+              }
+            } else {
+              endCalDate = getResetTimeOfDate(entry.date);
+            }
+
+            if (startCalDate && endCalDate) {
+              if (minuteDate >= startCalDate && minuteDate <= endCalDate) {
+                timerRunning = true;
+              }
+            }
+          }
+        });
+      }
+
+      if (timerRunning) {
+        log[m] = 3; // 타이머 실행 중 background
+      } else {
+        log[m] = 1; // 비활성 black
+      }
+    }
+
+    logs[calDateStr] = log;
+  });
+
+  return logs;
+};
+
 export interface UseRoutineManagerProps {
   activeTab: string;
   selectedChunkId: string | null;
@@ -184,6 +297,21 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
     return getEffectiveDateObject(currentTime, resetH);
   }, [todayStr, userData.resetTime]);
 
+  const globalActiveTask = useMemo(() => {
+    for (const chunk of userData.routineChunks) {
+      const active = chunk.tasks.find(t => 
+        t.startTime && 
+        !t.isPaused && 
+        !t.completed && 
+        t.status !== TaskStatus.SKIP && 
+        t.status !== TaskStatus.COMPLETED && 
+        t.status !== TaskStatus.PERFECT
+      );
+      if (active) return { task: active, chunkId: chunk.id };
+    }
+    return null;
+  }, [userData.routineChunks]);
+
   const {
     checkCheckIconId,
     isCheckCheckAvailable,
@@ -205,6 +333,7 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
   const prevLanguageRef = useRef(i18n.language);
   const isAutoNextTransitioningRef = useRef<boolean>(false);
   const lastProcessedStartTimeRef = useRef<{ taskId: string; startTime: string } | null>(null);
+  const lastLoggedMinuteRef = useRef<number>(-1);
 
   // Sync nagging settings when language changes
   useEffect(() => {
@@ -391,12 +520,11 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
           if (taskHistory) parsed.taskHistory = taskHistory;
         }
 
+        const rebuiltLogs = rebuildActivityLogs(parsed, new Date(), activityLogData || undefined);
+        parsed.dailyActivityLog = rebuiltLogs;
         setUserData(parsed);
+        setActivityLog(rebuiltLogs);
         setIsDataLoaded(true);
-
-        if (activityLogData) {
-          setActivityLog(activityLogData);
-        }
       } catch (err) {
         console.error('Failed to load state and migrate from localForage/localStorage', err);
         setIsDataLoaded(true); // Fallback to proceed even if load fails
@@ -457,7 +585,7 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
         // A. 기존 날짜(lastReset)의 데이터를 히스토리와 동기화하여 저장
         const syncedData = syncHistory(prev, lastReset);
 
-        // B. 루틴 상태를 미실행(NOT_STARTED) 및 진행률 리셋
+        // B. 루틴 상태를 미실행(NOT_STARTED) 및 진행률 리셋 (체크리스트 체크여부도 같이 리셋)
         const resetChunks = syncedData.routineChunks.map(chunk => {
           const resetTasks = chunk.tasks.map(task => {
             return {
@@ -471,7 +599,8 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
               status: TaskStatus.NOT_STARTED,
               closingNote: undefined,
               satisfaction: undefined,
-              laterTimestamp: undefined
+              laterTimestamp: undefined,
+              checklist: task.checklist?.map(item => ({ ...item, completed: false }))
             };
           });
 
@@ -502,7 +631,7 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
     performDailyReset();
   }, [isDataLoaded, todayStr]);
 
-  // 1-second interval for clock and notifications
+  // 1-second interval for clock, notifications, and real-time activity logging
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
@@ -512,9 +641,49 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
       if (now.getSeconds() === 0) {
         notificationService.checkAndTrigger(userData, now, todayStr);
       }
+
+      // Real-time minute logging
+      if (isDataLoaded) {
+        const currentMinutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+        if (currentMinutesSinceMidnight !== lastLoggedMinuteRef.current) {
+          const calDateStr = formatDate(now);
+          const isTimerRunning = globalActiveTask !== null;
+          const isAppForeground = typeof document !== 'undefined' ? document.visibilityState === 'visible' : true;
+
+          const color = isTimerRunning ? (isAppForeground ? 4 : 3) : (isAppForeground ? 2 : 1);
+
+          setUserData(prev => {
+            const logs = { ...(prev.dailyActivityLog || {}) };
+            const currentLog = [...(logs[calDateStr] || new Array(1440).fill(0))];
+            currentLog[currentMinutesSinceMidnight] = color;
+            for (let i = 0; i < currentMinutesSinceMidnight; i++) {
+              if (currentLog[i] === 0) {
+                currentLog[i] = 1;
+              }
+            }
+            logs[calDateStr] = currentLog;
+            return { ...prev, dailyActivityLog: logs };
+          });
+
+          setActivityLog(prev => {
+            const logs = { ...prev };
+            const currentLog = [...(logs[calDateStr] || new Array(1440).fill(0))];
+            currentLog[currentMinutesSinceMidnight] = color;
+            for (let i = 0; i < currentMinutesSinceMidnight; i++) {
+              if (currentLog[i] === 0) {
+                currentLog[i] = 1;
+              }
+            }
+            logs[calDateStr] = currentLog;
+            return logs;
+          });
+
+          lastLoggedMinuteRef.current = currentMinutesSinceMidnight;
+        }
+      }
     }, 1000);
     return () => clearInterval(timer);
-  }, [userData, todayStr]);
+  }, [userData, todayStr, isDataLoaded, globalActiveTask]);
 
   const saveData = async (data: UserData) => {
     try {
@@ -691,21 +860,6 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
       taskHistory: newTaskHistory
     };
   };
-
-  const globalActiveTask = useMemo(() => {
-    for (const chunk of userData.routineChunks) {
-      const active = chunk.tasks.find(t => 
-        t.startTime && 
-        !t.isPaused && 
-        !t.completed && 
-        t.status !== TaskStatus.SKIP && 
-        t.status !== TaskStatus.COMPLETED && 
-        t.status !== TaskStatus.PERFECT
-      );
-      if (active) return { task: active, chunkId: chunk.id };
-    }
-    return null;
-  }, [userData.routineChunks]);
 
   const autoCompleteAccumulatedTask = (id: string) => {
     const now = new Date();

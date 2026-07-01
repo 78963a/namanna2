@@ -1,13 +1,163 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Pretendard-Thin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Pretendard-ExtraLight.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Pretendard-Light.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Pretendard-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Pretendard-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Pretendard-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Pretendard-Bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Pretendard-ExtraBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/Pretendard-Black.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard JP';
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-Thin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard JP';
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-ExtraLight.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard JP';
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-Light.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard JP';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard JP';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard JP';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard JP';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-Bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard JP';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-ExtraBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard JP';
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-Black.woff2') format('woff2');
+}
+
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
+  --font-sans: "Pretendard", "Pretendard JP", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans JP", "Malgun Gothic", sans-serif;
   --animate-spin-slow: spin 3s linear infinite;
+}
+
+html[lang="ja"] {
+  --font-sans: "Pretendard JP", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans JP", "Noto Sans KR", sans-serif;
 }
 
 /* global.css 또는 index.css 파일 최하단 글자선택기능 방지*/
 body {
+  font-family: var(--font-sans);
   -webkit-user-select: none; /* 사파리 및 iOS 앱 환경 방어 */
   user-select: none;         /* 표준 브라우저 방어 */
 }
