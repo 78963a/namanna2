@@ -341,6 +341,8 @@ export default function App() {
     onConfirm: () => {}
   });
 
+  const [isVoiceMutedTemporarily, setIsVoiceMutedTemporarily] = useState(false);
+
   // Prevent background scrolling when modals are open
   useEffect(() => {
     const isModalOpen = 
@@ -803,6 +805,7 @@ export default function App() {
     autoCompleteAccumulatedTask,
     isAutoNextTransitioningRef,
     lastProcessedStartTimeRef,
+    isVoiceMutedTemporarily,
   });
 
   const currentDayActivityLog = useMemo(() => {
@@ -1539,15 +1542,15 @@ export default function App() {
                 if (typeof window !== 'undefined' && window.speechSynthesis) {
                   window.speechSynthesis.cancel();
                 }
-                setUserData(prev => ({ ...prev, isVoiceEnabled: !prev.isVoiceEnabled }));
+                setIsVoiceMutedTemporarily(prev => !prev);
               }}
               className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white border shadow-sm hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 ${
-                userData.isVoiceEnabled 
+                !isVoiceMutedTemporarily 
                   ? 'border-blue-400 text-blue-500 shadow-blue-50' 
                   : 'border-slate-100 text-slate-400'
               }`}
             >
-              {userData.isVoiceEnabled ? <Volume2 className="w-5 h-5" strokeWidth={2.5} /> : <VolumeX className="w-5 h-5" />}
+              {!isVoiceMutedTemporarily ? <Volume2 className="w-5 h-5" strokeWidth={2.5} /> : <VolumeX className="w-5 h-5" />}
             </button>
 
             {/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}

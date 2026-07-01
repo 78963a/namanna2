@@ -464,10 +464,29 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
 
         if (parsed.darkModeTheme === undefined) parsed.darkModeTheme = 'light';
         if (parsed.darkModeFollowSystem === undefined) parsed.darkModeFollowSystem = false;
-        
-        if (parsed.naggingSettings === undefined) {
-          parsed.naggingSettings = getNaggingDefaultSettings(i18n.language || 'ko');
+        if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
+
+        const currentLang = i18n.language || 'ko';
+
+        if (parsed.naggingSettingsByLang === undefined) {
+          parsed.naggingSettingsByLang = {
+            ko: getNaggingDefaultSettings('ko'),
+            en: getNaggingDefaultSettings('en'),
+            ja: getNaggingDefaultSettings('ja'),
+            [currentLang]: parsed.naggingSettings || getNaggingDefaultSettings(currentLang)
+          };
+        } else {
+          // Ensure all default languages exist
+          parsed.naggingSettingsByLang = {
+            ko: getNaggingDefaultSettings('ko'),
+            en: getNaggingDefaultSettings('en'),
+            ja: getNaggingDefaultSettings('ja'),
+            ...parsed.naggingSettingsByLang
+          };
         }
+
+        // Always sync the active naggingSettings to the loaded settings for the current language
+        parsed.naggingSettings = parsed.naggingSettingsByLang[currentLang] || getNaggingDefaultSettings(currentLang);
 
         if (parsed.naggingSettings) {
           if (parsed.naggingSettings.ongoingTargetTypes === undefined) {
@@ -482,16 +501,6 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
           if (parsed.naggingSettings.overTimeTargetTypes === undefined) {
             parsed.naggingSettings.overTimeTargetTypes = [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED];
           }
-        }
-
-        if (parsed.naggingSettingsByLang === undefined) {
-          const currentLang = i18n.language || 'ko';
-          parsed.naggingSettingsByLang = {
-            ko: getNaggingDefaultSettings('ko'),
-            en: getNaggingDefaultSettings('en'),
-            ja: getNaggingDefaultSettings('ja'),
-            [currentLang]: parsed.naggingSettings
-          };
         }
 
         if (parsed.soundSettings === undefined) {
@@ -524,9 +533,11 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
         parsed.dailyActivityLog = rebuiltLogs;
         setUserData(parsed);
         setActivityLog(rebuiltLogs);
+        prevLanguageRef.current = i18n.language;
         setIsDataLoaded(true);
       } catch (err) {
         console.error('Failed to load state and migrate from localForage/localStorage', err);
+        prevLanguageRef.current = i18n.language;
         setIsDataLoaded(true); // Fallback to proceed even if load fails
       }
     };

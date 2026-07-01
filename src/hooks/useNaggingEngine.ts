@@ -13,6 +13,7 @@ interface UseNaggingEngineParams {
   autoCompleteAccumulatedTask: (id: string) => void;
   isAutoNextTransitioningRef: React.MutableRefObject<boolean>;
   lastProcessedStartTimeRef: React.MutableRefObject<{ taskId: string; startTime: string } | null>;
+  isVoiceMutedTemporarily: boolean;
 }
 
 export function useNaggingEngine({
@@ -24,6 +25,7 @@ export function useNaggingEngine({
   autoCompleteAccumulatedTask,
   isAutoNextTransitioningRef,
   lastProcessedStartTimeRef,
+  isVoiceMutedTemporarily,
 }: UseNaggingEngineParams) {
   const naggingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevTriggerRunningRef = useRef<boolean>(false);
@@ -101,8 +103,8 @@ export function useNaggingEngine({
       }
     }
 
-     // 잔소리(음성 안내)는 스피커 아이콘이 켜져 있을 때만(isVoiceEnabled === true) 재생됩니다.
-     if (!userData.isVoiceEnabled) return;
+     // 잔소리(음성 안내)는 스피커 아이콘이 켜져 있을 때만(isVoiceMutedTemporarily === false) 재생됩니다.
+     if (isVoiceMutedTemporarily) return;
  
      if (!userData.naggingSettings) return;
  
@@ -203,7 +205,7 @@ export function useNaggingEngine({
     globalActiveTask?.task?.isPaused, 
     globalActiveTask?.task?.startTime, 
     globalActiveTask?.task ? calculateTaskDuration(globalActiveTask.task, currentTime) : 0, 
-    userData.isVoiceEnabled,
+    isVoiceMutedTemporarily,
     userData.naggingSettings
   ]);
 }
