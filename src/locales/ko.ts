@@ -247,11 +247,11 @@ export const ko = {
     mediaAlbum: "안내 음성"
   },
   nagging: {
-    defaultStartMessage: "task 시작합니다",
-    defaultOngoingMessage: "task가 n분째 진행중입니다",
+    defaultStartMessage: "task을/를 시작합니다",
+    defaultOngoingMessage: "task이/가 n분째 진행중입니다",
     defaultBeforeEndMessage: "task 종료 r분 전입니다.",
     defaultEndMessage: "task 시간이 지났습니다.",
-    defaultOverTimeMessage: "name님, task가 m분 지났어요.",
+    defaultOverTimeMessage: "name님, task이/가 m분 지났어요.",
     cancelTitle: "변경 취소 확인",
     cancelMessage: "변경 사항이 저장되지 않았습니다. 취소하시겠습니까?",
     cancelConfirm: "취소하고 나가기",

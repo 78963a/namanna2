@@ -22,7 +22,7 @@ import {
   calculateTaskDuration,
   getJosa
 } from '../utils';
-import { getNaggingDefaultSettings, healNaggingSettings } from '../utils/naggingDefaults';
+import { getNaggingDefaultSettings, healNaggingSettings } from '../components/settings/NaggingSettingsView';
 import { useCheckCheckBox } from './useCheckCheckBox';
 import { soundService } from '../services/soundService';
 import { voiceService } from '../services/voiceService';
