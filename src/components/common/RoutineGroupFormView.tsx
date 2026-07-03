@@ -46,6 +46,7 @@ import {
 import { notificationService } from '../../services/notificationService';
 import { ConfirmModal } from './ConfirmModal';
 import { ChecklistModal } from './ChecklistModal';
+import { MenuBar } from '../layout/MenuBar';
 
 // --- Helper Components ---
 
@@ -459,7 +460,8 @@ export const RoutineGroupFormView: React.FC<{
   activeTab?: string;
   mode?: 'add' | 'edit';
   onDirtyChange?: (isDirty: boolean) => void;
-}> = ({ addChunk, updateChunk, initialChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData: _userData, activeTab, mode = 'add', onDirtyChange }) => {
+  menuBarProps?: any;
+}> = ({ addChunk, updateChunk, initialChunk, setActiveTab, setSettingsSubView, setIsSettingsOpen, userData: _userData, activeTab, mode = 'add', onDirtyChange, menuBarProps }) => {
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState('');
@@ -850,8 +852,9 @@ export const RoutineGroupFormView: React.FC<{
     return daysFromTranslation[val - 1]; // Monday to Saturday
   };
 
-  return (
-    <div className="space-y-5 pb-20">
+  const renderFormContent = () => {
+    return (
+      <div className="space-y-5 pb-20">
       {/* 루틴 추가/삭제/수정 알림 팝업 */}
       <AnimatePresence>
         {(routineAddedMessage || deletionMessage || saveSuccessMessage || groupAddedMessage) && (
@@ -1302,6 +1305,20 @@ export const RoutineGroupFormView: React.FC<{
         validationPlaceholder={confirmModal.validationPlaceholder}
         confirmColor={confirmModal.confirmColor}
       />
+    </div>
+  );
+  };
+
+  if (!menuBarProps) {
+    return renderFormContent();
+  }
+
+  return (
+    <div className="w-full">
+      <MenuBar {...menuBarProps} />
+      <div className="max-w-2xl mx-auto px-4 pt-[10px] pb-[100px] space-y-3">
+        {renderFormContent()}
+      </div>
     </div>
   );
 };

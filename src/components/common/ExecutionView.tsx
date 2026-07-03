@@ -46,6 +46,7 @@ import { soundService } from '../../services/soundService';
 import { RoutineTitleLine } from '../routine/RoutineTitleLine';
 import { MonthlyHeatmap } from '../routine/MonthlyHeatmap';
 import { RoutineTitle } from '../routine/RoutineTitle';
+import { MenuBar } from '../layout/MenuBar';
 
 // --- Localized Text Object ---
 const LOCALIZED_TEXT = {
@@ -107,7 +108,8 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
   setConfirmModal,
   setStatsKey,
   setSelectedTaskForStats,
-  onGroupCompleted
+  onGroupCompleted,
+  menuBarProps
 }) => {
   // --- [Hook declarations FIRST to comply with React rules] ---
   const {
@@ -807,8 +809,10 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
   if (!chunk) return null;
 
   return (
-    <div className="space-y-4 relative">
-      {/* 루틴그룹박스 (Routine Group Box) */}
+    <div className="w-full">
+      {menuBarProps && <MenuBar {...menuBarProps} />}
+      <div className="max-w-2xl mx-auto px-4 pt-[10px] pb-[100px] space-y-4 relative">
+        {/* 루틴그룹박스 (Routine Group Box) */}
       <section className="bg-gradient-to-br from-indigo-500 to-violet-700 rounded-[10px] shadow-xl overflow-hidden relative">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -ml-12 -mb-12" />
@@ -1322,6 +1326,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
           </button>
         </div>
       )}
+    </div>
     </div>
   );
 };

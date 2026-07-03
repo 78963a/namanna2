@@ -248,6 +248,11 @@ export interface HomeViewProps {
   onEnterExecution: (chunkId: string) => void;
   onRestart?: (taskId: string) => void;
   togglePauseTask?: (taskId: string, forceStart?: boolean) => void;
+  menuBarProps?: any;
+  challengeDays?: number;
+  successDays?: number;
+  currentDayActivityLog?: number[];
+  formattedDate?: string;
 }
 
 export interface StatsViewProps {
@@ -284,6 +289,7 @@ export interface ExecutionViewProps {
   setSelectedTaskForStats?: (id: string | null) => void;
   onEnterExecution?: (chunkId: string) => void;
   onGroupCompleted?: (chunkId: string) => void;
+  menuBarProps?: any;
 }
 
 export interface AddRoutineGroupViewProps {

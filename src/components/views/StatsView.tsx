@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { UserData, TaskType } from '../../types';
 import { timeToMinutes, minutesToTime, formatDate, formatDurationPrecise, isTaskScheduledToday, calculateTaskDuration, getCreationDate } from '../../utils';
+import { MenuBar } from '../layout/MenuBar';
 
 interface StatsViewProps {
   userData: UserData;
@@ -31,6 +32,7 @@ interface StatsViewProps {
   onBackOverride?: () => void;
   initialSelectedTaskId?: string | null;
   isSingleTaskStatsOnly?: boolean;
+  menuBarProps?: any;
 }
 
 export const StatsView: React.FC<StatsViewProps> = ({ 
@@ -40,7 +42,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
   isSingleGroupStatsOnly = false,
   onBackOverride,
   initialSelectedTaskId = null,
-  isSingleTaskStatsOnly = false
+  isSingleTaskStatsOnly = false,
+  menuBarProps
 }) => {
   const { t } = useTranslation();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(initialSelectedGroupId);
@@ -1826,12 +1829,13 @@ export const StatsView: React.FC<StatsViewProps> = ({
     return groups;
   }, [userData.dailyActivityLog, userData.routineGroupHistory, userData.routineChunks, todayStr, currentTime, userData]);
 
-  if (viewAllType) {
-    return renderAllRecordsView();
-  }
+  const renderContent = () => {
+    if (viewAllType) {
+      return renderAllRecordsView();
+    }
 
-  if (selectedTaskId && taskDetailData) {
-    return (
+    if (selectedTaskId && taskDetailData) {
+      return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
         {renderFolderTabs()}
         <div className="bg-white rounded-b-[20px] rounded-t-[20px] shadow-sm border border-slate-100 overflow-hidden relative z-10 p-4 md:p-6">
@@ -2402,6 +2406,16 @@ export const StatsView: React.FC<StatsViewProps> = ({
             )}
           </AnimatePresence>
         </div>
+      </div>
+    </div>
+    );
+  };
+
+  return (
+    <div className="w-full">
+      {menuBarProps && <MenuBar {...menuBarProps} />}
+      <div className="max-w-2xl mx-auto px-4 pt-[10px] pb-[100px] space-y-3">
+        {renderContent()}
       </div>
     </div>
   );

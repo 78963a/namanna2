@@ -5,6 +5,7 @@ import {
   Sliders,
 } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
+import { MenuBar } from '../layout/MenuBar';
 
 // Internal Types & Constants
 import { 
@@ -60,6 +61,7 @@ interface SettingsViewProps {
   setShowPermissionGuide: (val: boolean) => void;
   syncHistory: (data: UserData, today: string) => UserData;
   mode?: 'main' | 'modal';
+  menuBarProps?: any;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -97,12 +99,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   setShowPermissionGuide,
   syncHistory,
   mode = 'main',
+  menuBarProps,
 }) => {
   const { t } = useTranslation();
   const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'groups'>('general');
 
-  if (settingsSubView.type === 'groupStats') {
-    return (
+  const renderContent = () => {
+    if (settingsSubView.type === 'groupStats') {
+      return (
       <div className={`flex flex-col ${mode === 'modal' ? 'h-full overflow-y-auto overscroll-contain' : 'h-auto'} custom-scrollbar animate-in fade-in slide-in-from-bottom-[50px] duration-300`}>
         <StatsView
           userData={userData}
@@ -303,6 +307,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           mode="edit"
           onDirtyChange={(isDirty) => setIsEditRoutineDirty(isDirty)}
         />
+      </div>
+    </div>
+  );
+  };
+
+  if (mode === 'modal') {
+    return renderContent();
+  }
+
+  return (
+    <div className="w-full">
+      {menuBarProps && <MenuBar {...menuBarProps} />}
+      <div className="max-w-2xl mx-auto px-4 pt-[10px] pb-[100px] space-y-3">
+        {renderContent()}
       </div>
     </div>
   );

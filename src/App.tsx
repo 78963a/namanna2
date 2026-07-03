@@ -8,20 +8,14 @@ import { useTranslation } from 'react-i18next';
 import { 
   Sun,
   CheckCircle2, 
-  Settings, 
   Trash2, 
   Clock,
   ChevronRight,
-  BarChart3,
-  Home,
   Play,
   Timer,
   X,
   RotateCcw,
-  PlusCircle,
   Check,
-  Volume2,
-  VolumeX,
   Save,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -39,14 +33,13 @@ import {
   SoundEffectSettings,
   NextRoutineSuggestion
 } from './types';
-import { SettingsView } from './components/settings/SettingsView';
+import SettingsView from './components/settings/SettingsView';
 import { 
   isChunkScheduledToday, 
   isTaskScheduledToday, 
   getDaysBetween,
   calculateTaskDuration
 } from './utils';
-import { CheckCheckIcon } from './components/CheckCheckIcon';
 import { useRoutineManager } from './hooks/useRoutineManager';
 import { useNaggingEngine } from './hooks/useNaggingEngine';
 import { voiceService } from './services/voiceService';
@@ -54,43 +47,16 @@ import { soundService } from './services/soundService';
 import { notificationService } from './services/notificationService';
 import { useCheckIn } from './hooks/useCheckIn';
 
-// --- Application ---
-import { HeaderBox } from './components/layout/HeaderBox';
+// --- Application Views & Components ---
 import { HomeView } from './components/views/HomeView';
 import { StatsView } from './components/views/StatsView';
 import { ExecutionView } from './components/common/ExecutionView';
 import { RoutineGroupFormView } from './components/common/RoutineGroupFormView';
-// import { AddRoutineGroupView } from './components/views/AddRoutineGroupView';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { PermissionGuideModal, NotificationDeniedModal } from './components/common/PermissionGuideModal';
 import { NextRoutineGroupModal } from './components/common/NextRoutineGroupModal';
 import { PerfectDayAnimation } from './PerfectDayAnimation';
 import { TodayEndAnimation } from './TodayEndAnimation';
-// import { TaskInputSection } from './components/routine/TaskInputSection';
-// import { SortableTaskItem } from './components/routine/SortableTaskItem';
-// import { SortableChunkItem } from './components/routine/SortableChunkItem';
-// import { SortableChecklistItem } from './components/routine/SortableChecklistItem';
-// --- Components ---
-
-
-
-
-
-// --- Application ---
-
-// --- Main Application ---
-
-// --- Sub-components ---
-
-
-
-
-
-
-export const OldExecutionView = () => {
-  return null;
-};
-
 
 // --- Helper Components ---
 
@@ -1298,12 +1264,6 @@ export default function App() {
   };
 
 
-
-
-  
-
-
-
   const challengeDays = useMemo(() => {
     const dates = Object.keys(userData.dailyCompletionRate || {}).filter(d => !!d);
     if (dates.length === 0) return 1;
@@ -1353,9 +1313,40 @@ export default function App() {
         setShowPermissionGuide={setShowPermissionGuide}
         syncHistory={syncHistory}
         mode={mode}
+        menuBarProps={menuBarProps}
       />
     );
   };
+
+  const menuBarProps = useMemo(() => ({
+    activeTab: activeTab as any,
+    selectedChunkId,
+    isVoiceMutedTemporarily,
+    setIsVoiceMutedTemporarily,
+    checkCheckIconId,
+    isCheckCheckAvailable,
+    userData,
+    handleTabTransition,
+    setSelectedChunkId,
+    setSettingsSubView,
+    setIsSettingsOpen,
+    setStatsKey,
+    handleCheckCheckClick,
+  }), [
+    activeTab,
+    selectedChunkId,
+    isVoiceMutedTemporarily,
+    setIsVoiceMutedTemporarily,
+    checkCheckIconId,
+    isCheckCheckAvailable,
+    userData,
+    handleTabTransition,
+    setSelectedChunkId,
+    setSettingsSubView,
+    setIsSettingsOpen,
+    setStatsKey,
+    handleCheckCheckClick,
+  ]);
 
   const formattedDate = useMemo(() => {
     return effectiveDate.toLocaleDateString(
@@ -1469,131 +1460,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* 홈아이콘줄 (Sticky Header Box) */}
-      <div className="sticky top-0 z-40 bg-[#F7FEE7]/80 dark:bg-slate-950/80 backdrop-blur-md pt-2.5 pb-0">
-        <div className="max-w-2xl mx-auto px-4">
-          <nav className="flex items-center gap-3">
-            <button 
-              onClick={() => {
-                handleTabTransition('home', () => {
-                  setSelectedChunkId(null);
-                });
-              }}
-              className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${
-                activeTab === 'home' && !selectedChunkId 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none' 
-                  : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 border border-slate-100 dark:border-slate-800 shadow-sm'
-              }`}
-            >
-              <Home className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={() => {
-                handleTabTransition('settings', () => {
-                  setSettingsSubView({ type: 'main' });
-                  setSelectedChunkId(null);
-                  setIsSettingsOpen(false);
-                });
-              }}
-              className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all ${
-                activeTab === 'settings'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none' 
-                  : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 border border-slate-100 dark:border-slate-800 shadow-sm'
-              }`}
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={() => {
-                handleTabTransition('add', () => {
-                  setSelectedChunkId(null);
-                  setIsSettingsOpen(false);
-                });
-              }}
-              className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all ${
-                activeTab === 'add'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none' 
-                  : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 border border-slate-100 dark:border-slate-800 shadow-sm'
-              }`}
-            >
-              <PlusCircle className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={() => {
-                handleTabTransition('stats', () => {
-                  setSelectedChunkId(null);
-                  setStatsKey(prev => prev + 1);
-                });
-              }}
-              className={`transition-all w-10 h-10 flex items-center justify-center rounded-[10px] ${
-                activeTab === 'stats' 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:shadow-none' 
-                  : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 border border-slate-100 dark:border-slate-800 shadow-sm'
-              }`}
-            >
-              <BarChart3 className="w-5 h-5" />
-            </button>
-
-            {/* 음성안내아이콘 */}
-            <button 
-              onClick={() => {
-                soundService.unlock();
-                voiceService.unlock();
-                if (typeof window !== 'undefined' && window.speechSynthesis) {
-                  window.speechSynthesis.cancel();
-                }
-                setIsVoiceMutedTemporarily(prev => !prev);
-              }}
-              className={`w-10 h-10 flex items-center justify-center rounded-[10px] transition-all bg-white border shadow-sm hover:text-indigo-600 hover:bg-indigo-50/50 hover:border-indigo-200 ${
-                !isVoiceMutedTemporarily 
-                  ? 'border-blue-400 text-blue-500 shadow-blue-50' 
-                  : 'border-slate-100 text-slate-400'
-              }`}
-            >
-              {!isVoiceMutedTemporarily ? <Volume2 className="w-5 h-5" strokeWidth={2.5} /> : <VolumeX className="w-5 h-5" />}
-            </button>
-
-            {/* 체크체크박스 (Check-Check Box): 클릭하여 성장시키는 아이콘 */}
-            <motion.button 
-              onClick={handleCheckCheckClick}
-              whileTap={isCheckCheckAvailable ? "tap" : undefined}
-              variants={{
-                tap: { scale: 0.94 }
-              }}
-              transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-              className={`transition-all w-16 h-10 flex items-center px-1.5 rounded-[10px] border shadow-sm relative overflow-hidden always-light ${
-                isCheckCheckAvailable 
-                  ? 'bg-white border-indigo-200 cursor-pointer hover:border-indigo-400' 
-                  : 'bg-white border-slate-100 cursor-default'
-              }`}
-            >
-              <motion.div 
-                variants={{
-                  tap: { scaleX: 1.25, scaleY: 0.75 }
-                }}
-                transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                className="flex-shrink-0 flex items-center justify-center w-9 origin-bottom"
-              >
-                <CheckCheckIcon iconId={checkCheckIconId} size={32} />
-              </motion.div>
-              <div className="flex-grow flex flex-col items-center justify-center ml-0.5 relative">
-                <span className="text-[10px] font-black text-slate-500 leading-none" title={t('character.pressCountTitle')}>
-                  {(userData.availableCheckCheckCount !== undefined ? userData.availableCheckCheckCount : 5)}
-                </span>
-                {isCheckCheckAvailable && (
-                  <div className="mt-1">
-                    <span className="flex h-1.5 w-1.5">
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
-                    </span>
-                  </div>
-                )}
-              </div>
-            </motion.button>
-          </nav>
-        </div>
-      </div>
-
-      <main className="max-w-2xl mx-auto px-4 pt-[10px] pb-[100px] space-y-3">
+      <main className="w-full">
         <AnimatePresence mode="wait">
           {activeTab === 'home' ? (
             <motion.div
@@ -1602,18 +1469,7 @@ export default function App() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
-              className="space-y-[10px]"
             >
-              <HeaderBox 
-                userData={userData}
-                todayStr={todayStr}
-                formattedDate={formattedDate}
-                challengeDays={challengeDays}
-                successDays={successDays}
-                currentTime={currentTime}
-                effectiveDate={effectiveDate}
-                activityLog={currentDayActivityLog}
-              />
               <HomeView 
                 userData={userData}
                 setUserData={setUserData}
@@ -1632,6 +1488,11 @@ export default function App() {
                 onEnterExecution={handleEnterExecution}
                 onRestart={onRestart}
                 togglePauseTask={togglePauseTask}
+                menuBarProps={menuBarProps}
+                challengeDays={challengeDays}
+                successDays={successDays}
+                currentDayActivityLog={currentDayActivityLog}
+                formattedDate={formattedDate}
               />
             </motion.div>
           ) : activeTab === 'stats' ? (
@@ -1641,13 +1502,13 @@ export default function App() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
-              className="space-y-4"
             >
               <StatsView 
                 key={statsKey}
                 userData={userData} 
                 currentTime={currentTime}
                 effectiveDate={effectiveDate}
+                menuBarProps={menuBarProps}
               />
             </motion.div>
           ) : activeTab === 'execution' ? (
@@ -1657,6 +1518,7 @@ export default function App() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.2 }}
+              className="w-full"
             >
               <ExecutionView 
                 userData={userData}
@@ -1683,6 +1545,7 @@ export default function App() {
                 setSelectedTaskForStats={setSelectedTaskForStats}
                 onEnterExecution={handleEnterExecution}
                 onGroupCompleted={handleGroupCompleted}
+                menuBarProps={menuBarProps}
               />
             </motion.div>
           ) : activeTab === 'add' ? (
@@ -1693,7 +1556,7 @@ export default function App() {
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
             >
-            <RoutineGroupFormView 
+              <RoutineGroupFormView 
                 addChunk={handleAddChunkAndClean}
                 setActiveTab={setActiveTab}
                 setSettingsSubView={setSettingsSubView}
@@ -1702,6 +1565,7 @@ export default function App() {
                 activeTab={activeTab}
                 mode="add"
                 onDirtyChange={(isDirty) => setIsAddRoutineDirty(isDirty)}
+                menuBarProps={menuBarProps}
               />
             </motion.div>
           ) : activeTab === 'settings' ? (
@@ -1712,9 +1576,7 @@ export default function App() {
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="p-0">
-                {renderSettingsContent('main')}
-              </div>
+              {renderSettingsContent('main')}
             </motion.div>
           ) : null}
         </AnimatePresence>
