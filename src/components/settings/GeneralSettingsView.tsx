@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import localForage from 'localforage';
+import { MY_APP_VERSION } from '../../zzz';
 import { 
   Sun,
   Moon,
@@ -1308,7 +1309,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
             className="w-full flex flex-col items-start p-4 bg-slate-50 border-x border-t border-slate-200 border-b-[4px] border-b-slate-200 rounded-xl text-left"
           >
             <span className="text-sm font-black text-slate-700 mb-1">{t('settings.versionCheck')}</span>
-            <span className="text-[12px] font-bold text-slate-400 leading-tight">{t('settings.versionCheckDesc')}</span>
+            <span className="text-[12px] font-bold text-slate-400 leading-tight">{MY_APP_VERSION}</span>
           </div>
 
           <button 

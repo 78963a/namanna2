@@ -76,7 +76,6 @@ export const en = {
     deleteRoutineRecordsDesc: "Delete all routine completion history. Routine settings will remain.",
     introAndSupport: "Introduction & Support",
     versionCheck: "Check Version Info",
-    versionCheckDesc: "Updated on June 28, 2026",
     privacyPolicy: "Privacy Policy",
     privacyPolicyDesc: "View the privacy policy for this app.",
     supportUrl: "Support URL",

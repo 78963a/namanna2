@@ -76,7 +76,6 @@ export const ja = {
     deleteRoutineRecordsDesc: "現在までに記録されたすべてのルーチン履歴を削除します。ルーチン設定は維持されます。",
     introAndSupport: "紹介とサポート",
     versionCheck: "バージョン情報の確認",
-    versionCheckDesc: "2026. 6. 28. アップデート",
     privacyPolicy: "個人情報保護方針 (Privacy Policy)",
     privacyPolicyDesc: "アプリの個人情報取り扱い方針を確認します。",
     supportUrl: "サポート (Support URL)",
