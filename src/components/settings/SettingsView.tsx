@@ -62,6 +62,7 @@ interface SettingsViewProps {
   syncHistory: (data: UserData, today: string) => UserData;
   mode?: 'main' | 'modal';
   menuBarProps?: any;
+  registerNaggingCloseHandler?: (handler: any) => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -100,6 +101,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   syncHistory,
   mode = 'main',
   menuBarProps,
+  registerNaggingCloseHandler,
 }) => {
   const { t } = useTranslation();
   const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'groups'>('general');
@@ -226,6 +228,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     setConfirmModal={setConfirmModal}
                     setNaggingSuccessMessage={setNaggingSuccessMessage}
                     setSettingsSubView={setSettingsSubView}
+                    registerCloseHandler={registerNaggingCloseHandler}
+                    setIsSettingsOpen={setIsSettingsOpen}
                   />
                 ) : (
                   <GeneralSettingsView

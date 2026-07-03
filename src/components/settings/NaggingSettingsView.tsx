@@ -14,6 +14,8 @@ interface NaggingSettingsViewProps {
   setConfirmModal: React.Dispatch<React.SetStateAction<any>>;
   setNaggingSuccessMessage: (msg: string | null) => void;
   setSettingsSubView: (subView: { type: 'main' | 'sound' | 'nagging' | 'detail'; chunkId?: string }) => void;
+  registerCloseHandler?: (handler: any) => void;
+  setIsSettingsOpen?: (isOpen: boolean) => void;
 }
 
 export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
@@ -26,9 +28,45 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
   setConfirmModal,
   setNaggingSuccessMessage,
   setSettingsSubView,
+  registerCloseHandler,
+  setIsSettingsOpen,
 }) => {
   const { t, i18n } = useTranslation();
   const defaultSettings = getNaggingDefaultSettings(i18n.language || 'ko');
+
+ {/* 저장 없이 빠져나가려고 할 때 안내 모달 */}
+  const handleCloseConfirm = React.useCallback((): boolean => {
+    if (isNaggingDirty) {
+      setConfirmModal({
+        isOpen: true,
+        title: t('nagging.cancelTitle'),
+        message: t('nagging.cancelMessage'),
+        confirmLabel: t('nagging.cancelConfirm'),
+        cancelLabel: t('nagging.cancelCancel'),
+        confirmColor: 'indigo',
+        showCancel: true,
+        onConfirm: () => {
+          setIsNaggingDirty(false);
+          if (setIsSettingsOpen) {
+            setIsSettingsOpen(false);
+          }
+          setConfirmModal((prev: any) => ({ ...prev, isOpen: false }));
+        },
+        onCancel: () => setConfirmModal((prev: any) => ({ ...prev, isOpen: false }))
+      });
+      return true; // Intercepted, do not close immediately
+    }
+    return false; // No changes, safe to close
+  }, [isNaggingDirty, setConfirmModal, setIsSettingsOpen, t]);
+
+  React.useEffect(() => {
+    if (registerCloseHandler) {
+      registerCloseHandler(handleCloseConfirm);
+      return () => {
+        registerCloseHandler(null);
+      };
+    }
+  }, [registerCloseHandler, handleCloseConfirm]);
 
   const settings = localNaggingSettings || {
     ...defaultSettings,

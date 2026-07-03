@@ -13,4 +13,4 @@
  */
 
 // 👇 아래 큰따옴표("") 안의 버전을 원하시는 대로 변경해 보세요!
-export const MY_APP_VERSION = "2026. 7. 3. 11:00";
+export const MY_APP_VERSION = "2026. 7. 3. 12:15";

@@ -22,7 +22,7 @@ import {
   calculateTaskDuration,
   getJosa
 } from '../utils';
-import { getNaggingDefaultSettings } from '../utils/naggingDefaults';
+import { getNaggingDefaultSettings, healNaggingSettings } from '../utils/naggingDefaults';
 import { useCheckCheckBox } from './useCheckCheckBox';
 import { soundService } from '../services/soundService';
 import { voiceService } from '../services/voiceService';
@@ -353,11 +353,17 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
           [oldLang]: currentNagging
         };
 
-        const nextNagging = updatedByLang[newLang] || getNaggingDefaultSettings(newLang);
+        // Heal all lang settings to make sure none have leftover unmodified Korean defaults
+        const healedByLang: { [lang: string]: any } = {};
+        Object.keys(updatedByLang).forEach(k => {
+          healedByLang[k] = healNaggingSettings(updatedByLang[k], k);
+        });
+
+        const nextNagging = healNaggingSettings(healedByLang[newLang] || getNaggingDefaultSettings(newLang), newLang);
 
         return {
           ...prev,
-          naggingSettingsByLang: updatedByLang,
+          naggingSettingsByLang: healedByLang,
           naggingSettings: nextNagging
         };
       });
@@ -485,8 +491,15 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
           };
         }
 
+        // Heal all lang settings to make sure none have leftover unmodified Korean defaults
+        if (parsed.naggingSettingsByLang) {
+          Object.keys(parsed.naggingSettingsByLang).forEach(k => {
+            parsed.naggingSettingsByLang[k] = healNaggingSettings(parsed.naggingSettingsByLang[k], k);
+          });
+        }
+
         // Always sync the active naggingSettings to the loaded settings for the current language
-        parsed.naggingSettings = parsed.naggingSettingsByLang[currentLang] || getNaggingDefaultSettings(currentLang);
+        parsed.naggingSettings = healNaggingSettings(parsed.naggingSettingsByLang[currentLang] || getNaggingDefaultSettings(currentLang), currentLang);
 
         if (parsed.naggingSettings) {
           if (parsed.naggingSettings.ongoingTargetTypes === undefined) {

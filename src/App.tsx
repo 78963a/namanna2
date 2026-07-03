@@ -25,7 +25,6 @@ import { arrayMove } from '@dnd-kit/sortable';
 
 // Internal Types & Constants
 import { 
-  TaskType, 
   Task, 
   RoutineChunk, 
   TaskStatus,
@@ -57,8 +56,6 @@ import { PermissionGuideModal, NotificationDeniedModal } from './components/comm
 import { NextRoutineGroupModal } from './components/common/NextRoutineGroupModal';
 import { PerfectDayAnimation } from './PerfectDayAnimation';
 import { TodayEndAnimation } from './TodayEndAnimation';
-
-// --- Helper Components ---
 
 // [디자인 수정 구역: 홈화면 및 실행화면 글꼴설정]
 export const FONT_SETTINGS = {
@@ -359,6 +356,7 @@ export default function App() {
   const [isNaggingDirty, setIsNaggingDirty] = useState(false);
   const [localNaggingSettings, setLocalNaggingSettings] = useState<NaggingSettings | null>(null);
   const [naggingSuccessMessage, setNaggingSuccessMessage] = useState<string | null>(null);
+  const naggingCloseHandlerRef = useRef<(() => boolean) | null>(null);
 
   const [isSoundSettingsDirty, setIsSoundSettingsDirty] = useState(false);
   const [localSoundSettings, setLocalSoundSettings] = useState<SoundEffectSettings | null>(null);
@@ -379,36 +377,6 @@ export default function App() {
   }, [soundSuccessMessage]);
 
   useEffect(() => {
-    if (settingsSubView.type === 'nagging') {
-      const defaultSettings: NaggingSettings = {
-        startEnabled: false,
-        restartEnabled: false,
-        startMessage: 'task',
-        ongoingEnabled: false,
-        ongoingInterval: 1,
-        ongoingMessage: 'task가 n분째 진행중입니다',
-        ongoingTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-        beforeEndEnabled: false,
-        beforeEndTime: 1,
-        beforeEndMessage: 'task 종료 r분 전입니다.',
-        beforeEndTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-        endEnabled: false,
-        endMessage: 'task 시간이 지났습니다.',
-        endTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED],
-        overTimeEnabled: false,
-        overTimeInterval: 1,
-        overTimeMessage: 'name님, task가 m분 지났어요.',
-        overTimeTargetTypes: [TaskType.TIME_INDEPENDENT, TaskType.TIME_LIMITED, TaskType.TIME_ACCUMULATED]
-      };
-      setLocalNaggingSettings({
-        ...defaultSettings,
-        ...(userData.naggingSettings || {})
-      });
-      setIsNaggingDirty(false);
-    }
-  }, [settingsSubView.type, userData.naggingSettings]);
-
-  useEffect(() => {
     if (settingsSubView.type === 'sound') {
       const defaultSettings: SoundEffectSettings = {
         wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
@@ -426,31 +394,17 @@ export default function App() {
   }, [settingsSubView.type, userData.soundSettings]);
 
   const handleSettingsClose = () => {
-    if (settingsSubView.type === 'nagging' && isNaggingDirty) {
-      setConfirmModal({
-        isOpen: true,
-        title: '변경 취소 확인',
-        message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
-        confirmLabel: '취소하고 나가기',
-        cancelLabel: '계속 수정하기',
-        confirmColor: 'indigo',
-        showCancel: true,
-        onConfirm: () => {
-          setIsNaggingDirty(false);
-          setIsSettingsOpen(false);
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        },
-        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
-      });
-      return;
+    if (settingsSubView.type === 'nagging' && naggingCloseHandlerRef.current) {
+      const intercepted = naggingCloseHandlerRef.current();
+      if (intercepted) return;
     }
     if (settingsSubView.type === 'sound' && isSoundSettingsDirty) {
       setConfirmModal({
         isOpen: true,
-        title: '변경 취소 확인',
-        message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
-        confirmLabel: '취소하고 나가기',
-        cancelLabel: '계속 수정하기',
+        title: t('sound.cancelTitle') || '변경 취소 확인',
+        message: t('sound.cancelMessage') || '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+        confirmLabel: t('sound.cancelConfirm') || '취소하고 나가기',
+        cancelLabel: t('sound.cancelCancel') || '계속 수정하기',
         confirmColor: 'indigo',
         showCancel: true,
         onConfirm: () => {
@@ -465,10 +419,10 @@ export default function App() {
     if (settingsSubView.type === 'detail' && isEditRoutineDirty) {
       setConfirmModal({
         isOpen: true,
-        title: '변경 취소 확인',
-        message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
-        confirmLabel: '취소하고 나가기',
-        cancelLabel: '계속 수정하기',
+        title: t('statsModal.cancelEditTitle') || '변경 취소 확인',
+        message: t('statsModal.cancelEditConfirm') || '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+        confirmLabel: t('statsModal.cancelAndExit') || '취소하고 나가기',
+        cancelLabel: t('statsModal.keepEditing') || '계속 수정하기',
         confirmColor: 'indigo',
         showCancel: true,
         onConfirm: () => {
@@ -493,10 +447,10 @@ export default function App() {
     if (activeTab === 'add' && targetTab !== 'add' && isAddRoutineDirty) {
       setConfirmModal({
         isOpen: true,
-        title: '입력 취소 확인',
-        message: '작성 중인 내용이 있습니다. 저장하지 않고 나가시겠습니까?',
-        confirmLabel: '저장하지 않고 나가기',
-        cancelLabel: '계속 작성하기',
+        title: t('statsModal.cancelInputTitle') || '입력 취소 확인',
+        message: t('statsModal.cancelInputConfirm') || '작성 중인 내용이 있습니다. 저장하지 않고 나가시겠습니까?',
+        confirmLabel: t('statsModal.exitWithoutSaving') || '저장하지 않고 나가기',
+        cancelLabel: t('statsModal.keepWriting') || '계속 작성하기',
         confirmColor: 'indigo',
         showCancel: true,
         onConfirm: () => {
@@ -510,12 +464,17 @@ export default function App() {
       return;
     }
     if (activeTab === 'settings' && targetTab !== 'settings' && (isNaggingDirty || isEditRoutineDirty || isSoundSettingsDirty)) {
+      const title = isNaggingDirty ? t('nagging.cancelTitle') : isSoundSettingsDirty ? t('sound.cancelTitle') : t('statsModal.cancelEditTitle');
+      const message = isNaggingDirty ? t('nagging.cancelMessage') : isSoundSettingsDirty ? t('sound.cancelMessage') : t('statsModal.cancelEditConfirm');
+      const confirmLabel = isNaggingDirty ? t('nagging.cancelConfirm') : isSoundSettingsDirty ? t('sound.cancelConfirm') : t('statsModal.cancelAndExit');
+      const cancelLabel = isNaggingDirty ? t('nagging.cancelCancel') : isSoundSettingsDirty ? t('sound.cancelCancel') : t('statsModal.keepEditing');
+
       setConfirmModal({
         isOpen: true,
-        title: '변경 취소 확인',
-        message: '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
-        confirmLabel: '취소하고 나가기',
-        cancelLabel: '계속 수정하기',
+        title: title || '변경 취소 확인',
+        message: message || '변경 사항이 저장되지 않았습니다. 취소하시겠습니까?',
+        confirmLabel: confirmLabel || '취소하고 나가기',
+        cancelLabel: cancelLabel || '계속 수정하기',
         confirmColor: 'indigo',
         showCancel: true,
         onConfirm: () => {
@@ -1061,8 +1020,8 @@ export default function App() {
   const resetChunk = (chunkId: string) => {
     setConfirmModal({
       isOpen: true,
-      title: '루틴 초기화',
-      message: '모든 루틴의 실행여부와 타이머가 초기화됩니다.',
+      title: t('routine.resetRoutineTitle') || '루틴 초기화',
+      message: t('routine.resetRoutineConfirm') || '모든 루틴의 실행여부와 타이머가 초기화됩니다.',
       onConfirm: () => {
         voiceService.stop();
         setUserData(prev => {
@@ -1160,9 +1119,9 @@ export default function App() {
   const handleDeleteChunkWithUI = (id: string, onSuccess?: () => void) => {
     setConfirmModal({
       isOpen: true,
-      title: '그룹 삭제',
-      message: '이 그룹과 포함된 모든 루틴이 삭제됩니다. 계속하시겠습니까?',
-      confirmLabel: '삭제',
+      title: t('routine.deleteGroupTitle') || '그룹 삭제',
+      message: t('routine.deleteGroupConfirm') || '이 그룹과 포함된 모든 루틴이 삭제됩니다. 계속하시겠습니까?',
+      confirmLabel: t('statsModal.delete') || '삭제',
       confirmColor: 'rose',
       onConfirm: () => {
         deleteChunk(id);
@@ -1247,8 +1206,8 @@ export default function App() {
     if (!newName.trim()) return;
     setConfirmModal({
       isOpen: true,
-      title: '그룹 정보 변경',
-      message: `그룹 정보를 변경하시겠습니까?`,
+      title: t('routine.changeGroupInfoTitle') || '그룹 정보 변경',
+      message: t('routine.changeGroupInfoConfirm') || `그룹 정보를 변경하시겠습니까?`,
       onConfirm: () => {
         setUserData(prev => ({
           ...prev,
@@ -1314,6 +1273,7 @@ export default function App() {
         syncHistory={syncHistory}
         mode={mode}
         menuBarProps={menuBarProps}
+        registerNaggingCloseHandler={(handler: any) => { naggingCloseHandlerRef.current = handler; }}
       />
     );
   };

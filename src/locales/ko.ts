@@ -195,6 +195,8 @@ export const ko = {
     deleteGroupTitle: "그룹 삭제",
     deleteGroupConfirm: "이 그룹과 포함된 모든 루틴이 삭제됩니다. 계속하시겠습니까?",
     groupDeletedMessage: "'{{name}}' 그룹이 삭제되었습니다",
+    changeGroupInfoTitle: "그룹 정보 변경",
+    changeGroupInfoConfirm: "그룹 정보를 변경하시겠습니까?",
     changeUserNameTitle: "사용자 이름 변경",
     changeUserNameConfirm: "사용자 이름을 '{{name}}'으로 변경하시겠습니까?",
     changeWakeUpTimeTitle: "기상 시각 변경",

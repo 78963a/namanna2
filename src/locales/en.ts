@@ -195,6 +195,8 @@ export const en = {
     deleteGroupTitle: "Delete Group",
     deleteGroupConfirm: "This group and all its routines will be deleted. Do you want to continue?",
     groupDeletedMessage: "Group '{{name}}' has been deleted",
+    changeGroupInfoTitle: "Change Group Info",
+    changeGroupInfoConfirm: "Are you sure you want to change the group information?",
     changeUserNameTitle: "Change User Name",
     changeUserNameConfirm: "Are you sure you want to change your name to '{{name}}'?",
     changeWakeUpTimeTitle: "Change Target Wake-Up Time",

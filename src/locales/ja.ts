@@ -195,6 +195,8 @@ export const ja = {
     deleteGroupTitle: "グループの削除",
     deleteGroupConfirm: "このグループと含まれるすべてのルーチンが削除されます。続行しますか？",
     groupDeletedMessage: "「{{name}}」グループが削除されました",
+    changeGroupInfoTitle: "グループ情報の変更",
+    changeGroupInfoConfirm: "グループ情報を変更しますか？",
     changeUserNameTitle: "ユーザー名の変更",
     changeUserNameConfirm: "ユーザー名を「{{name}}」に変更しますか？",
     changeWakeUpTimeTitle: "起床目標時間の変更",
