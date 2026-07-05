@@ -174,29 +174,32 @@ const rebuildActivityLogs = (userData: UserData, now: Date, existingLogState?: R
 
       let timerRunning = false;
 
-      userData.routineChunks.forEach(chunk => {
-        chunk.tasks.forEach(task => {
-          if (task.startTime && task.status === TaskStatus.IN_PROGRESS && !task.isPaused && !task.completed) {
-            const startCalDate = getCalendarDate(currentEffDateStr, task.startTime);
-            const resetCalDate = getResetTimeOfDate(currentEffDateStr);
-            if (startCalDate && resetCalDate) {
-              const endCalDate = now > resetCalDate ? resetCalDate : now;
-              if (minuteDate >= startCalDate && minuteDate <= endCalDate) {
-                timerRunning = true;
+      if (calDateStr === currentEffDateStr) {
+        userData.routineChunks.forEach(chunk => {
+          chunk.tasks.forEach(task => {
+            if (task.startTime && task.status === TaskStatus.IN_PROGRESS && !task.isPaused && !task.completed) {
+              const startCalDate = getCalendarDate(currentEffDateStr, task.startTime);
+              const resetCalDate = getResetTimeOfDate(currentEffDateStr);
+              if (startCalDate && resetCalDate) {
+                const endCalDate = now > resetCalDate ? resetCalDate : now;
+                if (minuteDate >= startCalDate && minuteDate <= endCalDate) {
+                  timerRunning = true;
+                }
               }
             }
-          }
+          });
         });
-      });
+      }
 
       if (userData.taskHistory) {
         userData.taskHistory.forEach(entry => {
+          if (entry.date !== calDateStr) return;
           if (entry.startTime) {
             const startCalDate = getCalendarDate(entry.date, entry.startTime);
             let endCalDate: Date | null = null;
             if (entry.endTime) {
               endCalDate = getCalendarDate(entry.date, entry.endTime);
-            } else if (entry.duration) {
+            } else if (entry.duration !== null && entry.duration !== undefined) {
               if (startCalDate) {
                 endCalDate = new Date(startCalDate.getTime() + entry.duration * 1000);
               }
