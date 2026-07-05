@@ -23,6 +23,7 @@ import {
 import { UserData, TaskType } from '../../types';
 import { timeToMinutes, minutesToTime, formatDate, formatDurationPrecise, isTaskScheduledToday, calculateTaskDuration, getCreationDate } from '../../utils';
 import { MenuBar } from '../layout/MenuBar';
+import { TimeBar } from '../common/TimeBar';
 
 interface StatsViewProps {
   userData: UserData;
@@ -917,7 +918,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
             breakdown: `(${failed}/${skipped}/${completedPerfect})`,
             startTime: firstStarts.length > 0 ? minutesToTime(Math.min(...firstStarts)) : '--:--',
             endTime: completions.length > 0 ? minutesToTime(Math.max(...completions)) : '--:--',
-            duration: sumDurationSeconds > 0 ? Math.floor(sumDurationSeconds / 60) + '분' : '0분'
+            duration: sumDurationSeconds > 0 ? t('home.minutes', { minutes: Math.floor(sumDurationSeconds / 60) }) : t('home.minutes', { minutes: 0 })
           });
         } else {
           historyByYear[year].push({
@@ -1317,7 +1318,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                           <tr key={i} className="hover:bg-indigo-50/40 active:bg-indigo-100/40 transition-colors cursor-pointer" onClick={() => setSelectedHistoryDate(row.date)}>
                             {viewAllType === 'task' ? (
                               <>
-                                <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
+                                <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-red-800' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
                                 <td className="px-2 py-2 text-center font-black text-slate-700">{row.startTime}</td>
                                 <td className="px-2 py-2 text-center font-bold text-indigo-600">{row.duration}</td>
                                 <td className="px-2 py-2 text-center font-black text-slate-700">{row.endTime}</td>
@@ -1325,7 +1326,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                               </>
                             ) : viewAllType === 'group' ? (
                                <>
-                                 <td className={`px-2 py-2 font-bold tracking-tighter whitespace-nowrap ${isSunday(row.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
+                                 <td className={`px-2 py-2 font-bold tracking-tighter whitespace-nowrap ${isSunday(row.date) ? 'text-red-800' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
                                  <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime}</td>
                                  <td className="px-2 py-2 text-center font-bold text-indigo-600 tracking-tighter">{row.duration}</td>
                                  <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime}</td>
@@ -1345,7 +1346,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                </>
                             ) : (
                               <>
-                                <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
+                                <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-red-800' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
                                 <td className="px-2 py-2 font-black text-violet-600">{row.rate}</td>
                                 <td className="px-2 py-2 font-bold text-slate-700 whitespace-nowrap">
                                   {viewAllType === 'group' ? row.status : `${row.totalActive}${row.breakdown}`}
@@ -1775,7 +1776,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
   const usageStatsGroups = useMemo(() => {
     const logs = userData.dailyActivityLog || {};
     const dates = Object.keys(logs).sort((a, b) => b.localeCompare(a));
-    const colorList = ['#E5E7EB', '#000000', '#FACC15', '#F97316', '#EF4444']; // 0:Gray, 1:Black, 2:Yellow, 3:Orange, 4:Red
     
     const groups: { [year: string]: any[] } = {};
     
@@ -1784,21 +1784,6 @@ export const StatsView: React.FC<StatsViewProps> = ({
       if (!groups[year]) groups[year] = [];
       
       const log = logs[date];
-      const stops = [];
-      let start = 0;
-      let currentColor = log[0];
-      
-      for (let i = 1; i <= log.length; i++) {
-        const val = i < log.length ? log[i] : -1;
-        if (val !== currentColor) {
-          const colorCode = colorList[currentColor] || '#e2e8f0';
-          const startPct = (start / 1440) * 100;
-          const endPct = (i / 1440) * 100;
-          stops.push(`${colorCode} ${startPct}% ${endPct}%`);
-          start = i;
-          currentColor = val;
-        }
-      }
 
       let totalUsageSeconds = 0;
       if (date === todayStr) {
@@ -1820,7 +1805,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
       
       groups[year].push({
         date,
-        gradient: `linear-gradient(to right, ${stops.join(', ')})`,
+        log,
         totalMinutes: Math.floor(totalUsageSeconds / 60),
         totalSeconds: totalUsageSeconds
       });
@@ -1925,7 +1910,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                         <tbody className="divide-y divide-slate-100">
                           {taskAllTimeStats.historyByYear[year].map((row, i) => (
                             <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                              <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
+                              <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-red-800' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
                               <td className="px-2 py-2 text-center font-black text-slate-700">{row.startTime}</td>
                               <td className="px-2 py-2 text-center font-bold text-indigo-600">{row.duration}</td>
                               <td className="px-2 py-2 text-center font-black text-slate-700">{row.endTime}</td>
@@ -2018,7 +2003,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {detailData.history7.map((row, i) => (
                       <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                        <td className={`px-2 py-2 font-bold tracking-tighter whitespace-nowrap ${isSunday(row.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
+                        <td className={`px-2 py-2 font-bold tracking-tighter whitespace-nowrap ${isSunday(row.date) ? 'text-red-800' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
                         <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime}</td>
                         <td className="px-2 py-2 text-center font-bold text-indigo-600 tracking-tighter">{row.duration}</td>
                         <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime}</td>
@@ -2072,7 +2057,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                         ) : (
                           <Hourglass className="w-2.5 h-2.5 text-indigo-400" />
                         )}
-                        <span>{task.targetDuration}분</span>
+                        <span>{t('home.minutes', { minutes: task.targetDuration })}</span>
                       </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors" />
@@ -2164,7 +2149,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             <tbody className="divide-y divide-slate-100">
                               {wakeUpStats.historyByYear[year].map((h, i) => (
                                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                  <td className={`px-2 py-2 font-bold ${isSunday(h.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{h.date.split('-').slice(1).join('/')}</td>
+                                  <td className={`px-2 py-2 font-bold ${isSunday(h.date) ? 'text-red-800' : 'text-slate-500'}`}>{h.date.split('-').slice(1).join('/')}</td>
                                   <td className="px-2 py-2 font-bold text-slate-400">{h.targetTime}</td>
                                   <td className="px-2 py-2 font-black text-indigo-600">{h.wakeUpTime || '--:--'}</td>
                                   <td className="px-2 py-2 text-right">
@@ -2257,7 +2242,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                         <tbody className="divide-y divide-slate-100">
                           {achievementStats.dailyHistory7.map((h, i) => (
                             <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                              <td className={`px-2 py-2 font-bold ${isSunday(h.date) ? 'text-[#8B0000]' : 'text-slate-500'}`}>{h.date.split('-').slice(1).join('/')}</td>
+                              <td className={`px-2 py-2 font-bold ${isSunday(h.date) ? 'text-red-800' : 'text-slate-500'}`}>{h.date.split('-').slice(1).join('/')}</td>
                               <td className="px-2 py-2 font-black text-violet-600">{h.rate}</td>
                               <td className="px-2 py-2 font-bold text-slate-700 whitespace-nowrap">
                                 {h.totalActive}{h.breakdown}
@@ -2373,21 +2358,19 @@ export const StatsView: React.FC<StatsViewProps> = ({
                         <div className="p-4 space-y-4">
                           {usageStatsGroups[year].map((day, i) => (
                             <div key={i} className="flex items-center gap-1 h-10 group">
-                              <div className={`w-9 text-[11px] font-black tabular-nums ${isSunday(day.date) ? 'text-[#8B0000]' : 'text-slate-400'}`}>
+                              <div className={`w-9 text-[11px] font-black tabular-nums ${isSunday(day.date) ? 'text-red-800' : 'text-slate-400'}`}>
                                 {day.date.split('-').slice(1).join('/')}
                               </div>
                               
-                              <div className="flex-grow h-3 bg-slate-100 rounded-full overflow-hidden relative shadow-inner">
-                                <div 
-                                  className="absolute inset-0 transition-opacity duration-300"
-                                  style={{ backgroundImage: day.gradient }}
-                                  title={day.date}
-                                />
-                              </div>
-                              
-                              <div className="w-9 text-right text-[11px] font-black text-indigo-600 tabular-nums">
-                                {t('home.minutes', { minutes: day.totalMinutes })}
-                              </div>
+                              <TimeBar 
+                                activityLog={day.log}
+                                heightClass="h-3"
+                                className="flex-grow"
+                                showDuration={true}
+                                totalMinutes={day.totalMinutes}
+                                durationColorClass="w-9 text-right text-[11px] font-black text-indigo-600 tabular-nums"
+                                title={day.date}
+                              />
                             </div>
                           ))}
                         </div>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { UserData, TaskStatus } from '../../types';
 import { isTaskScheduledToday, calculateTaskDuration, isTaskTargetForStats } from '../../utils';
+import { TimeBar } from '../common/TimeBar';
 
 interface HeaderBoxProps {
   userData: UserData;
@@ -13,14 +14,6 @@ interface HeaderBoxProps {
   currentTime: Date;
   activityLog?: number[];
 }
-
-const COLORS = {
-  base: '#e2e8f0',           // 기본 회색 (미지나감) - slate-200
-  past: '#1e293b',           // 지나감 (검은색) - slate-800
-  active: '#fbbf24',         // 접속중, 타이머X (노란색) - amber-400
-  routine: '#f97316',        // 백그라운드, 타이머O (주황색) - orange-500
-  'active-routine': '#ef4444' // 접속중, 타이머O (빨간색) - red-500
-};
 
 /**
  * The header section of the home view, displaying user stats, and current date.
@@ -70,28 +63,6 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
   }, 0);
   const totalDurationMinutes = Math.floor(totalDurationSeconds / 60);
 
-  const timeBarGradient = useMemo(() => {
-    if (!activityLog || activityLog.length === 0) return '';
-    const stops = [];
-    let start = 0;
-    let currentColor = activityLog[0];
-    
-    const colorList = [COLORS.base, COLORS.past, COLORS.active, COLORS.routine, COLORS['active-routine']];
-
-    for (let i = 1; i <= activityLog.length; i++) {
-      const val = i < activityLog.length ? activityLog[i] : -1;
-      if (val !== currentColor) {
-        const colorCode = colorList[currentColor] || COLORS.base;
-        const startPct = (start / 1440) * 100;
-        const endPct = (i / 1440) * 100;
-        stops.push(`${colorCode} ${startPct}% ${endPct}%`);
-        start = i;
-        currentColor = val;
-      }
-    }
-    return `linear-gradient(to right, ${stops.join(', ')})`;
-  }, [activityLog]);
-
   const last7Days = useMemo(() => {
     const days = [];
     const dayNames = t('common.days', { returnObjects: true }) as string[] || ['월', '화', '수', '목', '금', '토', '일'];
@@ -113,7 +84,7 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
         <div className="text-left space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-lg font-black text-slate-900 tracking-tight">{formattedDate}</p>
-            <p className="text-lg font-black tabular-nums leading-none" style={{ color: '#993399' }}>
+            <p className="text-purple-700 text-lg font-black tabular-nums leading-none">
               {`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`}
             </p>
           </div>
@@ -169,18 +140,12 @@ export const HeaderBox: React.FC<HeaderBoxProps> = ({
 
       {/* TimeBar 컴포넌트 */}
       <div className="pt-2 space-y-2">
-        <div className="flex items-center gap-4">
-          <div 
-            className="flex-grow h-2 bg-slate-100 rounded-full overflow-hidden"
-            style={{ backgroundImage: timeBarGradient }}
-          />
-          <div 
-            className="text-[12px] font-black tabular-nums transition-colors whitespace-nowrap"
-            style={{ color: '#ff0033' }}
-          >
-            {t('home.minutes', { minutes: totalDurationMinutes })}
-          </div>
-        </div>
+        <TimeBar 
+          activityLog={activityLog}
+          heightClass="h-2"
+          showDuration={true}
+          totalMinutes={totalDurationMinutes}
+        />
       </div>
     </section>
   );
