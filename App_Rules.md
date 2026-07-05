@@ -6,6 +6,19 @@ App_Rules.md (애플리케이션 운영 및 개발 규칙)
 #1.2. 이 앱의 데이터는  localForage (IndexedDB) 방식으로 사용자 기기에 저장된다. 
 #1.3. 팝업이나 모달 화면, 바텀 시트 등 본래화면 위에 다른 화면이 겹쳐지는 기능이 구현될 때에는 본래화면이 사용자의 터치나 스크롤에 반응하지 않도록 주의한다. 
 #1.4. 앞으로 구현할 모든 기능은 다국어 지원(ko, en, ja)을 전제로 한다. 모든 텍스트는 i18n 번역 파일로 격리하고, 유동적인 문장은 템플릿 리터럴 대신 변수 치환 방식을 쓰며, CSS는 글자 길어짐에 대응할 수 있도록 flex 기반의 유연한 구조(Responsive padding)로 작성하라.
+
+#1.5. 🛠️ Tech Stack
+
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS
+- **Animation**: motion (Framer Motion)
+- **Data Viz**: Recharts, D3
+- **Icons**: Lucide React
+- **Persistence**: LocalStorage / Firebase (Cloud Firestore & Auth)
+- **State Management**: React Hooks (useState, useMemo, useEffect)
+- **Drag & Drop**: @dnd-kit
+
+
 -------------------------------------------------
 
 #2. 홈화면
@@ -193,7 +206,7 @@ isManualForced: 비활성 요일이지만, 사용자가 **[활성화하기]**(to
 -3순위. '나중에' 루틴도 없을 경우, **'일시정지'**(isPaused) 상태인 루틴 중 가장 번호가 빠른 루틴.
 
 ###20.3.3.'완료' '완벽' '스킵' 상태의 루틴은 자동적으로는 현재 루틴이 되지 않는다. 다만 사용자의 '이어하기'(handleResumeTask) '다시하기'(onRestart) '시작하기'(handleStartTask) 선택을 통해 현재루틴이 될 수 있다.
-###20.3.4.현재 루틴이 타이머 진행중이든 혹은 일시정지중이든 관계없이, 사용자가 목록에 있는 루틴의 '이어하기'(togglePauseTask) '다시하기'(onRestart) '시작하기'(togglePauseTask/handleStartTask) 버튼을 누르면 현재루틴은 자동으로 '일시정지' 상태로 루틴목록으로 내려가고 사용자가 선택한 루틴이 '현재루틴'이 된다.  
+###20.3.4.현재 루틴이 타이머 진행중이든 혹은 일시정지중이든 관계없이, 사용자가 목록에 있는 루틴의 '이어하기'(togglePauseTask) '다시하기'(onRestart) '시작하기'(handleStartTask) 버튼을 누르면 현재루틴은 자동으로 '일시정지' 상태로 기존의 타이머가 저장된 채 루틴목록으로 내려가고 사용자가 선택한 루틴이 '현재루틴'이 된다.  
 
 ###20.3.5. 다음 루틴이 될 루틴이 없으면 현재루틴박스 없이 루틴목록박스만 표시된다. 
 

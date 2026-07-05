@@ -1296,23 +1296,22 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
 
       const newChunks = prev.routineChunks.map(chunk => {
         if (chunk.id === targetChunkId) {
-          const foundTask = chunk.tasks.find(t => t.id === id);
-          const taskDuration = foundTask ? (foundTask.duration || foundTask.accumulatedDuration || 0) : 0;
-
           const updatedTasks = chunk.tasks.map(t => {
             if (t.id === id) {
               return {
                 ...t,
                 status: TaskStatus.SKIP,
                 endTime: nowStr,
-                duration: taskDuration > 0 ? taskDuration : undefined,
+                duration: undefined,
+                accumulatedDuration: undefined,
                 startTime: undefined,
                 isPaused: false
               };
             } else if (t.status === TaskStatus.IN_PROGRESS) {
               const updated = { ...t };
+              const nextAccumulated = calculateTaskDuration(updated, now);
               updated.isPaused = !!updated.startTime || (updated.isPaused && (updated.accumulatedDuration || 0) > 0);
-              updated.accumulatedDuration = calculateTaskDuration(updated, now);
+              updated.accumulatedDuration = nextAccumulated;
               updated.startTime = undefined;
               updated.status = TaskStatus.NOT_STARTED;
               return updated;
@@ -1400,8 +1399,9 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
               };
             } else if (t.status === TaskStatus.IN_PROGRESS) {
               const updated = { ...t };
+              const nextAccumulated = calculateTaskDuration(updated, now);
               updated.isPaused = !!updated.startTime || (updated.isPaused && (updated.accumulatedDuration || 0) > 0);
-              updated.accumulatedDuration = calculateTaskDuration(updated, now);
+              updated.accumulatedDuration = nextAccumulated;
               updated.startTime = undefined;
               updated.status = TaskStatus.NOT_STARTED;
               return updated;
@@ -1506,8 +1506,9 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
               };
             } else if (task.status === TaskStatus.IN_PROGRESS || (task.startTime && !task.isPaused)) {
               const updated = { ...task };
+              const nextAccumulated = calculateTaskDuration(updated, now);
               updated.isPaused = true;
-              updated.accumulatedDuration = calculateTaskDuration(updated, now);
+              updated.accumulatedDuration = nextAccumulated;
               updated.startTime = undefined;
               updated.status = TaskStatus.NOT_STARTED;
               return updated;
@@ -1584,8 +1585,9 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
               };
             } else if (task.status === TaskStatus.IN_PROGRESS || (task.startTime && !task.isPaused)) {
               const updated = { ...task };
+              const nextAccumulated = calculateTaskDuration(updated, now);
               updated.isPaused = true;
-              updated.accumulatedDuration = calculateTaskDuration(updated, now);
+              updated.accumulatedDuration = nextAccumulated;
               updated.startTime = undefined;
               updated.status = TaskStatus.NOT_STARTED;
               return updated;
