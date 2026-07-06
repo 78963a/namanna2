@@ -54,7 +54,7 @@ import {
  */
 const renderSettingDesc = (text: string, extraClass: string = '') => {
   return (
-    <p className={`text-sm font-normal text-slate-400 dark:text-slate-300 leading-tight whitespace-normal ${extraClass}`}>
+    <p className={`text-sm font-normal text-slate-400 dark:text-slate-300 leading-tight whitespace-normal break-words ${extraClass}`}>
       {text}
     </p>
   );
@@ -67,7 +67,7 @@ const renderSettingDesc = (text: string, extraClass: string = '') => {
  */
 const renderSettingBigTitle = (text: string, extraClass: string = '') => {
   return (
-    <h3 className={`text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap ${extraClass}`}>
+    <h3 className={`text-base font-black text-slate-800 dark:text-slate-100 whitespace-normal break-words ${extraClass}`}>
       {text}
     </h3>
   );
@@ -80,7 +80,7 @@ const renderSettingBigTitle = (text: string, extraClass: string = '') => {
  */
 const renderSettingSmallTitle = (text: string, extraClass: string = '') => {
   return (
-    <h4 className={`text-sm font-black text-slate-700 dark:text-slate-200 ${extraClass}`}>
+    <h4 className={`text-sm font-black text-slate-700 dark:text-slate-200 whitespace-normal break-words ${extraClass}`}>
       {text}
     </h4>
   );
