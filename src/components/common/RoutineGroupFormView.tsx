@@ -35,7 +35,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// Internal Types & Constants
+// 내부 타입 및 상수 정의
 import { 
   TaskType, 
   Task, 
@@ -49,6 +49,19 @@ import { ChecklistModal } from './ChecklistModal';
 import { MenuBar } from '../layout/MenuBar';
 
 // --- Helper Components ---
+
+/**
+ * 루틴 그룹 생성/수정 화면의 각 설정 설명문에 사용되는 글자 스타일을 통일하여 렌더링하는 헬퍼 함수입니다.
+ * @param text 설명에 들어갈 텍스트 내용
+ * @param extraClass 추가 클래스 (기본값: 빈 문자열)
+ */
+const renderDescription = (text: string, extraClass: string = '') => {
+  return (
+    <p className={`text-sm font-normal text-slate-400 dark:text-slate-300 leading-tight whitespace-normal ${extraClass}`}>
+      {text}
+    </p>
+  );
+};
 
 // 루틴수정 팝업 
 const TaskInputSection = ({
@@ -86,7 +99,7 @@ const TaskInputSection = ({
     <div className="space-y-3">
       <div className="flex flex-col gap-1">
         <div className="text-[15px] font-bold text-slate-600 ml-1">{label}</div>
-        {description && <p className="text-[12px] font-bold text-slate-400 ml-1 leading-relaxed">{description}</p>}
+        {description && renderDescription(description, 'ml-1 leading-relaxed')}
       </div>
       <div className="bg-white p-3 rounded-[10px] border border-slate-200 space-y-4 shadow-none">
         <div className="space-y-1.5">
@@ -113,7 +126,7 @@ const TaskInputSection = ({
           />
         </div>
 
-        {/* Routine Schedule Settings */}
+        {/* 루틴 요일 설정 */}
         {!isTrigger && (
           <div className="space-y-1.5">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">{t('statsModal.routineDaysLabel')}</span>
@@ -421,7 +434,7 @@ const RoutineEditModal = ({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-white rounded-[25px] w-full max-w-sm shadow-2xl overflow-hidden flex flex-col"
+        className="bg-white rounded-[25px] w-full max-w-sm shadow-none overflow-hidden flex flex-col"
         style={{ maxHeight: '90vh' }}
       >
         <div className="p-6 overflow-y-auto flex-1 min-h-0">
@@ -447,7 +460,7 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   </label>
 );
 
-// --- Primary Export ---
+// --- 메인 컴포넌트 내보내기 ---
 
 export const RoutineGroupFormView: React.FC<{
   addChunk: (name: string, purpose: string, tasks: Task[], scheduleType: 'days', scheduledDays: number[], startTime?: string, isAlarmEnabled?: boolean, startType?: 'anytime' | 'situation' | 'time', situation?: string) => void;
@@ -529,7 +542,7 @@ export const RoutineGroupFormView: React.FC<{
     }
   }, [initialChunk]);
 
-  // Intelligent Day Synchronization
+  // 스마트 요일 동기화 (그룹 요일 변경 시 개별 루틴 요일 자동 업데이트)
   useEffect(() => {
     const prevDays = prevScheduledDaysRef.current;
     const added = scheduledDays.filter(d => !prevDays.includes(d));
@@ -599,7 +612,7 @@ export const RoutineGroupFormView: React.FC<{
     }
   }, [groupAddedMessage]);
 
-  // Prevent background scrolling when local modals inside group form are open
+  // 팝업 모달이 열려있을 때 배경 스크롤 방지
   useEffect(() => {
     const isLocalModalOpen = isEditModalOpen || confirmModal.isOpen || isChecklistModalOpen;
     if (isLocalModalOpen) {
@@ -640,7 +653,7 @@ export const RoutineGroupFormView: React.FC<{
       const isDirty = name.trim() !== '' || purpose.trim() !== '' || triggerTask.text.trim() !== '' || routineList.length > 0 || hasTriggerChecklist || hasRoutineChecklist || hasCurrentInput;
       onDirtyChange?.(isDirty);
     } else if (mode === 'edit' && initialChunk) {
-      // Comparison logic for edit mode
+      // 수정 모드 변경 사항 비교 감지 로직
       const isNameNew = name !== initialChunk.name;
       const isPurposeNew = purpose !== (initialChunk.purpose || '');
       const isDaysNew = JSON.stringify([...scheduledDays].sort()) !== JSON.stringify([...initialChunk.scheduledDays].sort());
@@ -649,7 +662,7 @@ export const RoutineGroupFormView: React.FC<{
       const isSituationNew = situation !== (initialChunk.situation || '');
       const isAlarmNew = isAlarmEnabled !== (initialChunk.isAlarmEnabled || false);
 
-      // Tasks comparison
+      // 루틴 항목 목록 변경 사항 비교
       const initialTasks = initialChunk.tasks || [];
       const isTriggerNew = initialTasks.length === 0 || 
         triggerTask.text !== initialTasks[0].text || 
@@ -752,7 +765,7 @@ export const RoutineGroupFormView: React.FC<{
     const finalTasks: Task[] = [];
     const now = Date.now();
     
-    // Create a map of existing tasks to preserve their state (startTime, accumulatedDuration, status, etc.)
+    // 기존 루틴 상태(시작 시간, 누적 시간, 상태 등) 보존을 위한 맵 생성
     const existingTasksMap = new Map<string, Task>();
     if (mode === 'edit' && initialChunk) {
       initialChunk.tasks.forEach(tItem => existingTasksMap.set(tItem.id, tItem));
@@ -864,7 +877,7 @@ export const RoutineGroupFormView: React.FC<{
             exit={{ opacity: 0, scale: 0.8, y: 10 }}
             className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[300] pointer-events-none"
           >
-            <div className={`bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-[20px] shadow-2xl flex flex-col items-center gap-2 border border-white/10 min-w-[200px] ${deletionMessage ? 'border-rose-500/30' : (saveSuccessMessage ? 'border-indigo-500/30' : 'border-emerald-500/30')}`}>
+            <div className={`bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-[20px] shadow-none flex flex-col items-center gap-2 border border-white/10 min-w-[200px] ${deletionMessage ? 'border-rose-500/30' : (saveSuccessMessage ? 'border-indigo-500/30' : 'border-emerald-500/30')}`}>
               <div className={`w-10 h-10 ${deletionMessage ? 'bg-rose-500/20' : (saveSuccessMessage ? 'bg-indigo-500/20' : 'bg-emerald-500/20')} rounded-full flex items-center justify-center mb-1`}>
                 {deletionMessage ? (
                   <Trash2 className="w-6 h-6 text-rose-400" />
@@ -929,7 +942,7 @@ export const RoutineGroupFormView: React.FC<{
           </div>
         </div>
         <div className="space-y-5">
-          {/* Name Input */}
+          {/* 그룹 이름 입력 */}
           <div className="space-y-3">
             <SectionTitle>{t('statsModal.groupNameLabel')}</SectionTitle>
             <input 
@@ -943,12 +956,10 @@ export const RoutineGroupFormView: React.FC<{
             />
           </div>
 
-          {/* Purpose Input */}
+          {/* 그룹 다짐/목적 입력 */}
           <div className="space-y-3">
             <SectionTitle>{t('statsModal.purposeLabel')}</SectionTitle>
-            <p className="text-[12px] font-bold text-slate-400 -mt-3 ml-1 mb-2 leading-tight">
-              {t('statsModal.purposeSubLabel')}
-            </p>
+            {renderDescription(t('statsModal.purposeSubLabel'), '-mt-3 ml-1 mb-2')}
 
             <input 
               type="text"
@@ -961,12 +972,10 @@ export const RoutineGroupFormView: React.FC<{
             />
           </div>
 
-          {/* Schedule Settings */}
+          {/* 요일 설정 */}
           <div className="space-y-3">
             <SectionTitle>{t('statsModal.daysLabel')}</SectionTitle>
-            <p className="text-[12px] font-bold text-slate-400 -mt-3 ml-1 mb-2 leading-tight">
-              {t('statsModal.daysSubLabel')}
-            </p>
+            {renderDescription(t('statsModal.daysSubLabel'), '-mt-3 ml-1 mb-2')}
             <div className="flex flex-wrap gap-2">
               {[
                 { label: getDayLabel(1), value: 1 },
@@ -999,12 +1008,12 @@ export const RoutineGroupFormView: React.FC<{
             </div>
           </div>
 
-          {/* Start Situation or Time Setting */}
+          {/* 시작 방법 설정 (언제든지, 특정 상황, 지정 시각) */}
           <div className="space-y-0">
             <SectionTitle>{t('statsModal.startTypeLabel')}</SectionTitle>
             
             <div className="relative">
-              {/* Index-style Tabs */}
+              {/* 인덱스 스타일 탭 디자인 */}
               <div className="flex items-end gap-1 px-0 relative z-10">
                 {[
                   { id: 'anytime', label: t('statsModal.anytime') },
@@ -1032,7 +1041,7 @@ export const RoutineGroupFormView: React.FC<{
                 })}
               </div>
 
-              {/* Connected Content Area */}
+              {/* 탭 연결 콘텐츠 영역 */}
               <div className="bg-white border border-slate-200 rounded-[12px] rounded-tl-none px-4 py-4 min-h-[85px] flex flex-col justify-center">
                 <div className="animate-in fade-in duration-300">
                   {startType === 'anytime' && (
@@ -1059,7 +1068,7 @@ export const RoutineGroupFormView: React.FC<{
 
                   {startType === 'time' && (
                     <div className="flex items-center justify-start gap-5">
-                      {/* Time Input */}
+                      {/* 시간 입력 필드 */}
                       <div className="flex items-center focus-within:ring-0 transition-all">
                         <input 
                           type="time" 
@@ -1072,7 +1081,7 @@ export const RoutineGroupFormView: React.FC<{
                         />
                       </div>
 
-                      {/* Alarm Toggle */}
+                      {/* 알림 설정 토글 */}
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[10px] font-black text-slate-700">
                           {isAlarmEnabled ? t('statsModal.alarmOn') : t('statsModal.alarmOff')}
@@ -1102,7 +1111,7 @@ export const RoutineGroupFormView: React.FC<{
             </div>
           </div>
 
-          {/* Tasks Section */}
+          {/* 루틴 목록 및 입력 섹션 */}
           <div className="space-y-5">
             <TaskInputSection 
               label={<SectionTitle>{t('statsModal.triggerRoutineLabel')}</SectionTitle>}
@@ -1117,7 +1126,7 @@ export const RoutineGroupFormView: React.FC<{
             <div className="space-y-3">
               <SectionTitle>{t('statsModal.addRoutineLabel')}</SectionTitle>
               
-              {/* Added Routines List */}
+              {/* 추가된 하위 루틴 목록 */}
               {routineList.length > 0 && (
                 <div className="space-y-3 mb-4">
                   <DndContext 
@@ -1161,7 +1170,7 @@ export const RoutineGroupFormView: React.FC<{
                 </div>
               )}
 
-              {/* New Routine Input Dialog */}
+              {/* 새로운 개별 루틴 입력창 */}
               <div id="routine-input-section">
                 <TaskInputSection 
                   label=""
@@ -1183,7 +1192,7 @@ export const RoutineGroupFormView: React.FC<{
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* 취소 및 저장 버튼 영역 */}
       <div className="space-y-3">
         {errorMessage && (
           <div className="p-3 bg-rose-50 border border-rose-100 rounded-[10px] flex items-center gap-2 text-rose-600 text-xs font-bold">
@@ -1285,7 +1294,7 @@ export const RoutineGroupFormView: React.FC<{
         </div>
       </div>
 
-      {/* Confirmation Modal for routine deletion */}
+      {/* 삭제 확인을 위한 모달 다이얼로그 */}
       <ConfirmModal 
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}

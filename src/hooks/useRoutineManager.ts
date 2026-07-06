@@ -1476,26 +1476,6 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
         if (chunk.id === targetChunkId) {
           const newTasks = chunk.tasks.map(task => {
             if (task.id === taskId) {
-              const speakTarget = task.text;
-              const soundConfig = prev.soundSettings?.triggerRoutineStart;
-              const soundEnabled = soundConfig ? soundConfig.enabled : true;
-              const soundFile = soundConfig?.file || '/driken5482-applause-cheer-236786.mp3';
-
-              soundService.refresh(soundFile);
-              soundService.play(soundFile, soundEnabled);
-
-              const startSpeakEnabled = prev.isVoiceEnabled && prev.naggingSettings?.startEnabled;
-              const startSpeakMessage = prev.naggingSettings?.startMessage || 'task 시작합니다';
-              if (startSpeakEnabled && startSpeakMessage) {
-                speakAsync(startSpeakMessage, true, {
-                  name: prev.userName || '나',
-                  task: speakTarget,
-                  n: task.targetDuration || 0,
-                  r: 0,
-                  m: 0
-                });
-              }
-
               return {
                 ...task,
                 startTime: nowStr,
