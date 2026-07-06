@@ -60,6 +60,32 @@ const renderSettingDesc = (text: string, extraClass: string = '') => {
   );
 };
 
+/**
+ * 설정 화면의 '큰 제목'(아이콘 옆에 표시되는 주요 설정 그룹명) 글자 스타일을 통일하여 렌더링하는 헬퍼 함수입니다.
+ * @param text 제목 텍스트 내용
+ * @param extraClass 추가 클래스 (기본값: 빈 문자열)
+ */
+const renderSettingBigTitle = (text: string, extraClass: string = '') => {
+  return (
+    <h3 className={`text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap ${extraClass}`}>
+      {text}
+    </h3>
+  );
+};
+
+/**
+ * 설정 화면의 '작은 제목'(큰 제목 이하의 세부 항목 타이틀) 글자 스타일을 통일하여 렌더링하는 헬퍼 함수입니다.
+ * @param text 제목 텍스트 내용
+ * @param extraClass 추가 클래스 (기본값: 빈 문자열)
+ */
+const renderSettingSmallTitle = (text: string, extraClass: string = '') => {
+  return (
+    <h4 className={`text-sm font-black text-slate-700 dark:text-slate-200 ${extraClass}`}>
+      {text}
+    </h4>
+  );
+};
+
 export interface GeneralSettingsViewProps {
   userData: UserData;
   setUserData: React.Dispatch<React.SetStateAction<UserData>>;
@@ -805,7 +831,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <User className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.userNameLabel')}</h3>
+          {renderSettingBigTitle(t('settings.userNameLabel'))}
         </div>
         <div className="flex gap-2">
           <input 
@@ -840,7 +866,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <Sun className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.wakeUpGoalTime')}</h3>
+          {renderSettingBigTitle(t('settings.wakeUpGoalTime'))}
         </div>
         <div className="flex gap-1.5 sm:gap-2 items-center">
           <input 
@@ -888,7 +914,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <Moon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.dayResetTime')}</h3>
+          {renderSettingBigTitle(t('settings.dayResetTime'))}
         </div>
         {renderSettingDesc(t('settings.dayResetTimeDesc'))}
         
@@ -960,13 +986,13 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <Timer className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.autoTimerStart')}</h3>
+          {renderSettingBigTitle(t('settings.autoTimerStart'))}
         </div>
         
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col gap-1">
-              <h4 className="text-sm font-black text-slate-700 dark:text-slate-200">{t('settings.firstRoutineAutoStart')}</h4>
+              {renderSettingSmallTitle(t('settings.firstRoutineAutoStart'))}
               {renderSettingDesc(t('settings.firstRoutineAutoStartDesc'))}
             </div>
             <button 
@@ -979,7 +1005,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
 
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col gap-1">
-              <h4 className="text-sm font-black text-slate-700 dark:text-slate-200">{t('settings.nextRoutineAutoStart')}</h4>
+              {renderSettingSmallTitle(t('settings.nextRoutineAutoStart'))}
               {renderSettingDesc(t('settings.nextRoutineAutoStartDesc'))}
             </div>
             <button 
@@ -992,13 +1018,13 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
         </div>
       </div>
 
-      {/* 수시 타이머 숨김 설정 */}
+      {/* 시간무관루틴 타이머 숨김 설정 */}
       <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl space-y-3 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <Clock className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.hideAnytimeTimer')}</h3>
+          {renderSettingBigTitle(t('settings.hideAnytimeTimer'))}
         </div>
         
         <div className="flex items-center justify-between gap-4">
@@ -1014,13 +1040,13 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
         </div>
       </div>
 
-      {/* 누적 시간 루틴 자동 진행 설정 */}
+      {/* 시간축적루틴 자동 진행 설정 */}
       <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl space-y-3 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <BrickWall className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.autoNextAccumulated')}</h3>
+          {renderSettingBigTitle(t('settings.autoNextAccumulated'))}
         </div>
         
         <div className="flex items-center justify-between gap-4">
@@ -1042,13 +1068,13 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <ArrowUpDown className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.autoReorder')}</h3>
+          {renderSettingBigTitle(t('settings.autoReorder'))}
         </div>
         
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col gap-1">
-              <h4 className="text-sm font-black text-slate-700 dark:text-slate-200">{t('settings.autoReorderInProgress')}</h4>
+              {renderSettingSmallTitle(t('settings.autoReorderInProgress'))}
               {renderSettingDesc(t('settings.autoReorderInProgressDesc'))}
             </div>
             <button 
@@ -1061,7 +1087,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
 
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col gap-1">
-              <h4 className="text-sm font-black text-slate-700 dark:text-slate-200">{t('settings.autoReorderCompleted')}</h4>
+              {renderSettingSmallTitle(t('settings.autoReorderCompleted'))}
               {renderSettingDesc(t('settings.autoReorderCompletedDesc'))}
             </div>
             <button 
@@ -1074,7 +1100,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
 
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col gap-1">
-              <h4 className="text-sm font-black text-slate-700 dark:text-slate-200">{t('settings.autoReorderInactive')}</h4>
+              {renderSettingSmallTitle(t('settings.autoReorderInactive'))}
               {renderSettingDesc(t('settings.autoReorderInactiveDesc'))}
             </div>
             <button 
@@ -1093,7 +1119,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <ArrowBigRightDash className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.nextRoutineGroupGuidance')}</h3>
+          {renderSettingBigTitle(t('settings.nextRoutineGroupGuidance'))}
         </div>
         
         <div className="flex items-center justify-between gap-4">
@@ -1115,7 +1141,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <Bell className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-900 dark:text-slate-100">{t('settings.soundEffects')}</h3>
+          {renderSettingBigTitle(t('settings.soundEffects'))}
         </div>
         {renderSettingDesc(t('settings.soundEffectsDesc'))}
         <button 
@@ -1133,7 +1159,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <Volume2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-900 dark:text-slate-100">{t('settings.naggingFeature')}</h3>
+          {renderSettingBigTitle(t('settings.naggingFeature'))}
         </div>
         {renderSettingDesc(t('settings.naggingFeatureDesc'))}
         <button 
@@ -1151,7 +1177,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <Moon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-900 dark:text-slate-100">{t('settings.darkModeSettings')}</h3>
+          {renderSettingBigTitle(t('settings.darkModeSettings'))}
         </div>
         {renderSettingDesc(t('settings.darkModeSettingsDesc'))}
         
@@ -1214,7 +1240,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <Download className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.backupAndRestore')}</h3>
+          {renderSettingBigTitle(t('settings.backupAndRestore'))}
         </div>
 
         <div className="space-y-3">
@@ -1272,7 +1298,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-rose-50 dark:bg-rose-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <Trash2 className="w-5 h-5 text-rose-600 dark:text-rose-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.deleteRecords')}</h3>
+          {renderSettingBigTitle(t('settings.deleteRecords'))}
         </div>
 
         <div className="space-y-3">
@@ -1316,7 +1342,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-slate-50 dark:bg-slate-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <AlertCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.introAndSupport')}</h3>
+          {renderSettingBigTitle(t('settings.introAndSupport'))}
         </div>
 
         <div className="space-y-3">
@@ -1351,7 +1377,7 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           <div className="w-8 h-8 bg-slate-50 dark:bg-slate-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
             <Globe className="w-5 h-5 text-slate-600 dark:text-slate-400" />
           </div>
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100 whitespace-nowrap">{t('settings.languageTitle')}</h3>
+          {renderSettingBigTitle(t('settings.languageTitle'))}
         </div>
         {renderSettingDesc(t('settings.languageDesc'))}
         <div className="flex items-center gap-3">
