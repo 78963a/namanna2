@@ -127,6 +127,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
 
   const [isPressing, setIsPressing] = useState(false);
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pressingDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pressStartTimeRef = useRef<number>(0);
   const rollbackTriggeredRef = useRef<boolean>(false);
   const isTouchActiveRef = useRef<boolean>(false);
@@ -165,17 +166,27 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
     if ('button' in e && e.button !== 0) return;
     if (!activeTask) return;
 
-    setIsPressing(true);
     rollbackTriggeredRef.current = false;
     pressStartTimeRef.current = Date.now();
 
     if (longPressTimeoutRef.current) {
       clearTimeout(longPressTimeoutRef.current);
     }
+    if (pressingDelayTimeoutRef.current) {
+      clearTimeout(pressingDelayTimeoutRef.current);
+    }
+
+    pressingDelayTimeoutRef.current = setTimeout(() => {
+      setIsPressing(true);
+    }, 250); // delay start of pressing visual animation so standard click/taps don't trigger it
 
     longPressTimeoutRef.current = setTimeout(() => {
       rollbackTimer(activeTask.id);
       rollbackTriggeredRef.current = true;
+      if (pressingDelayTimeoutRef.current) {
+        clearTimeout(pressingDelayTimeoutRef.current);
+        pressingDelayTimeoutRef.current = null;
+      }
       setIsPressing(false);
       
       if (navigator.vibrate) {
@@ -192,6 +203,10 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
     if (longPressTimeoutRef.current) {
       clearTimeout(longPressTimeoutRef.current);
       longPressTimeoutRef.current = null;
+    }
+    if (pressingDelayTimeoutRef.current) {
+      clearTimeout(pressingDelayTimeoutRef.current);
+      pressingDelayTimeoutRef.current = null;
     }
 
     setIsPressing(false);
@@ -223,6 +238,10 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
       clearTimeout(longPressTimeoutRef.current);
       longPressTimeoutRef.current = null;
     }
+    if (pressingDelayTimeoutRef.current) {
+      clearTimeout(pressingDelayTimeoutRef.current);
+      pressingDelayTimeoutRef.current = null;
+    }
     setIsPressing(false);
   };
 
@@ -243,6 +262,10 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
     if (longPressTimeoutRef.current) {
       clearTimeout(longPressTimeoutRef.current);
       longPressTimeoutRef.current = null;
+    }
+    if (pressingDelayTimeoutRef.current) {
+      clearTimeout(pressingDelayTimeoutRef.current);
+      pressingDelayTimeoutRef.current = null;
     }
     setIsPressing(false);
   };
