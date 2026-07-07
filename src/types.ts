@@ -207,13 +207,14 @@ export interface UserData {
   autoNextAccumulatedRoutine?: boolean;
   darkModeTheme?: 'light' | 'dark';
   darkModeFollowSystem?: boolean;
+  completionTemplatesByLang?: { [lang: string]: string[] };
 }
 
 /**
  * Represents the sub-view state within the settings screen.
  */
 export interface SettingsSubView {
-  type: 'main' | 'detail' | 'nagging' | 'sound' | 'groupStats';
+  type: 'main' | 'detail' | 'nagging' | 'sound' | 'groupStats' | 'completionPhrases';
   chunkId?: string;
 }
 

@@ -23,6 +23,7 @@ import {
   Globe,
   ArrowBigRightDash,
   FileText,
+  Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -54,7 +55,7 @@ import {
  */
 const renderSettingDesc = (text: string, extraClass: string = '') => {
   return (
-    <p className={`text-sm font-normal text-slate-400 dark:text-slate-300 leading-tight whitespace-normal break-words ${extraClass}`}>
+    <p className={`text-sm font-normal text-slate-500 dark:text-slate-300 leading-tight whitespace-normal break-words ${extraClass}`}>
       {text}
     </p>
   );
@@ -1167,6 +1168,24 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 border-x border-t border-slate-200 dark:border-slate-800 border-b-[4px] border-b-slate-200 dark:border-b-slate-950 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
         >
           <span className="text-sm font-black text-slate-700 dark:text-slate-300">{t('settings.configureNagging')}</span>
+          <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
+        </button>
+      </div>
+
+      {/* 루틴 그룹 완료 문구 설정 */}
+      <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl space-y-3 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          {renderSettingBigTitle(t('settings.completionPhrasesFeature'))}
+        </div>
+        {renderSettingDesc(t('settings.completionPhrasesFeatureDesc'))}
+        <button 
+          onClick={() => setSettingsSubView({ type: 'completionPhrases' })}
+          className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 border-x border-t border-slate-200 dark:border-slate-800 border-b-[4px] border-b-slate-200 dark:border-b-slate-950 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px] group"
+        >
+          <span className="text-sm font-black text-slate-700 dark:text-slate-300">{t('settings.configureCompletionPhrases')}</span>
           <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
         </button>
       </div>

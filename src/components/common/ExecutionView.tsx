@@ -32,7 +32,8 @@ import {
   TaskStatus,
   ExecutionViewProps
 } from '../../types';
-import phrases from '../../phrases.json';
+import i18n from '../../i18n';
+import { useTranslation } from 'react-i18next';
 import { 
   isTaskScheduledToday, 
   formatDurationPrecise,
@@ -112,6 +113,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
   menuBarProps
 }) => {
   // --- [Hook declarations FIRST to comply with React rules] ---
+  const { t } = useTranslation();
   const {
     checkCheckIconId,
     isCheckCheckAvailable,
@@ -742,58 +744,71 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
               <h3 className="text-center text-lg font-black text-slate-700 mb-6">{LOCALIZED_TEXT.completionTemplateTitle}</h3>
               
               <div className="space-y-3">
-                {phrases.routine_messages.COMPLETION_SELECTION_TEMPLATES.map((template, idx) => {
-                  let storedPhrase = template;
-                  
-                  // stats for resolution
-                  const currentHistory = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
-                  const startTimeStr = currentHistory?.firstTaskStartTime || '--:--';
-                  const endTimeStr = currentTime.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
-                  const totalDurationSec = currentHistory?.totalDuration || 0;
-                  const durationStr = formatDurationPrecise(totalDurationSec);
-                  const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
-                  const totalTargetDurationStr = `${totalTargetMinutes}${LOCALIZED_TEXT.minutesUnit}`;
+                {(() => {
+                  const currentLang = i18n.language || 'ko';
+                  const langKey = currentLang.startsWith('ko') ? 'ko' : currentLang.startsWith('ja') ? 'ja' : 'en';
+                  const userTemplates = userData.completionTemplatesByLang?.[langKey];
+                  const defaultTemplatesFromI18n = t('completionPhrases.defaultTemplates', { returnObjects: true });
+                  const defaultTemplates = Array.isArray(defaultTemplatesFromI18n)
+                    ? defaultTemplatesFromI18n
+                    : [];
+                  const templatesToUse = (userTemplates && userTemplates.length > 0)
+                    ? userTemplates
+                    : defaultTemplates;
 
-                  // Resolve particles but keep the placeholder for RoutineTitle to style
-                  const resolveParticles = (msg: string, tag: string, value: string) => {
-                    if (!msg) return "";
-                    const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|야/이야|이야/야|다/이다|이다/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)`, 'g');
-                    return msg.replace(regex, (_, p1) => {
-                      return `{{${tag}}}` + getJosa(value, p1 as any);
-                    });
-                  };
+                  return templatesToUse.map((template, idx) => {
+                    let storedPhrase = template;
+                    
+                    // stats for resolution
+                    const currentHistory = userData.routineGroupHistory?.find(h => h.date === todayStr && h.groupId === chunk.id);
+                    const startTimeStr = currentHistory?.firstTaskStartTime || '--:--';
+                    const endTimeStr = currentTime.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
+                    const totalDurationSec = currentHistory?.totalDuration || 0;
+                    const durationStr = formatDurationPrecise(totalDurationSec);
+                    const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
+                    const totalTargetDurationStr = `${totalTargetMinutes}${LOCALIZED_TEXT.minutesUnit}`;
 
-                  storedPhrase = resolveParticles(storedPhrase, 'title', chunk.name);
-                  storedPhrase = resolveParticles(storedPhrase, 'purpose', chunk.purpose || LOCALIZED_TEXT.purposeDefault);
-                  storedPhrase = resolveParticles(storedPhrase, 'userName', userData.userName || LOCALIZED_TEXT.userNameDefault);
+                    // Resolve particles but keep the placeholder for RoutineTitle to style
+                    const resolveParticles = (msg: string, tag: string, value: string) => {
+                      if (!msg) return "";
+                      const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|야/이야|이야/야|다/이다|이다/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)`, 'g');
+                      return msg.replace(regex, (_, p1) => {
+                        return `{{${tag}}}` + getJosa(value, p1 as any);
+                      });
+                    };
 
-                  // We preserve placeholders for startTime, endTime, userName, duration
-                  // so that RoutineTitle can style them based on phrases.json settings.
-                  
-                  // For the UI display in buttons, replace everything
-                  let displayPhrase = storedPhrase || '';
-                  if (displayPhrase) {
-                    displayPhrase = displayPhrase.replace(/\{\{userName\}\}/g, userData.userName || LOCALIZED_TEXT.userNameDefault);
-                    displayPhrase = displayPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
-                    displayPhrase = displayPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);
-                    displayPhrase = displayPhrase.replace(/\{\{duration\}\}/g, durationStr);
-                    displayPhrase = displayPhrase.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationStr);
-                    displayPhrase = displayPhrase.replace(/\{\{title\}\}/g, chunk.name);
-                    displayPhrase = displayPhrase.replace(/\{\{purpose\}\}/g, chunk.purpose || LOCALIZED_TEXT.purposeDefault);
-                  }
+                    storedPhrase = resolveParticles(storedPhrase, 'title', chunk.name);
+                    storedPhrase = resolveParticles(storedPhrase, 'purpose', chunk.purpose || LOCALIZED_TEXT.purposeDefault);
+                    storedPhrase = resolveParticles(storedPhrase, 'userName', userData.userName || LOCALIZED_TEXT.userNameDefault);
 
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleFinalSave(storedPhrase)}
-                      className="w-full p-6 bg-white border-2 border-slate-100 rounded-[20px] text-left hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-100 transition-all active:scale-[0.98] group"
-                    >
-                      <p className="text-base font-black text-slate-700 group-hover:text-indigo-600 leading-relaxed">
-                        {displayPhrase}
-                      </p>
-                    </button>
-                  );
-                })}
+                    // We preserve placeholders for startTime, endTime, userName, duration
+                    // so that RoutineTitle can style them based on phrases.json settings.
+                    
+                    // For the UI display in buttons, replace everything
+                    let displayPhrase = storedPhrase || '';
+                    if (displayPhrase) {
+                      displayPhrase = displayPhrase.replace(/\{\{userName\}\}/g, userData.userName || LOCALIZED_TEXT.userNameDefault);
+                      displayPhrase = displayPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
+                      displayPhrase = displayPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);
+                      displayPhrase = displayPhrase.replace(/\{\{duration\}\}/g, durationStr);
+                      displayPhrase = displayPhrase.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationStr);
+                      displayPhrase = displayPhrase.replace(/\{\{title\}\}/g, chunk.name);
+                      displayPhrase = displayPhrase.replace(/\{\{purpose\}\}/g, chunk.purpose || LOCALIZED_TEXT.purposeDefault);
+                    }
+
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => handleFinalSave(storedPhrase)}
+                        className="w-full p-6 bg-white border-2 border-slate-100 rounded-[20px] text-left hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-100 transition-all active:scale-[0.98] group"
+                      >
+                        <p className="text-base font-black text-slate-700 group-hover:text-indigo-600 leading-relaxed">
+                          {displayPhrase}
+                        </p>
+                      </button>
+                    );
+                  });
+                })()}
               </div>
             </motion.div>
           )}

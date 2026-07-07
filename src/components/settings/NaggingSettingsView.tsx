@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Volume2, AlertCircle, Clock, BrickWall, Hourglass } from 'lucide-react';
 import { NaggingSettings, UserData, TaskType } from '../../types';
 import i18n from '../../i18n';
+import { KoreanJosaGuide } from './KoreanJosaGuide';
 
 export function getNaggingDefaultSettings(lang: string): NaggingSettings {
   const options = { lng: lang || 'ko' };
@@ -167,6 +168,30 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
     }
   };
 
+  const insertNaggingVariable = (fieldKey: keyof NaggingSettings, variableText: string) => {
+    if (!localNaggingSettings) return;
+    const inputEl = document.getElementById(`nagging-input-${fieldKey}`) as HTMLInputElement | null;
+    const currentValue = (localNaggingSettings[fieldKey] as string) || '';
+    let newValue = '';
+    
+    if (inputEl) {
+      const start = inputEl.selectionStart ?? currentValue.length;
+      const end = inputEl.selectionEnd ?? currentValue.length;
+      newValue = currentValue.substring(0, start) + variableText + currentValue.substring(end);
+      
+      updateNagging(fieldKey, newValue);
+      
+      setTimeout(() => {
+        inputEl.focus();
+        const newCursorPos = start + variableText.length;
+        inputEl.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+    } else {
+      newValue = currentValue + variableText;
+      updateNagging(fieldKey, newValue);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="flex items-center gap-3 mb-[20px] flex-shrink-0">
@@ -207,17 +232,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
             </div>
           )}
 
-          {(i18n.language?.startsWith('ko') || (!i18n.language?.startsWith('ja') && !i18n.language?.startsWith('en'))) && (
-            <div className="space-y-1.5 pt-1 border-t border-indigo-200/50">
-              <h3 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 text-indigo-600" /> {t('nagging.josaCorrectionTitle')}
-              </h3>
-              <div className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">
-                {t('nagging.josaCorrectionDesc')}
-                <p className="text-[10px] font-bold text-indigo-600/80 leading-relaxed">{t('nagging.josaSupported')}</p>
-              </div>
-            </div>
-          )}
+          {i18n.language?.startsWith('ko') && <KoreanJosaGuide />}
         </div>
 
         {/* 3-1. 루틴 시작시 알림 */}
@@ -252,11 +267,29 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                 <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.textSetting')}</label>
                 <input 
                   type="text"
+                  id="nagging-input-startMessage"
                   value={settings.startMessage}
                   onChange={(e) => updateNagging('startMessage', e.target.value)}
                   placeholder={t('nagging.textPlaceholder')}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
+                <div className="flex flex-wrap gap-1.5 pt-1.5">
+                  {i18n.language?.startsWith('ko') ? (
+                    <>
+                      <button type="button" onClick={() => insertNaggingVariable('startMessage', 'task이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명이/가</button>
+                      <button type="button" onClick={() => insertNaggingVariable('startMessage', 'task을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명을/를</button>
+                      <button type="button" onClick={() => insertNaggingVariable('startMessage', 'task은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명은/는</button>
+                      <button type="button" onClick={() => insertNaggingVariable('startMessage', 'name이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름이/가</button>
+                      <button type="button" onClick={() => insertNaggingVariable('startMessage', 'name을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름을/를</button>
+                      <button type="button" onClick={() => insertNaggingVariable('startMessage', 'name은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름은/는</button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => insertNaggingVariable('startMessage', 'task')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Routine</button>
+                      <button type="button" onClick={() => insertNaggingVariable('startMessage', 'name')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Name</button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -332,10 +365,32 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                 <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.textSetting')}</label>
                 <input 
                   type="text"
+                  id="nagging-input-ongoingMessage"
                   value={settings.ongoingMessage}
                   onChange={(e) => updateNagging('ongoingMessage', e.target.value)}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
+                <div className="flex flex-wrap gap-1.5 pt-1.5">
+                  {i18n.language?.startsWith('ko') ? (
+                    <>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'task이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명이/가</button>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'task을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명을/를</button>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'task은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명은/는</button>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'name이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름이/가</button>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'name을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름을/를</button>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'name은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름은/는</button>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'n')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">경과(분)</button>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'r')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">남은(분)</button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'task')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Routine</button>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'name')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Name</button>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'n')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">Elapsed</button>
+                      <button type="button" onClick={() => insertNaggingVariable('ongoingMessage', 'r')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">Remaining</button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -404,10 +459,32 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                 <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.textSetting')}</label>
                 <input 
                   type="text"
+                  id="nagging-input-beforeEndMessage"
                   value={settings.beforeEndMessage}
                   onChange={(e) => updateNagging('beforeEndMessage', e.target.value)}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
+                <div className="flex flex-wrap gap-1.5 pt-1.5">
+                  {i18n.language?.startsWith('ko') ? (
+                    <>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'task이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명이/가</button>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'task을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명을/를</button>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'task은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명은/는</button>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'name이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름이/가</button>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'name을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름을/를</button>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'name은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름은/는</button>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'n')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">경과(분)</button>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'r')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">남은(분)</button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'task')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Routine</button>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'name')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Name</button>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'n')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">Elapsed</button>
+                      <button type="button" onClick={() => insertNaggingVariable('beforeEndMessage', 'r')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">Remaining</button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -464,10 +541,28 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                 <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.textSetting')}</label>
                 <input 
                   type="text"
+                  id="nagging-input-endMessage"
                   value={settings.endMessage}
                   onChange={(e) => updateNagging('endMessage', e.target.value)}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
+                <div className="flex flex-wrap gap-1.5 pt-1.5">
+                  {i18n.language?.startsWith('ko') ? (
+                    <>
+                      <button type="button" onClick={() => insertNaggingVariable('endMessage', 'task이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명이/가</button>
+                      <button type="button" onClick={() => insertNaggingVariable('endMessage', 'task을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명을/를</button>
+                      <button type="button" onClick={() => insertNaggingVariable('endMessage', 'task은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명은/는</button>
+                      <button type="button" onClick={() => insertNaggingVariable('endMessage', 'name이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름이/가</button>
+                      <button type="button" onClick={() => insertNaggingVariable('endMessage', 'name을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름을/를</button>
+                      <button type="button" onClick={() => insertNaggingVariable('endMessage', 'name은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름은/는</button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => insertNaggingVariable('endMessage', 'task')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Routine</button>
+                      <button type="button" onClick={() => insertNaggingVariable('endMessage', 'name')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Name</button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -543,10 +638,32 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                 <label className="text-[11px] font-bold text-slate-500 ml-1">{t('nagging.textSetting')}</label>
                 <input 
                   type="text"
+                  id="nagging-input-overTimeMessage"
                   value={settings.overTimeMessage}
                   onChange={(e) => updateNagging('overTimeMessage', e.target.value)}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
+                <div className="flex flex-wrap gap-1.5 pt-1.5">
+                  {i18n.language?.startsWith('ko') ? (
+                    <>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'task이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명이/가</button>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'task을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명을/를</button>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'task은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명은/는</button>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'name이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름이/가</button>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'name을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름을/를</button>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'name은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름은/는</button>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'n')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">경과(분)</button>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'm')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">초과(분)</button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'task')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Routine</button>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'name')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Name</button>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'n')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">Elapsed</button>
+                      <button type="button" onClick={() => insertNaggingVariable('overTimeMessage', 'm')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">Overtime</button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}

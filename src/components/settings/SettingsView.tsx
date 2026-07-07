@@ -22,6 +22,7 @@ import { GeneralSettingsView } from './GeneralSettingsView';
 import { GroupManagementView } from './GroupManagementView';
 import { SoundSettingsView } from './SoundSettingsView';
 import { NaggingSettingsView } from './NaggingSettingsView';
+import { CompletionPhrasesSettingsView } from './CompletionPhrasesSettingsView';
 import { StatsView } from '../views/StatsView';
 import { RoutineGroupFormView } from '../common/RoutineGroupFormView';
 import { soundService } from '../../services/soundService';
@@ -121,7 +122,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     );
   }
 
-  if (settingsSubView.type === 'main' || settingsSubView.type === 'sound' || settingsSubView.type === 'nagging' || (activeTab === 'settings' && settingsSubView.type === 'detail')) {
+  if (settingsSubView.type === 'main' || settingsSubView.type === 'sound' || settingsSubView.type === 'nagging' || settingsSubView.type === 'completionPhrases' || (activeTab === 'settings' && settingsSubView.type === 'detail')) {
     return (
       <div className={`flex flex-col ${mode === 'modal' ? 'h-full overflow-hidden' : 'h-auto'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
         {/* Folder Tab Containers */}
@@ -229,6 +230,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     setNaggingSuccessMessage={setNaggingSuccessMessage}
                     setSettingsSubView={setSettingsSubView}
                     registerCloseHandler={registerNaggingCloseHandler}
+                    setIsSettingsOpen={setIsSettingsOpen}
+                  />
+                ) : settingsSubView.type === 'completionPhrases' ? (
+                  <CompletionPhrasesSettingsView
+                    userData={userData}
+                    setUserData={setUserData}
+                    setConfirmModal={setConfirmModal}
+                    setSettingsSubView={setSettingsSubView}
                     setIsSettingsOpen={setIsSettingsOpen}
                   />
                 ) : (
