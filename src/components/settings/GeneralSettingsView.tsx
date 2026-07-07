@@ -35,6 +35,7 @@ import {
   TaskStatus,
 } from '../../types';
 import { soundService } from '../../services/soundService';
+import { getNaggingDefaultSettings } from './NaggingSettingsView';
 import { notificationService } from '../../services/notificationService';
 import { STORAGE_KEY } from '../../constants';
 import { 
@@ -289,6 +290,78 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
         }));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setDeletionMessage(t('settings.deleteAllSuccess'));
+      }
+    });
+  };
+
+  const resetAllSettings = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: t('settings.resetSettingsTitle'),
+      message: t('settings.resetSettingsConfirm'),
+      confirmLabel: t('common.confirm'),
+      confirmColor: 'rose',
+      onConfirm: () => {
+        const currentLang = i18n.language || 'ko';
+        const defKoNagging = getNaggingDefaultSettings('ko');
+        const defEnNagging = getNaggingDefaultSettings('en');
+        const defJaNagging = getNaggingDefaultSettings('ja');
+        const currentDefNagging = getNaggingDefaultSettings(currentLang);
+
+        setUserData(prev => ({
+          ...prev,
+          userName: '나',
+          targetWakeUpTime: '07:00',
+          resetTime: '00:00',
+          dailyResetHour: 0,
+          isVoiceEnabled: true,
+          isWakeUpAlarmEnabled: false,
+          firstRoutineAutoStart: false,
+          nextRoutineAutoStart: false,
+          hideAnytimeTimer: false,
+          autoNextAccumulatedRoutine: false,
+          autoReorderInProgressGroups: true,
+          autoReorderCompletedGroups: true,
+          autoReorderInactiveGroups: true,
+          nextRoutineGroupGuidanceEnabled: false,
+          darkModeTheme: 'light',
+          darkModeFollowSystem: false,
+          soundSettings: {
+            wakeUpCheckIn: { enabled: true, file: '/sounds/freesound_community-success-fanfare-trumpets-6185.mp3' },
+            triggerRoutineStart: { enabled: true, file: '/sounds/driken5482-applause-cheer-236786.mp3' },
+            individualRoutineComplete: { enabled: true, file: '/sounds/tithuh-level-up-523624.mp3' },
+            routineGroupComplete: { enabled: true, file: '/sounds/dragon-studio-fireworks-02-419019.mp3' },
+            todayEnd: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+            allGroupsComplete: { enabled: true, file: '/sounds/freesound_community-piglevelwin2mp3-14800.mp3' },
+            chickSound: { enabled: true, file: 'public/sounds/nikin-short-chick-sound-171389.mp3' }
+          },
+          naggingSettings: currentDefNagging,
+          naggingSettingsByLang: {
+            ko: defKoNagging,
+            en: defEnNagging,
+            ja: defJaNagging
+          },
+          completionTemplatesByLang: {
+            ko: [
+              "내가 #그룹 해냄.",
+              "나는 #목적이야.",
+              "내 이름은 #이름, #소요시간만에 #그룹을/를 완료한 #목적이죠."
+            ],
+            en: [
+              "I did #group.",
+              "I am #purpose.",
+              "My name is #name, the #purpose who completed #group in #duration."
+            ],
+            ja: [
+              "私が #グループ を成し遂げた。",
+              "私は #目的 だ。",
+              "私の名前は #名前、#所要時間 で #グループ を完了した #目的 です。"
+            ]
+          }
+        }));
+
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setDeletionMessage(t('settings.resetSettingsSuccess'));
       }
     });
   };
@@ -1351,6 +1424,14 @@ export const GeneralSettingsView: React.FC<GeneralSettingsViewProps> = ({
           >
             <span className="text-sm font-black text-slate-700 dark:text-slate-200 mb-1">{t('settings.deleteAllRoutines')}</span>
             {renderSettingDesc(t('settings.deleteAllRoutinesDesc'))}
+          </button>
+
+          <button 
+            onClick={resetAllSettings}
+            className="w-full flex flex-col items-start p-4 bg-slate-50 dark:bg-slate-950 border-x border-t border-slate-200 dark:border-slate-800 border-b-[4px] border-b-slate-200 dark:border-b-slate-950 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:border-rose-200 dark:hover:border-rose-800 transition-all text-left active:translate-y-[2px] active:border-b-[2px] active:pb-[18px] mb-[2px]"
+          >
+            <span className="text-sm font-black text-slate-700 dark:text-slate-200 mb-1">{t('settings.resetSettings')}</span>
+            {renderSettingDesc(t('settings.resetSettingsDesc'))}
           </button>
         </div>
       </div>

@@ -51,6 +51,7 @@ interface SettingsViewProps {
   setBackupMessage: (msg: string | null) => void;
   setNaggingSuccessMessage: (msg: string | null) => void;
   setSoundSuccessMessage: (msg: string | null) => void;
+  setCompletionSuccessMessage: (msg: string | null) => void;
   activityLog: Record<string, number[]>;
   setActivityLog: React.Dispatch<React.SetStateAction<Record<string, number[]>>>;
   addChunk: (name: string, purpose: string, isAlarmEnabled: boolean, alarmTime: string, scheduledDays: number[], tasks: Task[]) => void;
@@ -90,6 +91,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   setBackupMessage,
   setNaggingSuccessMessage,
   setSoundSuccessMessage,
+  setCompletionSuccessMessage,
   activityLog,
   setActivityLog,
   addChunk,
@@ -239,6 +241,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     setConfirmModal={setConfirmModal}
                     setSettingsSubView={setSettingsSubView}
                     setIsSettingsOpen={setIsSettingsOpen}
+                    setCompletionSuccessMessage={setCompletionSuccessMessage}
                   />
                 ) : (
                   <GeneralSettingsView

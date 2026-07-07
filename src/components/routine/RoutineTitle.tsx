@@ -61,6 +61,15 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     const triggerTaskName = chunk.tasks[0]?.text || '첫 번째 루틴';
     const triggerTaskHtml = getStyledHtml('triggerTask', triggerTaskName);
 
+    const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || t.accumulatedDuration || 0), 0);
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
+    const durationHtml = getStyledHtml('duration', durationText);
+
+    const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
+    const totalTargetDurationText = `${totalTargetMinutes}분`;
+    const totalTargetDurationHtml = getStyledHtml('totalTargetDuration', totalTargetDurationText);
+
     let baseMessage = selectedPhrase;
     if (!baseMessage && isExecutionTitle) {
       baseMessage = phrases.routine_messages.EXECUTION_TITLE;
@@ -87,6 +96,60 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       }
     }
 
+    const replaceHashtags = (msg: string) => {
+      if (!msg) return "";
+      const userNameHtml = getStyledHtml('userName', userName || '나');
+      const startTimeHtml = getStyledHtml('startTime', startTime || '--:--');
+      const endTimeHtml = getStyledHtml('endTime', endTime || '--:--');
+
+      const hashtagMap: Record<string, string> = {
+        '#이름': userNameHtml,
+        '#name': userNameHtml,
+        '#名前': userNameHtml,
+        
+        '#그룹': titleHtml,
+        '#group': titleHtml,
+        '#グループ': titleHtml,
+        
+        '#목적': purposeHtml,
+        '#purpose': purposeHtml,
+        '#目的': purposeHtml,
+        
+        '#소요시간': durationHtml,
+        '#duration': durationHtml,
+        '#所要時間': durationHtml,
+        
+        '#시작시간': startTimeHtml,
+        '#starttime': startTimeHtml,
+        '#開始時間': startTimeHtml,
+        
+        '#완료시간': endTimeHtml,
+        '#endtime': endTimeHtml,
+        '#完了時間': endTimeHtml,
+      };
+
+      const hashtagVarRegex = /(#(이름|그룹|목적|소요시간|시작시간|완료시간|name|group|purpose|duration|starttime|endtime|名前|グループ|目的|所要時間|開始時間|完了時間))(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|야\/이야|이야\/야|다\/이다|이다\/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)?/g;
+      
+      return msg.replace(hashtagVarRegex, (fullMatch, hashtagVar, _varWord, particle) => {
+        const cleanVar = hashtagVar;
+        const valueHtml = hashtagMap[cleanVar];
+        if (valueHtml === undefined) return fullMatch;
+        
+        if (particle) {
+          let rawValue = '';
+          if (['#이름', '#name', '#名前'].includes(cleanVar)) rawValue = userName || '나';
+          else if (['#그룹', '#group', '#グループ'].includes(cleanVar)) rawValue = chunk.name;
+          else if (['#목적', '#purpose', '#目的'].includes(cleanVar)) rawValue = chunk.purpose || '목표';
+          else if (['#소요시간', '#duration', '#所要時間'].includes(cleanVar)) rawValue = durationText;
+          else if (['#시작시간', '#starttime', '#開始時間'].includes(cleanVar)) rawValue = startTime || '--:--';
+          else if (['#완료시간', '#endtime', '#完了時間'].includes(cleanVar)) rawValue = endTime || '--:--';
+          
+          return valueHtml + getJosa(rawValue, particle as any);
+        }
+        return valueHtml;
+      });
+    };
+
     if (baseMessage) {
       let message = baseMessage;
       
@@ -99,20 +162,13 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       message = message.replace(/\{\{purpose\}\}/g, purposeHtml);
       message = message.replace(/\{\{triggerTask\}\}/g, triggerTaskHtml);
       
-      // Handle remaining potential placeholders
-      const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || t.accumulatedDuration || 0), 0);
-      const totalMinutes = Math.floor(totalSeconds / 60);
-      const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
-
-      const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
-      const totalTargetDurationText = `${totalTargetMinutes}분`;
-      
-      message = message.replace(/\{\{duration\}\}/g, getStyledHtml('duration', durationText));
-      message = message.replace(/\{\{totalTargetDuration\}\}/g, getStyledHtml('totalTargetDuration', totalTargetDurationText));
+      message = message.replace(/\{\{duration\}\}/g, durationHtml);
+      message = message.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationHtml);
       message = message.replace(/\{\{userName\}\}/g, getStyledHtml('userName', userName || '나'));
       message = message.replace(/\{\{startTime\}\}/g, getStyledHtml('startTime', startTime || '--:--'));
       message = message.replace(/\{\{endTime\}\}/g, getStyledHtml('endTime', endTime || '--:--'));
       
+      message = replaceHashtags(message);
       return message;
     }
 
@@ -169,16 +225,6 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     }
     const startInfoHtml = getStyledHtml('start_info', startInfoText);
 
-    // 3. 소요 시간 정보 (duration)
-    const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || t.accumulatedDuration || 0), 0);
-    const totalMinutes = Math.floor(totalSeconds / 60);
-    const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
-    const durationHtml = getStyledHtml('duration', durationText);
-
-    const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
-    const totalTargetDurationText = `${totalTargetMinutes}분`;
-    const totalTargetDurationHtml = getStyledHtml('totalTargetDuration', totalTargetDurationText);
-
     // --- [메시지 치환 로직] ---
     message = replaceWithJosa(message, 'title', chunk.name, titleHtml);
     message = replaceWithJosa(message, 'purpose', chunk.purpose || '목표', purposeHtml);
@@ -197,6 +243,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     message = message.replace(/\{\{startTime\}\}/g, getStyledHtml('startTime', startTime || '--:--'));
     message = message.replace(/\{\{endTime\}\}/g, getStyledHtml('endTime', endTime || '--:--'));
 
+    message = replaceHashtags(message);
     return message;
   }, [chunk.id, chunk.name, chunk.purpose, chunk.scheduledDays, chunk.startType, chunk.startTime, chunk.situation, chunk.tasks, status, selectedPhrase, userName, startTime, endTime, isExecutionTitle, todayStr, userData?.resetTime]);
 

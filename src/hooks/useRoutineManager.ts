@@ -347,29 +347,39 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
     const oldLang = prevLanguageRef.current;
     const newLang = i18n.language;
     if (oldLang && newLang && oldLang !== newLang) {
-      setUserData(prev => {
-        const naggingSettingsByLang = prev.naggingSettingsByLang || {};
-        const currentNagging = prev.naggingSettings || getNaggingDefaultSettings(oldLang);
-        
-        const updatedByLang = {
-          ...naggingSettingsByLang,
-          [oldLang]: currentNagging
-        };
+      const getLangKey = (lang: string) => {
+        const norm = (lang || 'ko').toLowerCase();
+        return norm.startsWith('ko') ? 'ko' : norm.startsWith('ja') ? 'ja' : 'en';
+      };
+      
+      const oldLangKey = getLangKey(oldLang);
+      const newLangKey = getLangKey(newLang);
+      
+      if (oldLangKey !== newLangKey) {
+        setUserData(prev => {
+          const naggingSettingsByLang = prev.naggingSettingsByLang || {};
+          const currentNagging = prev.naggingSettings || getNaggingDefaultSettings(oldLangKey);
+          
+          const updatedByLang = {
+            ...naggingSettingsByLang,
+            [oldLangKey]: currentNagging
+          };
 
-        // Heal all lang settings to make sure none have leftover unmodified Korean defaults
-        const healedByLang: { [lang: string]: any } = {};
-        Object.keys(updatedByLang).forEach(k => {
-          healedByLang[k] = healNaggingSettings(updatedByLang[k], k);
+          // Heal all lang settings to make sure none have leftover unmodified Korean defaults
+          const healedByLang: { [lang: string]: any } = {};
+          Object.keys(updatedByLang).forEach(k => {
+            healedByLang[k] = healNaggingSettings(updatedByLang[k], k);
+          });
+
+          const nextNagging = healNaggingSettings(healedByLang[newLangKey] || getNaggingDefaultSettings(newLangKey), newLangKey);
+
+          return {
+            ...prev,
+            naggingSettingsByLang: healedByLang,
+            naggingSettings: nextNagging
+          };
         });
-
-        const nextNagging = healNaggingSettings(healedByLang[newLang] || getNaggingDefaultSettings(newLang), newLang);
-
-        return {
-          ...prev,
-          naggingSettingsByLang: healedByLang,
-          naggingSettings: nextNagging
-        };
-      });
+      }
       prevLanguageRef.current = newLang;
     }
   }, [i18n.language, isDataLoaded]);
@@ -467,7 +477,24 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
             userName: '나',
             isVoiceEnabled: true,
             isWakeUpAlarmEnabled: false,
-            naggingSettings: getNaggingDefaultSettings(i18n.language || 'ko')
+            naggingSettings: getNaggingDefaultSettings(i18n.language || 'ko'),
+            completionTemplatesByLang: {
+              ko: [
+                "내가 #그룹 해냄.",
+                "나는 #목적이야.",
+                "내 이름은 #이름, #소요시간만에 #그룹을/를 완료한 #목적이죠."
+              ],
+              en: [
+                "I did #group.",
+                "I am #purpose.",
+                "My name is #name, the #purpose who completed #group in #duration."
+              ],
+              ja: [
+                "私が #グループ を成し遂げた。",
+                "私は #目的 だ。",
+                "私の名前は #名前、#所要時間 で #グループ を完了した #目的 です。"
+              ]
+            }
           };
         }
 
@@ -475,7 +502,8 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
         if (parsed.darkModeFollowSystem === undefined) parsed.darkModeFollowSystem = false;
         if (parsed.isVoiceEnabled === undefined) parsed.isVoiceEnabled = true;
 
-        const currentLang = i18n.language || 'ko';
+        const rawLang = i18n.language || 'ko';
+        const currentLang = rawLang.toLowerCase().startsWith('ko') ? 'ko' : rawLang.toLowerCase().startsWith('ja') ? 'ja' : 'en';
 
         if (parsed.naggingSettingsByLang === undefined) {
           parsed.naggingSettingsByLang = {
@@ -491,6 +519,45 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
             en: getNaggingDefaultSettings('en'),
             ja: getNaggingDefaultSettings('ja'),
             ...parsed.naggingSettingsByLang
+          };
+        }
+
+        if (parsed.completionTemplatesByLang === undefined) {
+          parsed.completionTemplatesByLang = {
+            ko: [
+              "내가 #그룹 해냄.",
+              "나는 #목적이야.",
+              "내 이름은 #이름, #소요시간만에 #그룹을/를 완료한 #목적이죠."
+            ],
+            en: [
+              "I did #group.",
+              "I am #purpose.",
+              "My name is #name, the #purpose who completed #group in #duration."
+            ],
+            ja: [
+              "私が #グループ を成し遂げた。",
+              "私は #目的 だ。",
+              "私の名前は #名前、#所要時間 で #グループ を完了した #目的 です。"
+            ]
+          };
+        } else {
+          parsed.completionTemplatesByLang = {
+            ko: [
+              "내가 #그룹 해냄.",
+              "나는 #목적이야.",
+              "내 이름은 #이름, #소요시간만에 #그룹을/를 완료한 #목적이죠."
+            ],
+            en: [
+              "I did #group.",
+              "I am #purpose.",
+              "My name is #name, the #purpose who completed #group in #duration."
+            ],
+            ja: [
+              "私が #グループ を成し遂げた。",
+              "私は #目的 だ。",
+              "私の名前は #名前、#所要時間 で #グループ を完了した #目的 です。"
+            ],
+            ...parsed.completionTemplatesByLang
           };
         }
 

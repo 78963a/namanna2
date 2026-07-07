@@ -86,6 +86,11 @@ export const ja = {
     saveAndClose: "保存して閉じる",
     deleteAllRoutines: "ルーチン全削除",
     deleteAllRoutinesDesc: "これまでのすべてのルーチン履歴と、ユーザーが設定したルーチングループ、個別ルーチン設定がすべて削除されます。",
+    resetSettings: "設定リセット",
+    resetSettingsDesc: "設定をすべて初期化します。ルーチン関連の設定や履歴は変更されません。",
+    resetSettingsTitle: "設定の初期化",
+    resetSettingsConfirm: "一般設定、小言設定、完了メッセージを含むすべての設定をデフォルト値にリセットしますか？ルーチングループや記録されたデータは削除されません。",
+    resetSettingsSuccess: "すべての設定がデフォルトにリセットされました。",
     changeUserNameTitle: "ユーザー名の変更",
     changeUserNameConfirm: "ユーザー名を「{{name}}」に変更しますか？",
     changeWakeUpTimeTitle: "起床時刻の変更",
@@ -250,11 +255,11 @@ export const ja = {
     mediaAlbum: "案内音声"
   },
   nagging: {
-    defaultStartMessage: "taskを開始します",
-    defaultOngoingMessage: "taskがn分経過しました",
-    defaultBeforeEndMessage: "task終了r分前です。",
-    defaultEndMessage: "taskの時間が過ぎました。",
-    defaultOverTimeMessage: "nameさん、taskがm分過ぎています。",
+    defaultStartMessage: "#ルーチンを開始します",
+    defaultOngoingMessage: "#ルーチンが#経過時間分経過しました",
+    defaultBeforeEndMessage: "#ルーチン終了#残り時間分前です。",
+    defaultEndMessage: "#ルーチンの時間が過ぎました。",
+    defaultOverTimeMessage: "#名前さん、#ルーチンが#超過時間分過ぎています。",
     cancelTitle: "変更キャンセルの確認",
     cancelMessage: "変更内容が保存されていません。キャンセルしますか？",
     cancelConfirm: "キャンセルして戻る",
@@ -300,7 +305,7 @@ export const ja = {
     varsStartTimeLabel: "開始時間",
     varsEndTimeLabel: "完了時間",
     templateLabel: "テンプレート",
-    inputPlaceholder: "例：{{userName}}が{{duration}}で{{title}}を完了しました！",
+    inputPlaceholder: "例：#名前が#所要時間で#グループを完了しました！",
     deleteBtn: "削除する",
     addBtn: "追加する",
     saveBtn: "保存する",
@@ -308,9 +313,9 @@ export const ja = {
     saveErrorTitle: "保存失敗",
     saveErrorMessage: "完了メッセージは少なくとも1つ以上入力してください。",
     defaultTemplates: [
-      "私が {{title}} を成し遂げた。",
-      "私は {{purpose}} だ。",
-      "私の名前は {{userName}}、{{duration}} で {{title}} を完了した {{purpose}} です。"
+      "私が #グループ を成し遂げた。",
+      "私は #目的 だ。",
+      "私の名前は #名前、#所要時間 で #グループ を完了した #目的 です。"
     ]
   },
   sound: {

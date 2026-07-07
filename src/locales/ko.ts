@@ -86,6 +86,11 @@ export const ko = {
     saveAndClose: "저장하고 닫기",
     deleteAllRoutines: "루틴 전체 삭제",
     deleteAllRoutinesDesc: "지금까지의 모든 루틴 기록과 사용자가 설정한 루틴 그룹, 개별 루틴 설정이 삭제됩니다.",
+    resetSettings: "설정 리셋",
+    resetSettingsDesc: "설정을 전부 초기화합니다. 루틴과 관련된 설정이나 기록은 변경하지 않습니다.",
+    resetSettingsTitle: "설정 초기화",
+    resetSettingsConfirm: "일반 설정, 잔소리 설정, 완료 문구 등 모든 설정을 기본값으로 초기화하시겠습니까? 루틴 그룹이나 기록 데이터는 삭제되지 않습니다.",
+    resetSettingsSuccess: "모든 설정이 초기화되었습니다.",
     changeUserNameTitle: "사용자 이름 변경",
     changeUserNameConfirm: "사용자 이름을 '{{name}}'{{josa}} 변경하시겠습니까?",
     changeWakeUpTimeTitle: "기상 시각 변경",
@@ -250,11 +255,11 @@ export const ko = {
     mediaAlbum: "안내 음성"
   },
   nagging: {
-    defaultStartMessage: "task을/를 시작합니다",
-    defaultOngoingMessage: "task이/가 n분째 진행중입니다",
-    defaultBeforeEndMessage: "task 종료 r분 전입니다.",
-    defaultEndMessage: "task 시간이 지났습니다.",
-    defaultOverTimeMessage: "name님, task이/가 m분 지났어요.",
+    defaultStartMessage: "#루틴을/를 시작합니다",
+    defaultOngoingMessage: "#루틴이/가 #지난시간분째 진행중입니다",
+    defaultBeforeEndMessage: "#루틴 종료 #남은시간분 전입니다.",
+    defaultEndMessage: "#루틴 시간이 지났습니다.",
+    defaultOverTimeMessage: "#이름님, #루틴이/가 #초과시간분 지났어요.",
     cancelTitle: "변경 취소 확인",
     cancelMessage: "변경 사항이 저장되지 않았습니다. 취소하시겠습니까?",
     cancelConfirm: "취소하고 나가기",
@@ -300,7 +305,7 @@ export const ko = {
     varsStartTimeLabel: "시작 시간",
     varsEndTimeLabel: "완료 시간",
     templateLabel: "템플릿",
-    inputPlaceholder: "예: {{userName}}님이 {{duration}}만에 {{title}}을/를 완료했습니다!",
+    inputPlaceholder: "예: #이름님이 #소요시간만에 #그룹을/를 완료했습니다!",
     deleteBtn: "삭제하기",
     addBtn: "추가하기",
     saveBtn: "저장하기",
@@ -308,9 +313,9 @@ export const ko = {
     saveErrorTitle: "저장 실패",
     saveErrorMessage: "최소 1개 이상의 완료 문구를 입력해야 합니다.",
     defaultTemplates: [
-      "내가 {{title}} 해냄.",
-      "나는 {{purpose}}야/이야.",
-      "내 이름은 {{userName}}, {{duration}}만에 {{title}}을/를 완료한 {{purpose}}이죠/죠."
+      "내가 #그룹 해냄.",
+      "나는 #목적이야.",
+      "내 이름은 #이름, #소요시간만에 #그룹을/를 완료한 #목적이죠."
     ]
   },
   sound: {

@@ -41,6 +41,7 @@ import {
 } from './utils';
 import { useRoutineManager } from './hooks/useRoutineManager';
 import { useNaggingEngine } from './hooks/useNaggingEngine';
+import { getNaggingDefaultSettings } from './components/settings/NaggingSettingsView';
 import { voiceService } from './services/voiceService';
 import { soundService } from './services/soundService';
 import { notificationService } from './services/notificationService';
@@ -361,6 +362,7 @@ export default function App() {
   const [isSoundSettingsDirty, setIsSoundSettingsDirty] = useState(false);
   const [localSoundSettings, setLocalSoundSettings] = useState<SoundEffectSettings | null>(null);
   const [soundSuccessMessage, setSoundSuccessMessage] = useState<string | null>(null);
+  const [completionSuccessMessage, setCompletionSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (naggingSuccessMessage) {
@@ -375,6 +377,13 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [soundSuccessMessage]);
+
+  useEffect(() => {
+    if (completionSuccessMessage) {
+      const timer = setTimeout(() => setCompletionSuccessMessage(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [completionSuccessMessage]);
 
   useEffect(() => {
     if (settingsSubView.type === 'sound') {
@@ -392,6 +401,25 @@ export default function App() {
       setIsSoundSettingsDirty(false);
     }
   }, [settingsSubView.type, userData.soundSettings]);
+
+  useEffect(() => {
+    if (settingsSubView.type === 'nagging') {
+      const currentLang = (i18n.language || 'ko').toLowerCase();
+      const langKey = currentLang.startsWith('ko') ? 'ko' : currentLang.startsWith('ja') ? 'ja' : 'en';
+      const defaultSettings = getNaggingDefaultSettings(langKey);
+      
+      const langNaggingSettings = userData.naggingSettingsByLang?.[langKey] || userData.naggingSettings || defaultSettings;
+      
+      setLocalNaggingSettings({
+        ...defaultSettings,
+        ...langNaggingSettings
+      });
+      setIsNaggingDirty(false);
+    } else {
+      setLocalNaggingSettings(null);
+      setIsNaggingDirty(false);
+    }
+  }, [settingsSubView.type, userData.naggingSettingsByLang, userData.naggingSettings, i18n.language]);
 
   const handleSettingsClose = () => {
     if (settingsSubView.type === 'nagging' && naggingCloseHandlerRef.current) {
@@ -1261,6 +1289,7 @@ export default function App() {
         setBackupMessage={setBackupMessage}
         setNaggingSuccessMessage={setNaggingSuccessMessage}
         setSoundSuccessMessage={setSoundSuccessMessage}
+        setCompletionSuccessMessage={setCompletionSuccessMessage}
         activityLog={activityLog}
         setActivityLog={setActivityLog}
         addChunk={handleAddChunkAndClean}
@@ -1792,7 +1821,7 @@ export default function App() {
             </div>
           </motion.div>
         )}
-        {(deletionMessage || naggingSuccessMessage || soundSuccessMessage) && (
+        {(deletionMessage || naggingSuccessMessage || soundSuccessMessage || completionSuccessMessage) && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1805,7 +1834,7 @@ export default function App() {
               ) : (
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               )}
-              <span className="text-sm font-black tracking-tight">{deletionMessage || naggingSuccessMessage || soundSuccessMessage}</span>
+              <span className="text-sm font-black tracking-tight">{deletionMessage || naggingSuccessMessage || soundSuccessMessage || completionSuccessMessage}</span>
             </div>
           </motion.div>
         )}

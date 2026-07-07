@@ -86,6 +86,11 @@ export const en = {
     saveAndClose: "Save and Close",
     deleteAllRoutines: "Delete All Routines",
     deleteAllRoutinesDesc: "Delete all routine completion history, routine groups, and individual routine settings.",
+    resetSettings: "Reset Settings",
+    resetSettingsDesc: "Reset all settings to their default values. Routine groups, individual routine tasks, and history records will remain unchanged.",
+    resetSettingsTitle: "Reset Settings",
+    resetSettingsConfirm: "Are you sure you want to reset all configurations (general settings, nagging messages, and completion templates) to their defaults? Your routine groups and recorded data will not be deleted.",
+    resetSettingsSuccess: "All settings have been reset to default.",
     changeUserNameTitle: "Change User Name",
     changeUserNameConfirm: "Are you sure you want to change your user name to '{{name}}'?",
     changeWakeUpTimeTitle: "Change Wake-up Target Time",
@@ -250,11 +255,11 @@ export const en = {
     mediaAlbum: "Guide Voice"
   },
   nagging: {
-    defaultStartMessage: "Starting task",
-    defaultOngoingMessage: "task has been in progress for n minutes",
-    defaultBeforeEndMessage: "r minutes remaining before task ends.",
-    defaultEndMessage: "task time has passed.",
-    defaultOverTimeMessage: "name, task is m minutes overdue.",
+    defaultStartMessage: "Starting #routine",
+    defaultOngoingMessage: "#routine has been in progress for #elapsed minutes",
+    defaultBeforeEndMessage: "#remaining minutes remaining before #routine ends.",
+    defaultEndMessage: "#routine time has passed.",
+    defaultOverTimeMessage: "#name, #routine is #overtime minutes overdue.",
     cancelTitle: "Confirm Cancel",
     cancelMessage: "Changes have not been saved. Are you sure you want to cancel?",
     cancelConfirm: "Cancel and Exit",
@@ -300,7 +305,7 @@ export const en = {
     varsStartTimeLabel: "Start Time",
     varsEndTimeLabel: "End Time",
     templateLabel: "Template",
-    inputPlaceholder: "e.g., {{userName}} completed {{title}} in {{duration}}!",
+    inputPlaceholder: "e.g., #name completed #group in #duration!",
     deleteBtn: "Delete",
     addBtn: "Add Phrase",
     saveBtn: "Save Settings",
@@ -308,9 +313,9 @@ export const en = {
     saveErrorTitle: "Save Error",
     saveErrorMessage: "You must configure at least one completion phrase.",
     defaultTemplates: [
-      "I did {{title}}.",
-      "I am {{purpose}}.",
-      "My name is {{userName}}, the {{purpose}} who completed {{title}} in {{duration}}."
+      "I did #group.",
+      "I am #purpose.",
+      "My name is #name, the #purpose who completed #group in #duration."
     ]
   },
   sound: {

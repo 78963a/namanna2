@@ -777,9 +777,25 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
                       });
                     };
 
+                    const resolveHashtagParticles = (msg: string, tagList: string[], value: string) => {
+                      if (!msg) return "";
+                      let result = msg;
+                      for (const tag of tagList) {
+                        const regex = new RegExp(`(#${tag})(이/가|을/를|은/는|으로/로|이죠/죠|야/이야|이야/야|다/이다|이다/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)`, 'gi');
+                        result = result.replace(regex, (_, hashtagVar, p1) => {
+                          return hashtagVar + getJosa(value, p1 as any);
+                        });
+                      }
+                      return result;
+                    };
+
                     storedPhrase = resolveParticles(storedPhrase, 'title', chunk.name);
                     storedPhrase = resolveParticles(storedPhrase, 'purpose', chunk.purpose || LOCALIZED_TEXT.purposeDefault);
                     storedPhrase = resolveParticles(storedPhrase, 'userName', userData.userName || LOCALIZED_TEXT.userNameDefault);
+
+                    storedPhrase = resolveHashtagParticles(storedPhrase, ['그룹', 'group', 'グループ'], chunk.name);
+                    storedPhrase = resolveHashtagParticles(storedPhrase, ['목적', 'purpose', '目的'], chunk.purpose || LOCALIZED_TEXT.purposeDefault);
+                    storedPhrase = resolveHashtagParticles(storedPhrase, ['이름', 'name', '名前'], userData.userName || LOCALIZED_TEXT.userNameDefault);
 
                     // We preserve placeholders for startTime, endTime, userName, duration
                     // so that RoutineTitle can style them based on phrases.json settings.
@@ -787,6 +803,44 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
                     // For the UI display in buttons, replace everything
                     let displayPhrase = storedPhrase || '';
                     if (displayPhrase) {
+                      const plainVarMap: Record<string, string> = {
+                        '#이름': userData.userName || LOCALIZED_TEXT.userNameDefault,
+                        '#name': userData.userName || LOCALIZED_TEXT.userNameDefault,
+                        '#名前': userData.userName || LOCALIZED_TEXT.userNameDefault,
+                        
+                        '#그룹': chunk.name,
+                        '#group': chunk.name,
+                        '#グループ': chunk.name,
+                        
+                        '#목적': chunk.purpose || LOCALIZED_TEXT.purposeDefault,
+                        '#purpose': chunk.purpose || LOCALIZED_TEXT.purposeDefault,
+                        '#目的': chunk.purpose || LOCALIZED_TEXT.purposeDefault,
+                        
+                        '#소요시간': durationStr,
+                        '#duration': durationStr,
+                        '#所要時間': durationStr,
+                        
+                        '#시작시간': startTimeStr,
+                        '#starttime': startTimeStr,
+                        '#開始時間': startTimeStr,
+                        
+                        '#완료시간': endTimeStr,
+                        '#endtime': endTimeStr,
+                        '#完了時間': endTimeStr,
+                      };
+
+                      const hashtagRegex = /(#(이름|그룹|목적|소요시간|시작시간|완료시간|name|group|purpose|duration|starttime|endtime|名前|グループ|目的|所要時間|開始時間|完了時間))(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|야\/이야|이야\/야|다\/이다|이다\/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)?/gi;
+
+                      displayPhrase = displayPhrase.replace(hashtagRegex, (fullMatch, hashtagVar, _varWord, particle) => {
+                        const cleanVar = hashtagVar;
+                        const val = plainVarMap[cleanVar];
+                        if (val === undefined) return fullMatch;
+                        if (particle) {
+                          return val + getJosa(val, particle as any);
+                        }
+                        return val;
+                      });
+
                       displayPhrase = displayPhrase.replace(/\{\{userName\}\}/g, userData.userName || LOCALIZED_TEXT.userNameDefault);
                       displayPhrase = displayPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
                       displayPhrase = displayPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);

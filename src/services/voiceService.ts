@@ -124,6 +124,42 @@ class VoiceService {
     let msg = template;
     const { name = '', task = '', n = 0, m = 0, r = 0 } = variables;
 
+    // A. Apply hashtag variables and particle auto-correction (multilingual support)
+    const naggingPlainMap: Record<string, string> = {
+      '#이름': name,
+      '#name': name,
+      '#名前': name,
+      
+      '#루틴': task,
+      '#routine': task,
+      '#ルーチン': task,
+      
+      '#지난시간': n.toString(),
+      '#elapsed': n.toString(),
+      '#経過時間': n.toString(),
+      
+      '#남은시간': r.toString(),
+      '#remaining': r.toString(),
+      '#残り時間': r.toString(),
+      
+      '#초과시간': m.toString(),
+      '#overtime': m.toString(),
+      '#超過時間': m.toString(),
+    };
+
+    const naggingHashtagRegex = /(#(이름|루틴|지난시간|남은시간|초과시간|name|routine|elapsed|remaining|overtime|名前|ルーチン|経過時間|残り時間|超過時間))(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|야\/이야|이야\/야|다\/이다|이다\/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)?/gi;
+
+    msg = msg.replace(naggingHashtagRegex, (fullMatch, hashtagVar, _varWord, particle) => {
+      const cleanVar = hashtagVar.toLowerCase();
+      const val = naggingPlainMap[cleanVar];
+      if (val === undefined) return fullMatch;
+      if (particle) {
+        return val + getJosa(val, particle as any);
+      }
+      return val;
+    });
+
+    // B. Legacy replacements for backward compatibility
     // 1. Apply particle rules (Josa) if variables were used followed by dual particles
     // e.g. "task이/가" -> "루틴이" or "커피가"
     // Single particles like "task가" will be output as is (e.g. "루틴가") as requested.
