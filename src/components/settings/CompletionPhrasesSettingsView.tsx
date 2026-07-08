@@ -115,31 +115,7 @@ export const CompletionPhrasesSettingsView: React.FC<CompletionPhrasesSettingsVi
     setIsDirty(true);
   };
 
-  const insertVariable = (index: number, variableText: string) => {
-    const inputEl = document.getElementById(`phrase-input-${index}`) as HTMLInputElement | null;
-    const currentPhrase = phrases[index] || '';
-    if (inputEl) {
-      const start = inputEl.selectionStart ?? currentPhrase.length;
-      const end = inputEl.selectionEnd ?? currentPhrase.length;
-      const newPhrase = currentPhrase.substring(0, start) + variableText + currentPhrase.substring(end);
-      
-      const updated = [...phrases];
-      updated[index] = newPhrase;
-      setPhrases(updated);
-      setIsDirty(true);
-      
-      setTimeout(() => {
-        inputEl.focus();
-        const newCursorPos = start + variableText.length;
-        inputEl.setSelectionRange(newCursorPos, newCursorPos);
-      }, 0);
-    } else {
-      const updated = [...phrases];
-      updated[index] = currentPhrase + variableText;
-      setPhrases(updated);
-      setIsDirty(true);
-    }
-  };
+
 
   return (
     <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
@@ -217,42 +193,6 @@ export const CompletionPhrasesSettingsView: React.FC<CompletionPhrasesSettingsVi
                   placeholder={t('completionPhrases.inputPlaceholder')}
                   className="w-full text-sm font-black p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-slate-100"
                 />
-                <div className="flex flex-wrap gap-1.5 pt-1.5">
-                  {langKey === 'ko' ? (
-                    <>
-                      <button type="button" onClick={() => insertVariable(index, '#그룹이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">그룹이/가</button>
-                      <button type="button" onClick={() => insertVariable(index, '#그룹을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">그룹을/를</button>
-                      <button type="button" onClick={() => insertVariable(index, '#그룹은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">그룹은/는</button>
-                      <button type="button" onClick={() => insertVariable(index, '#목적이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">목적이/가</button>
-                      <button type="button" onClick={() => insertVariable(index, '#목적을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">목적을/를</button>
-                      <button type="button" onClick={() => insertVariable(index, '#목적은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">목적은/는</button>
-                      <button type="button" onClick={() => insertVariable(index, '#이름이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">이름이/가</button>
-                      <button type="button" onClick={() => insertVariable(index, '#이름을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">이름을/를</button>
-                      <button type="button" onClick={() => insertVariable(index, '#이름은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">이름은/는</button>
-                      <button type="button" onClick={() => insertVariable(index, '#소요시간')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-black rounded-lg border border-emerald-100 dark:border-emerald-900/60 transition-colors cursor-pointer">소요시간</button>
-                      <button type="button" onClick={() => insertVariable(index, '#시작시간')} className="text-[10px] px-2 py-1 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-black rounded-lg border border-violet-100 dark:border-violet-900/60 transition-colors cursor-pointer">시작시간</button>
-                      <button type="button" onClick={() => insertVariable(index, '#완료시간')} className="text-[10px] px-2 py-1 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-black rounded-lg border border-violet-100 dark:border-violet-900/60 transition-colors cursor-pointer">완료시간</button>
-                    </>
-                  ) : langKey === 'ja' ? (
-                    <>
-                      <button type="button" onClick={() => insertVariable(index, '#グループ')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">グループ</button>
-                      <button type="button" onClick={() => insertVariable(index, '#目的')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">目的</button>
-                      <button type="button" onClick={() => insertVariable(index, '#名前')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">名前</button>
-                      <button type="button" onClick={() => insertVariable(index, '#所要時間')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-black rounded-lg border border-emerald-100 dark:border-emerald-900/60 transition-colors cursor-pointer">所要時間</button>
-                      <button type="button" onClick={() => insertVariable(index, '#開始時間')} className="text-[10px] px-2 py-1 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-black rounded-lg border border-violet-100 dark:border-violet-900/60 transition-colors cursor-pointer">開始時間</button>
-                      <button type="button" onClick={() => insertVariable(index, '#完了時間')} className="text-[10px] px-2 py-1 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-black rounded-lg border border-violet-100 dark:border-violet-900/60 transition-colors cursor-pointer">完了時間</button>
-                    </>
-                  ) : (
-                    <>
-                      <button type="button" onClick={() => insertVariable(index, '#group')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">Group</button>
-                      <button type="button" onClick={() => insertVariable(index, '#purpose')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">Goal/Purpose</button>
-                      <button type="button" onClick={() => insertVariable(index, '#name')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-black rounded-lg border border-indigo-100 dark:border-indigo-900/60 transition-colors cursor-pointer">Name</button>
-                      <button type="button" onClick={() => insertVariable(index, '#duration')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-black rounded-lg border border-emerald-100 dark:border-emerald-900/60 transition-colors cursor-pointer">Duration</button>
-                      <button type="button" onClick={() => insertVariable(index, '#starttime')} className="text-[10px] px-2 py-1 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-black rounded-lg border border-violet-100 dark:border-violet-900/60 transition-colors cursor-pointer">Start Time</button>
-                      <button type="button" onClick={() => insertVariable(index, '#endtime')} className="text-[10px] px-2 py-1 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-black rounded-lg border border-violet-100 dark:border-violet-900/60 transition-colors cursor-pointer">End Time</button>
-                    </>
-                  )}
-                </div>
               </div>
               <button 
                 onClick={() => handleRemovePhrase(index)}

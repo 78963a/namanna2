@@ -788,17 +788,9 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
                     const endTimeStr = currentTime.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
                     const totalDurationSec = currentHistory?.totalDuration || 0;
                     const durationStr = formatDurationPrecise(totalDurationSec);
-                    const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
-                    const totalTargetDurationStr = `${totalTargetMinutes}${LOCALIZED_TEXT.minutesUnit}`;
 
-                    // Resolve particles but keep the placeholder for RoutineTitle to style
-                    const resolveParticles = (msg: string, tag: string, value: string) => {
-                      if (!msg) return "";
-                      const regex = new RegExp(`\\{\\{${tag}\\}\\}(이/가|을/를|은/는|으로/로|이죠/죠|야/이야|이야/야|다/이다|이다/다|이|가|을|를|은|는|으로|로|이죠|죠|야|이야|다|이다)`, 'g');
-                      return msg.replace(regex, (_, p1) => {
-                        return `{{${tag}}}` + getJosa(value, p1 as any);
-                      });
-                    };
+
+
 
                     const resolveHashtagParticles = (msg: string, tagList: string[], value: string) => {
                       if (!msg) return "";
@@ -812,9 +804,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
                       return result;
                     };
 
-                    storedPhrase = resolveParticles(storedPhrase, 'title', chunk.name);
-                    storedPhrase = resolveParticles(storedPhrase, 'purpose', chunk.purpose || LOCALIZED_TEXT.purposeDefault);
-                    storedPhrase = resolveParticles(storedPhrase, 'userName', userData.userName || LOCALIZED_TEXT.userNameDefault);
+
 
                     storedPhrase = resolveHashtagParticles(storedPhrase, ['그룹', 'group', 'グループ'], chunk.name);
                     storedPhrase = resolveHashtagParticles(storedPhrase, ['목적', 'purpose', '目的'], chunk.purpose || LOCALIZED_TEXT.purposeDefault);
@@ -864,13 +854,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
                         return val;
                       });
 
-                      displayPhrase = displayPhrase.replace(/\{\{userName\}\}/g, userData.userName || LOCALIZED_TEXT.userNameDefault);
-                      displayPhrase = displayPhrase.replace(/\{\{startTime\}\}/g, startTimeStr);
-                      displayPhrase = displayPhrase.replace(/\{\{endTime\}\}/g, endTimeStr);
-                      displayPhrase = displayPhrase.replace(/\{\{duration\}\}/g, durationStr);
-                      displayPhrase = displayPhrase.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationStr);
-                      displayPhrase = displayPhrase.replace(/\{\{title\}\}/g, chunk.name);
-                      displayPhrase = displayPhrase.replace(/\{\{purpose\}\}/g, chunk.purpose || LOCALIZED_TEXT.purposeDefault);
+
                     }
 
                     return (

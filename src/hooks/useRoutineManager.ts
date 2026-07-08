@@ -19,8 +19,7 @@ import {
   isTaskScheduledToday, 
   formatDate, 
   getEffectiveDateObject,
-  calculateTaskDuration,
-  getJosa
+  calculateTaskDuration
 } from '../utils';
 import { getNaggingDefaultSettings, healNaggingSettings } from '../components/settings/NaggingSettingsView';
 import { useCheckCheckBox } from './useCheckCheckBox';
@@ -66,7 +65,7 @@ const playAudioAsync = (path: string, isEnabled: boolean): Promise<void> => {
   });
 };
 
-const speakAsync = (message: string, isEnabled: boolean, variables?: any): Promise<void> => {
+const speakAsync = (message: string, isEnabled: boolean, _variables?: any): Promise<void> => {
   return new Promise<void>((resolve) => {
     if (!isEnabled || !message || typeof window === 'undefined' || !window.speechSynthesis) {
       resolve();
@@ -76,25 +75,7 @@ const speakAsync = (message: string, isEnabled: boolean, variables?: any): Promi
       const synth = window.speechSynthesis;
       synth.cancel();
       let msg = message;
-      if (variables) {
-        const { name = '', task = '', n = 0, m = 0, r = 0 } = variables;
-        const josaRegex = /(name|task)(이\/가|을\/를|은\/는|으로\/로|이죠\/죠|이야\/야|이다\/다)/g;
-        msg = msg.replace(josaRegex, (_match, variable, p1) => {
-          const val = variable === 'name' ? name : task;
-          return val + getJosa(val, p1 as any);
-        });
-        
-        // Use updated placeholder replacement logic to prevent replacing 'task' in 'taskHistory' etc.
-        const placeholderRegex = /(?<![a-zA-Z])(name|task|n|m|r)(?![a-zA-Z])/g;
-        msg = msg.replace(placeholderRegex, (match) => {
-          if (match === 'name') return name;
-          if (match === 'task') return task;
-          if (match === 'n') return n.toString();
-          if (match === 'm') return m.toString();
-          if (match === 'r') return r.toString();
-          return match;
-        });
-      }
+
 
       const utterance = new SpeechSynthesisUtterance(msg);
       utterance.lang = 'ko-KR';
@@ -393,6 +374,16 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
       return () => clearTimeout(timer);
     }
   }, [deletionMessage]);
+
+  // Automatically clear groupAddedMessage after 2 seconds (Toast message auto-close)
+  useEffect(() => {
+    if (groupAddedMessage) {
+      const timer = setTimeout(() => {
+        setGroupAddedMessage(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [groupAddedMessage]);
 
   // Async Load and migration from localStorage to localForage on mount
   useEffect(() => {

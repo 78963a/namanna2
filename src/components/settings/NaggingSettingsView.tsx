@@ -108,61 +108,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
     ]
   };
 
-  const renderNaggingButtons = (fieldKey: keyof NaggingSettings, type?: 'ongoing' | 'beforeEnd' | 'overtime') => {
-    if (langKey === 'ko') {
-      return (
-        <>
-          <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#루틴이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명이/가</button>
-          <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#루틴을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명을/를</button>
-          <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#루틴은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">루틴명은/는</button>
-          <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#이름이/가')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름이/가</button>
-          <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#이름을/를')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름을/를</button>
-          <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#이름은/는')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">이름은/는</button>
-          {(type === 'ongoing' || type === 'beforeEnd' || type === 'overtime') && (
-            <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#지난시간')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">지난시간(분)</button>
-          )}
-          {(type === 'ongoing' || type === 'beforeEnd') && (
-            <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#남은시간')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">남은시간(분)</button>
-          )}
-          {type === 'overtime' && (
-            <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#초과시간')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">초과시간(분)</button>
-          )}
-        </>
-      );
-    } else if (langKey === 'ja') {
-      return (
-        <>
-          <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#ルーチン')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">ルーチン</button>
-          <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#名前')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">名前</button>
-          {(type === 'ongoing' || type === 'beforeEnd' || type === 'overtime') && (
-            <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#経過時間')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">経過時間</button>
-          )}
-          {(type === 'ongoing' || type === 'beforeEnd') && (
-            <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#残り時間')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">残り時間</button>
-          )}
-          {type === 'overtime' && (
-            <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#超過時間')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">超過時間</button>
-          )}
-        </>
-      );
-    } else {
-      return (
-        <>
-          <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#routine')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Routine</button>
-          <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#name')} className="text-[10px] px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black rounded-lg border border-indigo-100 transition-colors cursor-pointer">Name</button>
-          {(type === 'ongoing' || type === 'beforeEnd' || type === 'overtime') && (
-            <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#elapsed')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">Elapsed</button>
-          )}
-          {(type === 'ongoing' || type === 'beforeEnd') && (
-            <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#remaining')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">Remaining</button>
-          )}
-          {type === 'overtime' && (
-            <button type="button" onClick={() => insertNaggingVariable(fieldKey, '#overtime')} className="text-[10px] px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black rounded-lg border border-emerald-100 transition-colors cursor-pointer">Overtime</button>
-          )}
-        </>
-      );
-    }
-  };
+
 
   const defaultSettings = getNaggingDefaultSettings(i18n.language || 'ko');
 
@@ -253,29 +199,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
     }
   };
 
-  const insertNaggingVariable = (fieldKey: keyof NaggingSettings, variableText: string) => {
-    const currentSettings = localNaggingSettings || settings;
-    const inputEl = document.getElementById(`nagging-input-${fieldKey}`) as HTMLInputElement | null;
-    const currentValue = (currentSettings[fieldKey] as string) || '';
-    let newValue = '';
-    
-    if (inputEl) {
-      const start = inputEl.selectionStart ?? currentValue.length;
-      const end = inputEl.selectionEnd ?? currentValue.length;
-      newValue = currentValue.substring(0, start) + variableText + currentValue.substring(end);
-      
-      updateNagging(fieldKey, newValue);
-      
-      setTimeout(() => {
-        inputEl.focus();
-        const newCursorPos = start + variableText.length;
-        inputEl.setSelectionRange(newCursorPos, newCursorPos);
-      }, 0);
-    } else {
-      newValue = currentValue + variableText;
-      updateNagging(fieldKey, newValue);
-    }
-  };
+
 
   return (
     <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
@@ -352,9 +276,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                   placeholder={t('nagging.textPlaceholder')}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
-                <div className="flex flex-wrap gap-1.5 pt-1.5">
-                  {renderNaggingButtons('startMessage')}
-                </div>
+
               </div>
             </div>
           )}
@@ -435,9 +357,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                   onChange={(e) => updateNagging('ongoingMessage', e.target.value)}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
-                <div className="flex flex-wrap gap-1.5 pt-1.5">
-                  {renderNaggingButtons('ongoingMessage', 'ongoing')}
-                </div>
+
               </div>
             </div>
           )}
@@ -511,9 +431,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                   onChange={(e) => updateNagging('beforeEndMessage', e.target.value)}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
-                <div className="flex flex-wrap gap-1.5 pt-1.5">
-                  {renderNaggingButtons('beforeEndMessage', 'beforeEnd')}
-                </div>
+
               </div>
             </div>
           )}
@@ -575,9 +493,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                   onChange={(e) => updateNagging('endMessage', e.target.value)}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
-                <div className="flex flex-wrap gap-1.5 pt-1.5">
-                  {renderNaggingButtons('endMessage')}
-                </div>
+
               </div>
             </div>
           )}
@@ -658,9 +574,7 @@ export const NaggingSettingsView: React.FC<NaggingSettingsViewProps> = ({
                   onChange={(e) => updateNagging('overTimeMessage', e.target.value)}
                   className="w-full text-sm font-black p-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
-                <div className="flex flex-wrap gap-1.5 pt-1.5">
-                  {renderNaggingButtons('overTimeMessage', 'overtime')}
-                </div>
+
               </div>
             </div>
           )}
