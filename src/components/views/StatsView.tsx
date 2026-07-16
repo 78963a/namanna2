@@ -150,6 +150,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
   // Scroll to top when entering detailed view
   useEffect(() => {
+    if (isSingleTaskStatsOnly || isSingleGroupStatsOnly) return;
+
     if (selectedGroupId || selectedTaskId || viewAllType) {
       window.scrollTo({ top: 0, behavior: 'instant' });
       
@@ -159,7 +161,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
         el.scrollTo({ top: 0, behavior: 'auto' });
       });
     }
-  }, [selectedGroupId, selectedTaskId, viewAllType]);
+  }, [selectedGroupId, selectedTaskId, viewAllType, isSingleTaskStatsOnly, isSingleGroupStatsOnly]);
 
   const todayStr = formatDate(currentTime);
   
@@ -375,7 +377,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           breakdown: `(${failed}/${skipped}/${completedPerfect})`,
           startTime: minStart !== null ? minutesToTime(minStart) : '--:--',
           endTime: maxEnd !== null ? minutesToTime(maxEnd) : '--:--',
-          duration: sumDurationSeconds > 0 ? Math.floor(sumDurationSeconds / 60) + '분' : '0분'
+          duration: sumDurationSeconds > 0 ? t('stats.formatMinute', { minutes: Math.floor(sumDurationSeconds / 60) }) : t('stats.formatMinute', { minutes: 0 })
         };
       }).reverse();
     };
@@ -534,7 +536,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
         return {
           date,
           startTime: entry?.firstTaskStartTime || '미실행',
-          duration: entry ? formatDurationPrecise(entry.totalDuration) : '0초',
+          duration: entry ? formatDurationPrecise(entry.totalDuration) : t('stats.formatSecond', { seconds: 0 }),
           endTime: entry?.completedAt || '미완료',
           rate: Math.floor(rate) + '%',
           status: entry?.completionStatus || '미실행'
@@ -1056,7 +1058,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
           historyByYear[year].push({
             date,
             startTime: entry?.firstTaskStartTime || '미실행',
-            duration: entry ? formatDurationPrecise(entry.totalDuration) : '0초',
+            duration: entry ? formatDurationPrecise(entry.totalDuration) : t('stats.formatSecond', { seconds: 0 }),
             endTime: entry?.completedAt || '미완료',
             rate: dayRate + '%',
             status: entry?.completionStatus || '미실행'
@@ -1238,18 +1240,18 @@ export const StatsView: React.FC<StatsViewProps> = ({
               </button>
               <h2 className="text-xl font-black text-slate-900">
                 {viewAllType === 'group' ? (
-                  <><span className="text-indigo-600">{allTimeStats.name}</span> 전체 기록</>
+                  <><span className="text-indigo-600">{allTimeStats.name}</span> {t('stats.totalRecord')}</>
                 ) : viewAllType === 'task' ? (
-                  <><span className="text-indigo-400">{allTimeStats.name}</span> 전체 기록</>
+                  <><span className="text-indigo-400">{allTimeStats.name}</span> {t('stats.totalRecord')}</>
                 ) : (
-                  allTimeStats.title
+                  t('stats.totalRecord')
                 )}
               </h2>
             </div>
 
             <div className="py-8 bg-slate-50/50 rounded-[20px] border border-slate-100">
               <div className="text-center space-y-2">
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">평균 달성률</p>
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{t('stats.avgAchievementRate')}</p>
                 <p className="text-[11px] font-bold text-slate-300">{allTimeStats.period}</p>
                 <h3 className="text-5xl font-black text-slate-900 tracking-tighter">{allTimeStats.avgRate}%</h3>
                 <div className="mt-4 flex flex-col items-center gap-1 text-xs font-bold text-slate-500">
@@ -1258,8 +1260,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <span>{allTimeStats.avgStart} ~ {allTimeStats.avgEnd}</span>
                   </div>
                   <div className="flex flex-col items-center mt-1">
-                    <span className="text-slate-400">평균 소요 시간: <span className="text-indigo-600 font-black">{allTimeStats.avgDuration}</span></span>
-                    <span className="text-slate-400">누적 소요 시간: <span className="text-indigo-600 font-black">{allTimeStats.totalDuration}</span></span>
+                    <span className="text-slate-400">{t('stats.averageDurationLabel')}: <span className="text-indigo-600 font-black">{allTimeStats.avgDuration}</span></span>
+                    <span className="text-slate-400">{t('stats.totalDurationLabel')}: <span className="text-indigo-600 font-black">{allTimeStats.totalDuration}</span></span>
                   </div>
                 </div>
               </div>
@@ -1271,45 +1273,45 @@ export const StatsView: React.FC<StatsViewProps> = ({
                   <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-indigo-500" />
-                      {year}년 기록
+                      {t('stats.historyYear', { year })}
                     </h3>
-                    <span className="text-[10px] font-bold text-slate-400">{allTimeStats.historyByYear[year].length}개의 기록</span>
+                    <span className="text-[10px] font-bold text-slate-400">{t('stats.recordCount', { count: allTimeStats.historyByYear[year].length })}</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-[11px]">
                       <thead>
                         {viewAllType === 'task' ? (
                           <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                            <th className="px-2 py-2">날짜</th>
-                            <th className="px-2 py-2 text-center">시작</th>
-                            <th className="px-2 py-2 text-center">소요</th>
-                            <th className="px-2 py-2 text-center">완료</th>
-                            <th className="px-2 py-2 text-center">상태</th>
+                            <th className="px-2 py-2">{t('stats.colDate')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colStart')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colDuration')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colEnd')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colStatus')}</th>
                           </tr>
                         ) : viewAllType === 'group' ? (
                           <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                            <th className="px-2 py-2">날짜</th>
-                            <th className="px-2 py-2 text-center">시작</th>
-                            <th className="px-2 py-2 text-center">소요</th>
-                            <th className="px-2 py-2 text-center">완료</th>
-                            <th className="px-2 py-2 text-right">달성률</th>
+                            <th className="px-2 py-2">{t('stats.colDate')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colStart')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colDuration')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colEnd')}</th>
+                            <th className="px-2 py-2 text-right">{t('stats.colRate')}</th>
                           </tr>
                         ) : (
                           <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                            <th className="px-2 py-2">날짜</th>
-                            <th className="px-2 py-2">달성률</th>
+                            <th className="px-2 py-2">{t('stats.colDate')}</th>
+                            <th className="px-2 py-2">{t('stats.colRate')}</th>
                             <th className="px-2 py-2">
-                              루틴{viewAllType === 'overall' && <span className="block md:inline">(미완료/스킵/완료)</span>}
+                              {t('stats.colRoutine')}{viewAllType === 'overall' && <span className="block md:inline">{t('stats.breakdownLabel')}</span>}
                             </th>
                             <th className="px-2 py-2 text-center">
-                              <span className="hidden md:inline">시작 ~ 종료</span>
-                              <span className="md:hidden">시작</span>
+                              <span className="hidden md:inline">{t('stats.startEnd')}</span>
+                              <span className="md:hidden">{t('stats.colStart')}</span>
                               <br className="md:hidden" />
                               <span className="md:hidden">~</span>
                               <br className="md:hidden" />
-                              <span className="md:hidden">종료</span>
+                              <span className="md:hidden">{t('stats.colEnd')}</span>
                             </th>
-                            <th className="px-2 py-2 text-right">합계</th>
+                            <th className="px-2 py-2 text-right">{t('stats.sum')}</th>
                           </tr>
                         )}
                       </thead>
@@ -1319,17 +1321,17 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             {viewAllType === 'task' ? (
                               <>
                                 <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-red-800' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
-                                <td className="px-2 py-2 text-center font-black text-slate-700">{row.startTime}</td>
+                                <td className="px-2 py-2 text-center font-black text-slate-700">{row.startTime === '미실행' ? t('status.미실행') : row.startTime}</td>
                                 <td className="px-2 py-2 text-center font-bold text-indigo-600">{row.duration}</td>
-                                <td className="px-2 py-2 text-center font-black text-slate-700">{row.endTime}</td>
+                                <td className="px-2 py-2 text-center font-black text-slate-700">{row.endTime === '미완료' ? t('status.미완료') : row.endTime}</td>
                                 <td className="px-2 py-2">{renderStatusIcon(row.status)}</td>
                               </>
                             ) : viewAllType === 'group' ? (
                                <>
                                  <td className={`px-2 py-2 font-bold tracking-tighter whitespace-nowrap ${isSunday(row.date) ? 'text-red-800' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
-                                 <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime}</td>
+                                 <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime === '미실행' ? t('status.미실행') : row.startTime}</td>
                                  <td className="px-2 py-2 text-center font-bold text-indigo-600 tracking-tighter">{row.duration}</td>
-                                 <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime}</td>
+                                 <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime === '미완료' ? t('status.미완료') : row.endTime}</td>
                                  <td className="px-2 py-2 text-right font-black tracking-tighter">
                                    {row.rate === '쉬는요일' || row.rate === '건너뜀' || row.rate === '기록없음' ? (
                                      <span className={`text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-[6px] whitespace-nowrap ${
@@ -1337,7 +1339,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                        row.rate === '건너뜀' ? 'text-amber-700 bg-amber-50 border border-amber-100' :
                                        'text-slate-400 bg-slate-50 border border-dashed border-slate-200'
                                      }`}>
-                                       {row.rate}
+                                       {row.rate === '쉬는요일' ? t('status.쉬는요일') : row.rate === '건너뜀' ? t('status.건너뜀') : t('status.기록없음')}
                                      </span>
                                    ) : (
                                      <span className="text-emerald-600">{row.rate}</span>
@@ -1353,9 +1355,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                 </td>
                                 <td className="px-2 py-2 text-center font-black text-slate-700">
                                   <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-0 md:gap-1 tracking-tighter">
-                                    <span>{row.startTime}</span>
+                                    <span>{row.startTime === '미실행' ? t('status.미실행') : row.startTime}</span>
                                     <span className="text-[8px] text-slate-300 md:text-xs">~</span>
-                                    <span>{row.endTime}</span>
+                                    <span>{row.endTime === '미완료' ? t('status.미완료') : row.endTime}</span>
                                   </div>
                                 </td>
                                 <td className="px-2 py-2 text-right font-black text-indigo-600">{row.duration}</td>
@@ -1379,9 +1381,9 @@ export const StatsView: React.FC<StatsViewProps> = ({
               if (!dateStr || !dateStr.includes('-')) return dateStr;
               const [y, m, d] = dateStr.split('-').map(Number);
               if (viewAllType === 'group' && selectedGroupId) {
-                return `${y}년 ${m}월 ${d}일`;
+                return t('stats.selectedDateFull', { year: y, month: m, day: d });
               }
-              return `${y}년 ${m}월 ${d}일 전체 기록`;
+              return t('stats.selectedDateRecord', { year: y, month: m, day: d });
             })();
 
             // 1. Gather all unique group IDs from:
@@ -1615,8 +1617,11 @@ export const StatsView: React.FC<StatsViewProps> = ({
             }
 
             const formatTimeCompact = (timeStr: string) => {
-              if (!timeStr || timeStr === '--:--' || timeStr === '비활성' || timeStr === '쉬어감' || 
-                  timeStr === '쉬는요일' || timeStr === '건너뜀' || timeStr === '미실행' || timeStr === '기록누락') return timeStr;
+              if (!timeStr || timeStr === '--:--') return timeStr;
+              if (timeStr === '비활성' || timeStr === '쉬어감' || 
+                  timeStr === '쉬는요일' || timeStr === '건너뜀' || timeStr === '미실행' || timeStr === '기록누락' || timeStr === '미완료') {
+                return t(`status.${timeStr}`);
+              }
               const parts = timeStr.trim().split(':');
               if (parts.length >= 2) {
                 return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
@@ -1693,7 +1698,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                   <div className="p-2 sm:p-4 overflow-y-auto flex-1 bg-white space-y-3 overscroll-contain">
                     {groups.length === 0 ? (
                       <div className="text-center py-10 text-slate-400 font-bold text-xs">
-                        설정된 루틴 그룹이 없습니다.
+                        {t('stats.noGroupConfigured')}
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -1712,13 +1717,16 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                     group.specialState === '미실행' ? 'text-rose-500 bg-rose-50 border border-rose-100/70' :
                                     'text-slate-400 bg-slate-50 border border-dashed border-slate-200' /* 기록누락 */
                                   }`}>
-                                    {group.specialState}
+                                    {group.specialState === '쉬는요일' ? t('status.쉬는요일') :
+                                     group.specialState === '건너뜀' ? t('status.건너뜀') :
+                                     group.specialState === '미실행' ? t('status.미실행') :
+                                     t('status.기록없음')}
                                   </span>
                                 ) : group.groupStatus === '비활성' || group.groupStatus === '쉬어감' ? (
                                   <span className={`text-[9px] sm:text-[11px] font-black px-1 sm:px-1.5 py-0.5 rounded-[5px] sm:rounded-[6px] whitespace-nowrap ${
                                     group.groupStatus === '쉬어감' ? 'text-amber-700 bg-amber-50 border border-amber-100' : 'text-slate-400 bg-slate-100 border border-slate-200'
                                   }`}>
-                                    {group.startTime}
+                                    {group.startTime === '쉬어감' ? t('status.쉬어감') : group.startTime === '비활성' ? t('status.비활성') : group.startTime}
                                   </span>
                                 ) : (
                                   <span className="whitespace-nowrap text-[10px] sm:text-xs font-semibold">{formatTimeCompact(group.startTime)}~{formatTimeCompact(group.endTime)}</span>
@@ -1738,7 +1746,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                             {!group.specialState && group.groupStatus === '정상' && (
                               <div className="divide-y divide-slate-50">
                                 {group.tasks.length === 0 ? (
-                                  <div className="text-slate-400 font-bold pl-2 py-1 text-[12px]">등록된 개별 루틴이 없습니다.</div>
+                                  <div className="text-slate-400 font-bold pl-2 py-1 text-[12px]">{t('stats.noIndividualRoutineConfigured')}</div>
                                 ) : (
                                   group.tasks.map(task => (
                                     <div key={task.id} className="grid grid-cols-12 items-center gap-1.5 sm:gap-2 py-1 px-1 sm:px-1.5 hover:bg-slate-50/40 rounded-lg transition-colors">
@@ -1836,29 +1844,29 @@ export const StatsView: React.FC<StatsViewProps> = ({
                   <ChevronLeft className="w-6 h-6 text-slate-600" />
                 </button>
               )}
-              <h2 className="text-xl font-black text-slate-900"><span className="text-indigo-400">{taskDetailData.name}</span> 상세 통계</h2>
+              <h2 className="text-xl font-black text-slate-900"><span className="text-indigo-400">{taskDetailData.name}</span> {t('stats.detailStats')}</h2>
             </div>
 
             {/* 1. 지난 7일 평균 달성률 : 지난 30일 평균 달성률 */}
             <div className="grid grid-cols-2 gap-4 py-4">
               <div className="text-center space-y-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균 달성률</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('stats.avgAchievement7')}</p>
                 <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
                 <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{taskDetailData.avgRate7}{taskDetailData.avgRate7 !== '-' ? '%' : ''}</h3>
                 <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                   <div>{taskDetailData.avgStart7} ~ {taskDetailData.avgEnd7}</div>
-                  <div className="text-slate-400">(평균 {taskDetailData.avgDuration7})</div>
-                  <div className="text-slate-400">(누적 {taskDetailData.totalDuration7})</div>
+                  <div className="text-slate-400">({t('stats.average')} {taskDetailData.avgDuration7})</div>
+                  <div className="text-slate-400">({t('stats.cumulative')} {taskDetailData.totalDuration7})</div>
                 </div>
               </div>
               <div className="text-center space-y-1 border-l border-slate-100">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균 달성률</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('stats.avgAchievement30')}</p>
                 <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
                 <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{taskDetailData.avgRate30}{taskDetailData.avgRate30 !== '-' ? '%' : ''}</h3>
                 <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                   <div>{taskDetailData.avgStart30} ~ {taskDetailData.avgEnd30}</div>
-                  <div className="text-slate-400">(평균 {taskDetailData.avgDuration30})</div>
-                  <div className="text-slate-400">(누적 {taskDetailData.totalDuration30})</div>
+                  <div className="text-slate-400">({t('stats.average')} {taskDetailData.avgDuration30})</div>
+                  <div className="text-slate-400">({t('stats.cumulative')} {taskDetailData.totalDuration30})</div>
                 </div>
               </div>
             </div>
@@ -1867,7 +1875,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
             {taskAllTimeStats && (
               <div className="py-8 bg-slate-50/50 rounded-[20px] border border-slate-100">
                 <div className="text-center space-y-2">
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">평균 달성률</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{t('stats.avgAchievementRate')}</p>
                   <p className="text-[11px] font-bold text-slate-300">{taskAllTimeStats.period}</p>
                   <h3 className="text-5xl font-black text-slate-900 tracking-tighter">{taskAllTimeStats.avgRate}%</h3>
                   <div className="mt-4 flex flex-col items-center gap-1 text-xs font-bold text-slate-500">
@@ -1876,8 +1884,8 @@ export const StatsView: React.FC<StatsViewProps> = ({
                       <span>{taskAllTimeStats.avgStart} ~ {taskAllTimeStats.avgEnd}</span>
                     </div>
                     <div className="flex flex-col items-center mt-1">
-                      <span className="text-slate-400">평균 소요 시간: <span className="text-indigo-600 font-black">{taskAllTimeStats.avgDuration}</span></span>
-                      <span className="text-slate-400">누적 소요 시간: <span className="text-indigo-600 font-black">{taskAllTimeStats.totalDuration}</span></span>
+                      <span className="text-slate-400">{t('stats.averageDurationLabel')}: <span className="text-indigo-600 font-black">{taskAllTimeStats.avgDuration}</span></span>
+                      <span className="text-slate-400">{t('stats.totalDurationLabel')}: <span className="text-indigo-600 font-black">{taskAllTimeStats.totalDuration}</span></span>
                     </div>
                   </div>
                 </div>
@@ -1892,28 +1900,28 @@ export const StatsView: React.FC<StatsViewProps> = ({
                     <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                       <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-indigo-500" />
-                        {year}년 기록
+                        {t('stats.historyYear', { year })}
                       </h3>
-                      <span className="text-[10px] font-bold text-slate-400">{taskAllTimeStats.historyByYear[year].length}개의 기록</span>
+                      <span className="text-[10px] font-bold text-slate-400">{t('stats.recordCount', { count: taskAllTimeStats.historyByYear[year].length })}</span>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-[11px]">
                         <thead>
                           <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                            <th className="px-2 py-2">날짜</th>
-                            <th className="px-2 py-2 text-center">시작</th>
-                            <th className="px-2 py-2 text-center">소요</th>
-                            <th className="px-2 py-2 text-center">완료</th>
-                            <th className="px-2 py-2 text-center">상태</th>
+                            <th className="px-2 py-2">{t('stats.colDate')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colStart')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colDuration')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colEnd')}</th>
+                            <th className="px-2 py-2 text-center">{t('stats.colStatus')}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {taskAllTimeStats.historyByYear[year].map((row, i) => (
                             <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                               <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-red-800' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
-                              <td className="px-2 py-2 text-center font-black text-slate-700">{row.startTime}</td>
+                              <td className="px-2 py-2 text-center font-black text-slate-700">{row.startTime === '미실행' ? t('status.미실행') : row.startTime}</td>
                               <td className="px-2 py-2 text-center font-bold text-indigo-600">{row.duration}</td>
-                              <td className="px-2 py-2 text-center font-black text-slate-700">{row.endTime}</td>
+                              <td className="px-2 py-2 text-center font-black text-slate-700">{row.endTime === '미완료' ? t('status.미완료') : row.endTime}</td>
                               <td className="px-2 py-2 flex justify-center">{renderStatusIcon(row.status)}</td>
                             </tr>
                           ))}
@@ -1953,30 +1961,30 @@ export const StatsView: React.FC<StatsViewProps> = ({
                 </button>
               )}
               <div className="flex flex-col">
-                <h2 className="text-xl font-black text-slate-900"><span className="text-indigo-600">{detailData.name}</span> 상세 통계</h2>
-                <p className="text-[10px] font-bold text-slate-400 mt-0.5">※ 해당 기간 동안의 모든 개별 루틴 수행 평균 점수</p>
+                <h2 className="text-xl font-black text-slate-900"><span className="text-indigo-600">{detailData.name}</span> {t('stats.groupDetailStats')}</h2>
+                <p className="text-[10px] font-bold text-slate-400 mt-0.5">{t('stats.descAccuracy')}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 py-4">
               <div className="text-center space-y-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 7일 평균 달성률</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('stats.avgAchievement7')}</p>
                 <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last7Days)}</p>
                 <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{detailData.avgRate7}{detailData.avgRate7 !== '-' ? '%' : ''}</h3>
                 <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                   <div>{detailData.avgStart7} ~ {detailData.avgEnd7}</div>
-                  <div className="text-slate-400">(평균 {detailData.avgDuration7})</div>
-                  <div className="text-slate-400">(누적 {detailData.totalDuration7})</div>
+                  <div className="text-slate-400">({t('stats.average')} {detailData.avgDuration7})</div>
+                  <div className="text-slate-400">({t('stats.cumulative')} {detailData.totalDuration7})</div>
                 </div>
               </div>
               <div className="text-center space-y-1 border-l border-slate-100">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">지난 30일 평균 달성률</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('stats.avgAchievement30')}</p>
                 <p className="text-[10px] font-bold text-slate-300">{getDateRangeStr(last30Days)}</p>
                 <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{detailData.avgRate30}{detailData.avgRate30 !== '-' ? '%' : ''}</h3>
                 <div className="mt-2 text-[10px] font-bold text-slate-500 leading-tight">
                   <div>{detailData.avgStart30} ~ {detailData.avgEnd30}</div>
-                  <div className="text-slate-400">(평균 {detailData.avgDuration30})</div>
-                  <div className="text-slate-400">(누적 {detailData.totalDuration30})</div>
+                  <div className="text-slate-400">({t('stats.average')} {detailData.avgDuration30})</div>
+                  <div className="text-slate-400">({t('stats.cumulative')} {detailData.totalDuration30})</div>
                 </div>
               </div>
             </div>
@@ -1986,27 +1994,27 @@ export const StatsView: React.FC<StatsViewProps> = ({
               <div className="p-3 bg-slate-50 border-b border-slate-100">
                 <h3 className="text-xs font-black text-slate-700 flex items-center gap-2">
                   <History className="w-4 h-4 text-indigo-500" />
-                  최근 7일 기록
+                  {t('stats.historyRecent7')}
                 </h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-[11px]">
                   <thead>
                     <tr className="bg-slate-50/50 text-slate-400 font-black uppercase tracking-tighter">
-                      <th className="px-2 py-2">날짜</th>
-                      <th className="px-2 py-2 text-center">시작</th>
-                      <th className="px-2 py-2 text-center">소요</th>
-                      <th className="px-2 py-2 text-center">완료</th>
-                      <th className="px-2 py-2 text-right">달성률</th>
+                      <th className="px-2 py-2">{t('stats.colDate')}</th>
+                      <th className="px-2 py-2 text-center">{t('stats.colStart')}</th>
+                      <th className="px-2 py-2 text-center">{t('stats.colDuration')}</th>
+                      <th className="px-2 py-2 text-center">{t('stats.colEnd')}</th>
+                      <th className="px-2 py-2 text-right">{t('stats.colRate')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {detailData.history7.map((row, i) => (
                       <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                         <td className={`px-2 py-2 font-bold tracking-tighter whitespace-nowrap ${isSunday(row.date) ? 'text-red-800' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
-                        <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime}</td>
+                        <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.startTime === '미실행' ? t('status.미실행') : row.startTime}</td>
                         <td className="px-2 py-2 text-center font-bold text-indigo-600 tracking-tighter">{row.duration}</td>
-                        <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime}</td>
+                        <td className="px-2 py-2 text-center font-black text-slate-700 tracking-tighter">{row.endTime === '미완료' ? t('status.미완료') : row.endTime}</td>
                         <td className="px-2 py-2 text-right font-black tracking-tighter">
                           {row.rate === '쉬는요일' || row.rate === '건너뜀' || row.rate === '기록없음' ? (
                             <span className={`text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-[6px] whitespace-nowrap ${
@@ -2014,7 +2022,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                               row.rate === '건너뜀' ? 'text-amber-700 bg-amber-50 border border-amber-100' :
                               'text-slate-400 bg-slate-50 border border-dashed border-slate-200'
                             }`}>
-                              {row.rate}
+                              {t(`status.${row.rate}`)}
                             </span>
                           ) : (
                             <span className="text-emerald-600">{row.rate}</span>
@@ -2030,7 +2038,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                   onClick={() => setViewAllType('group')}
                   className="w-full flex items-center justify-center gap-2 text-xs font-black text-slate-400 hover:text-indigo-600 transition-colors py-2"
                 >
-                  모든 기록 확인
+                  {t('stats.viewAllRecords')}
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -2038,7 +2046,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
 
             {/* Individual Task Stats */}
             <div className="space-y-4">
-              <h2 className="text-lg font-black text-slate-800 pl-1">개별 루틴 통계</h2>
+              <h2 className="text-lg font-black text-slate-800 pl-1">{t('stats.individualRoutineStats')}</h2>
               {detailData.tasks.map((task, i) => (
                 <button 
                   key={i} 
@@ -2064,17 +2072,17 @@ export const StatsView: React.FC<StatsViewProps> = ({
                   </div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] bg-indigo-50/50 p-2 rounded-[10px]">
-                      <div className="font-black text-indigo-400 whitespace-nowrap">7일</div>
-                      <div className="text-emerald-600 font-black whitespace-nowrap">달성: {task.last7.rate}</div>
+                      <div className="font-black text-indigo-400 whitespace-nowrap">{t('stats.days7')}</div>
+                      <div className="text-emerald-600 font-black whitespace-nowrap">{t('stats.completed')}: {task.last7.rate}</div>
                       <div className="text-slate-600 font-bold whitespace-nowrap">
-                        평균: {task.last7.avg} (최단: {task.last7.min} / 최장: {task.last7.max})
+                        {t('stats.average')}: {task.last7.avg} ({t('stats.shortest')}: {task.last7.min} / {t('stats.longest')}: {task.last7.max})
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] bg-slate-50 p-2 rounded-[10px]">
-                      <div className="font-black text-slate-400 whitespace-nowrap">30일</div>
-                      <div className="text-emerald-600 font-black whitespace-nowrap">달성: {task.last30.rate}</div>
+                      <div className="font-black text-slate-400 whitespace-nowrap">{t('stats.days30')}</div>
+                      <div className="text-emerald-600 font-black whitespace-nowrap">{t('stats.completed')}: {task.last30.rate}</div>
                       <div className="text-slate-600 font-bold whitespace-nowrap">
-                        평균: {task.last30.avg} (최단: {task.last30.min} / 최장: {task.last30.max})
+                        {t('stats.average')}: {task.last30.avg} ({t('stats.shortest')}: {task.last30.min} / {t('stats.longest')}: {task.last30.max})
                       </div>
                     </div>
                   </div>

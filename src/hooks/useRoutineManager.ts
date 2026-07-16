@@ -180,12 +180,12 @@ const rebuildActivityLogs = (userData: UserData, now: Date, existingLogState?: R
             let endCalDate: Date | null = null;
             if (entry.endTime) {
               endCalDate = getCalendarDate(entry.date, entry.endTime);
-            } else if (entry.duration !== null && entry.duration !== undefined) {
+            } else if (entry.duration !== null && entry.duration !== undefined && entry.duration > 0) {
               if (startCalDate) {
                 endCalDate = new Date(startCalDate.getTime() + entry.duration * 1000);
               }
             } else {
-              endCalDate = getResetTimeOfDate(entry.date);
+              endCalDate = startCalDate;
             }
 
             if (startCalDate && endCalDate) {

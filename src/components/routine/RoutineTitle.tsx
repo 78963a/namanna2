@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RoutineChunk, UserData } from '../../types';
 import { getJosa, getEffectiveDate } from '../../utils';
 import phrases from '../../phrases.json';
@@ -29,9 +30,18 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
   userData,
   todayStr
 }) => {
+  const { i18n } = useTranslation();
+  
+  const langKey = useMemo(() => {
+    const currentLang = (i18n.language || 'ko').split('-')[0];
+    return ['ko', 'en', 'ja'].includes(currentLang) ? (currentLang as 'ko' | 'en' | 'ja') : 'ko';
+  }, [i18n.language]);
+
   const processedMessage = useMemo(() => {
     const context = isExecutionTitle ? FONT_SETTINGS.execution_settings : FONT_SETTINGS.settings;
     
+    const localizedMessages = phrases.routine_messages[langKey] || phrases.routine_messages.ko;
+
     const getStyledHtml = (key: string, value: string) => {
       const style = (context as any)[`${key}_style`];
       if (!style) return value;
@@ -56,23 +66,51 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       return result;
     };
 
+    const defaultPurposeMap = {
+      ko: '목표',
+      en: 'Goal',
+      ja: '目標'
+    };
+    const defaultTriggerTaskMap = {
+      ko: '첫 번째 루틴',
+      en: 'First routine',
+      ja: '最初のルーティン'
+    };
+    const minutesTextMap = {
+      ko: '분',
+      en: 'm',
+      ja: '分'
+    };
+    const secondsTextMap = {
+      ko: '초',
+      en: 's',
+      ja: '秒'
+    };
+    const defaultUserNameMap = {
+      ko: '나',
+      en: 'Me',
+      ja: '自分'
+    };
+
     const titleHtml = getStyledHtml('title', chunk.name);
-    const purposeHtml = getStyledHtml('purpose', chunk.purpose || '목표');
-    const triggerTaskName = chunk.tasks[0]?.text || '첫 번째 루틴';
+    const purposeHtml = getStyledHtml('purpose', chunk.purpose || defaultPurposeMap[langKey]);
+    const triggerTaskName = chunk.tasks[0]?.text || defaultTriggerTaskMap[langKey];
     const triggerTaskHtml = getStyledHtml('triggerTask', triggerTaskName);
 
     const totalSeconds = chunk.tasks.reduce((acc, t) => acc + (t.duration || t.accumulatedDuration || 0), 0);
     const totalMinutes = Math.floor(totalSeconds / 60);
-    const durationText = totalMinutes > 0 ? `${totalMinutes}분` : `${totalSeconds}초`;
+    const durationText = totalMinutes > 0 
+      ? `${totalMinutes}${minutesTextMap[langKey]}` 
+      : `${totalSeconds}${secondsTextMap[langKey]}`;
     const durationHtml = getStyledHtml('duration', durationText);
 
     const totalTargetMinutes = chunk.tasks.reduce((acc, t) => acc + (t.targetDuration || 0), 0);
-    const totalTargetDurationText = `${totalTargetMinutes}분`;
+    const totalTargetDurationText = `${totalTargetMinutes}${minutesTextMap[langKey]}`;
     const totalTargetDurationHtml = getStyledHtml('totalTargetDuration', totalTargetDurationText);
 
     let baseMessage = selectedPhrase;
     if (!baseMessage && isExecutionTitle) {
-      baseMessage = phrases.routine_messages.EXECUTION_TITLE;
+      baseMessage = localizedMessages.EXECUTION_TITLE;
     }
 
     if (!baseMessage && status === '비활성' && userData) {
@@ -85,12 +123,12 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
 
       if (!isScheduledTodayNaturally) {
         // Condition: Today is a disabled day in schedule
-        const offDayMessages = phrases.routine_messages.INACTIVE_OFF_DAY;
+        const offDayMessages = localizedMessages.INACTIVE_OFF_DAY;
         const msgIdx = Math.abs(chunk.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % offDayMessages.length;
         baseMessage = offDayMessages[msgIdx];
       } else if (isExplicitlyInactive) {
         // Condition: Scheduled today, but user chose "Take a break today"
-        const inactiveMessages = phrases.routine_messages.INACTIVE;
+        const inactiveMessages = localizedMessages.INACTIVE;
         const msgIdx = Math.abs(chunk.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % inactiveMessages.length;
         baseMessage = inactiveMessages[msgIdx];
       }
@@ -98,7 +136,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
 
     const replaceHashtags = (msg: string) => {
       if (!msg) return "";
-      const userNameHtml = getStyledHtml('userName', userName || '나');
+      const userNameHtml = getStyledHtml('userName', userName || defaultUserNameMap[langKey]);
       const startTimeHtml = getStyledHtml('startTime', startTime || '--:--');
       const endTimeHtml = getStyledHtml('endTime', endTime || '--:--');
 
@@ -137,9 +175,9 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
         
         if (particle) {
           let rawValue = '';
-          if (['#이름', '#name', '#名前'].includes(cleanVar)) rawValue = userName || '나';
+          if (['#이름', '#name', '#名前'].includes(cleanVar)) rawValue = userName || defaultUserNameMap[langKey];
           else if (['#그룹', '#group', '#グループ'].includes(cleanVar)) rawValue = chunk.name;
-          else if (['#목적', '#purpose', '#目的'].includes(cleanVar)) rawValue = chunk.purpose || '목표';
+          else if (['#목적', '#purpose', '#目的'].includes(cleanVar)) rawValue = chunk.purpose || defaultPurposeMap[langKey];
           else if (['#소요시간', '#duration', '#所要時間'].includes(cleanVar)) rawValue = durationText;
           else if (['#시작시간', '#starttime', '#開始時間'].includes(cleanVar)) rawValue = startTime || '--:--';
           else if (['#완료시간', '#endtime', '#完了時間'].includes(cleanVar)) rawValue = endTime || '--:--';
@@ -154,8 +192,8 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       let message = baseMessage;
       
       message = replaceWithJosa(message, 'title', chunk.name, titleHtml);
-      message = replaceWithJosa(message, 'purpose', chunk.purpose || '목표', purposeHtml);
-      message = replaceWithJosa(message, 'userName', userName || '나', getStyledHtml('userName', userName || '나'));
+      message = replaceWithJosa(message, 'purpose', chunk.purpose || defaultPurposeMap[langKey], purposeHtml);
+      message = replaceWithJosa(message, 'userName', userName || defaultUserNameMap[langKey], getStyledHtml('userName', userName || defaultUserNameMap[langKey]));
       message = replaceWithJosa(message, 'triggerTask', triggerTaskName, triggerTaskHtml);
 
       message = message.replace(/\{\{title\}\}/g, titleHtml);
@@ -164,7 +202,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
       
       message = message.replace(/\{\{duration\}\}/g, durationHtml);
       message = message.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationHtml);
-      message = message.replace(/\{\{userName\}\}/g, getStyledHtml('userName', userName || '나'));
+      message = message.replace(/\{\{userName\}\}/g, getStyledHtml('userName', userName || defaultUserNameMap[langKey]));
       message = message.replace(/\{\{startTime\}\}/g, getStyledHtml('startTime', startTime || '--:--'));
       message = message.replace(/\{\{endTime\}\}/g, getStyledHtml('endTime', endTime || '--:--'));
       
@@ -183,7 +221,7 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     };
 
     const key = statusMap[status] || 'NOT_STARTED';
-    const messages = phrases.routine_messages[key as keyof typeof phrases.routine_messages] as string[];
+    const messages = localizedMessages[key as keyof typeof localizedMessages] as string[];
     if (!messages || messages.length === 0) return '';
     
     // and ensure the phrase stays the same for the entire logical day.
@@ -204,7 +242,19 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     // --- [사용자 정의 변수 추출] ---
     
     // 1. 요일 정보 (days)
-    const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+    const dayNamesMap = {
+      ko: ['월', '화', '수', '목', '금', '토', '일'],
+      en: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      ja: ['月', '火', '水', '木', '金', '土', '日']
+    };
+    const daysSuffixMap = {
+      ko: '요일',
+      en: '',
+      ja: '曜日'
+    };
+    const dayNames = dayNamesMap[langKey];
+    const daysSuffix = daysSuffixMap[langKey];
+
     const sortedDays = [...chunk.scheduledDays].sort((a, b) => {
       const orderA = a === 0 ? 6 : a - 1;
       const orderB = b === 0 ? 6 : b - 1;
@@ -213,13 +263,24 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     const daysText = sortedDays.map(d => {
       const idx = d === 0 ? 6 : d - 1;
       return dayNames[idx];
-    }).join(', ') + '요일';
+    }).join(', ') + daysSuffix;
     const daysHtml = getStyledHtml('days', daysText);
 
     // 2. 시작 상황/시간 정보 (start_info)
-    let startInfoText = '아무때나';
+    const anytimeMap = {
+      ko: '아무때나',
+      en: 'Anytime',
+      ja: 'いつでも'
+    };
+    let startInfoText = anytimeMap[langKey];
     if (chunk.startType === 'time' && chunk.startTime) {
-      startInfoText = chunk.startTime.replace(/시/g, '');
+      if (langKey === 'ko') {
+        startInfoText = chunk.startTime.replace(/시/g, '');
+      } else if (langKey === 'ja') {
+        startInfoText = chunk.startTime.replace(/시/g, '時');
+      } else {
+        startInfoText = chunk.startTime.replace(/시/g, '');
+      }
     } else if (chunk.startType === 'situation' && chunk.situation) {
       startInfoText = chunk.situation;
     }
@@ -227,8 +288,8 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
 
     // --- [메시지 치환 로직] ---
     message = replaceWithJosa(message, 'title', chunk.name, titleHtml);
-    message = replaceWithJosa(message, 'purpose', chunk.purpose || '목표', purposeHtml);
-    message = replaceWithJosa(message, 'userName', userName || '나', getStyledHtml('userName', userName || '나'));
+    message = replaceWithJosa(message, 'purpose', chunk.purpose || defaultPurposeMap[langKey], purposeHtml);
+    message = replaceWithJosa(message, 'userName', userName || defaultUserNameMap[langKey], getStyledHtml('userName', userName || defaultUserNameMap[langKey]));
     message = replaceWithJosa(message, 'triggerTask', triggerTaskName, triggerTaskHtml);
 
     // Handle remaining placeholders
@@ -239,13 +300,13 @@ export const RoutineTitle: React.FC<RoutineTitleProps> = ({
     message = message.replace(/\{\{start_info\}\}/g, startInfoHtml);
     message = message.replace(/\{\{duration\}\}/g, durationHtml);
     message = message.replace(/\{\{totalTargetDuration\}\}/g, totalTargetDurationHtml);
-    message = message.replace(/\{\{userName\}\}/g, getStyledHtml('userName', userName || '나'));
+    message = message.replace(/\{\{userName\}\}/g, getStyledHtml('userName', userName || defaultUserNameMap[langKey]));
     message = message.replace(/\{\{startTime\}\}/g, getStyledHtml('startTime', startTime || '--:--'));
     message = message.replace(/\{\{endTime\}\}/g, getStyledHtml('endTime', endTime || '--:--'));
 
     message = replaceHashtags(message);
     return message;
-  }, [chunk.id, chunk.name, chunk.purpose, chunk.scheduledDays, chunk.startType, chunk.startTime, chunk.situation, chunk.tasks, status, selectedPhrase, userName, startTime, endTime, isExecutionTitle, todayStr, userData?.resetTime]);
+  }, [chunk.id, chunk.name, chunk.purpose, chunk.scheduledDays, chunk.startType, chunk.startTime, chunk.situation, chunk.tasks, status, selectedPhrase, userName, startTime, endTime, isExecutionTitle, todayStr, userData?.resetTime, langKey]);
 
   const context = isExecutionTitle ? FONT_SETTINGS.execution_settings : FONT_SETTINGS.settings;
   const baseStyle = (context as any).base_style;

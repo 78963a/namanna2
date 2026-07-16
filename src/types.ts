@@ -288,6 +288,8 @@ export interface ExecutionViewProps {
   setConfirmModal: (modal: any) => void;
   setStatsKey?: React.Dispatch<React.SetStateAction<number>>;
   setSelectedTaskForStats?: (id: string | null) => void;
+  isSettingsOpen?: boolean;
+  selectedTaskForStats?: string | null;
   onEnterExecution?: (chunkId: string) => void;
   onGroupCompleted?: (chunkId: string) => void;
   menuBarProps?: any;

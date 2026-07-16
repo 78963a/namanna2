@@ -109,6 +109,8 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
   setConfirmModal,
   setStatsKey,
   setSelectedTaskForStats,
+  isSettingsOpen,
+  selectedTaskForStats,
   onGroupCompleted,
   menuBarProps
 }) => {
@@ -362,10 +364,23 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
   const allTasksDone = scheduledTasks.length > 0 && scheduledTasks.every(t => t.completed || t.status === TaskStatus.SKIP || t.status === TaskStatus.COMPLETED || t.status === TaskStatus.PERFECT);
   const wasDoneOnMount = useRef(allTasksDone);
 
+  const prevIsSettingsOpen = useRef(isSettingsOpen);
+  const prevSelectedTaskForStats = useRef(selectedTaskForStats);
+
   useEffect(() => {
-    if (activeTask?.id) {
-      // Short delay to allow animations/layout to stabilize
+    const wasPopupToggled = (prevIsSettingsOpen.current !== isSettingsOpen) || (prevSelectedTaskForStats.current !== selectedTaskForStats);
+    
+    // Update refs for the next run
+    prevIsSettingsOpen.current = isSettingsOpen;
+    prevSelectedTaskForStats.current = selectedTaskForStats;
+
+    if (isSettingsOpen || selectedTaskForStats) return;
+    if (wasPopupToggled) return;
+
+    if (activeTask) {
       const timer = setTimeout(() => {
+        if (isSettingsOpen || selectedTaskForStats) return;
+
         if (activeTaskRef.current && typeof activeTaskRef.current.getBoundingClientRect === 'function') {
           const headerHeight = 64; // Menu icon row height + padding
           const rect = activeTaskRef.current.getBoundingClientRect();
@@ -380,7 +395,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [activeTask?.id]);
+  }, [activeTask?.id, activeTask?.status, activeTask?.isPaused, activeTask?.startTime, isSettingsOpen, selectedTaskForStats]);
 
   useEffect(() => {
     if (!allTasksDone) {

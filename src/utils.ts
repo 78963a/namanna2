@@ -1,4 +1,5 @@
 import { RoutineChunk, UserData, Task, WakeUpRecord } from './types';
+import i18n from './i18n';
 
 /**
  * Converts a time string (HH:mm) to total minutes from the start of the day.
@@ -187,9 +188,9 @@ export const formatDurationPrecise = (seconds: number | null | undefined): strin
   if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return '-';
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
-  if (m === 0) return `${s}초`;
-  if (s === 0) return `${m}분`;
-  return `${m}분 ${s}초`;
+  if (m === 0) return i18n.t('stats.formatSecond', { seconds: s });
+  if (s === 0) return i18n.t('stats.formatMinute', { minutes: m });
+  return i18n.t('stats.formatMinuteSecond', { minutes: m, seconds: s });
 };
 
 /**

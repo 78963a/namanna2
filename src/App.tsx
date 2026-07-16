@@ -630,9 +630,24 @@ export default function App() {
 
 
 
-  // [수정] 탭 변경이나 설정 하위 뷰 변경 시에만 최상단으로 스크롤 이동
+  // [수정] 탭 변경이나 설정 하위 뷰 변경 시에만 최상단으로 스크롤 이동 (실행 탭 내 모달 작업 중에는 스크롤하지 않음)
+  const prevActiveTabRef = useRef(activeTab);
+  const prevSettingsSubViewTypeRef = useRef(settingsSubView.type);
+
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
+    const tabChanged = prevActiveTabRef.current !== activeTab;
+    const subViewChanged = prevSettingsSubViewTypeRef.current !== settingsSubView.type;
+
+    prevActiveTabRef.current = activeTab;
+    prevSettingsSubViewTypeRef.current = settingsSubView.type;
+
+    if (activeTab === 'execution') {
+      return;
+    }
+
+    if (tabChanged || (subViewChanged && activeTab === 'settings')) {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
   }, [activeTab, settingsSubView.type]);
 
   // 완벽한 하루 및 오늘 하루 마감(오늘 끝) 애니메이션 체크
@@ -1532,6 +1547,8 @@ export default function App() {
                 isCheckCheckAvailable={isCheckCheckAvailable}
                 setConfirmModal={setConfirmModal}
                 setSelectedTaskForStats={setSelectedTaskForStats}
+                isSettingsOpen={isSettingsOpen}
+                selectedTaskForStats={selectedTaskForStats}
                 onEnterExecution={handleEnterExecution}
                 onGroupCompleted={handleGroupCompleted}
                 menuBarProps={menuBarProps}
@@ -1626,24 +1643,25 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={handleSettingsClose}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[1200] touch-none"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1200] touch-none"
             />
             <motion.div 
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className={`fixed bottom-0 left-0 right-0 bg-slate-50 rounded-t-[20px] p-6 z-[1201] shadow-2xl max-w-2xl mx-auto overflow-hidden flex flex-col ${
                 settingsSubView.type === 'groupStats' ? 'h-[85vh]' : ''
               }`}
               style={{ maxHeight: '90vh' }}
             >
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 flex-shrink-0" />
-              {settingsSubView.type === 'groupStats' && (
+              {(settingsSubView.type === 'groupStats' || settingsSubView.type === 'detail') && (
                 <button
                   onClick={handleSettingsClose}
-                  className="absolute top-4 right-4 p-1 hover:bg-slate-200/60 rounded-full text-slate-400 hover:text-slate-600 transition-colors z-[1202]"
+                  className="absolute top-5 right-6 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer z-[1202]"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               )}
               {renderSettingsContent('modal')}
@@ -1948,7 +1966,7 @@ export default function App() {
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 flex-shrink-0" />
               <button
                 onClick={() => setSelectedTaskForStats(null)}
-                className="absolute top-5 right-6 w-8 h-8 rounded-full bg-slate-250/80 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all cursor-pointer z-50"
+                className="absolute top-5 right-6 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer z-[1002]"
               >
                 <X className="w-4 h-4" />
               </button>

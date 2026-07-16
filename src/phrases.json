@@ -1,56 +1,115 @@
 {
   "routine_messages": {
-    "EXECUTION_TITLE": "{{purpose}}{{particle:이/가}} 되기 위한 {{title}}",
-    "INACTIVE": [
-      "{{title}} 땡땡이치기"
-    ],
-    "INACTIVE_OFF_DAY": [
-      "오늘은 {{title}}을 하지 않는 날"
-    ],
-    "NOT_STARTED": [
-      "{{userName}}은 {{purpose}}이/가 되기 위해 {{title}}을/를 완료하기로 하고 일단 {{triggerTask}}부터 시작했다.",
-      "{{start_info}}, 일단 {{triggerTask}}만 해내면 {{title}}은 금방 끝나지",
-      "뭐? {{title}}을/를 {{totalTargetDuration}}동안 완료하면 {{purpose}}이/가 될 수 있다고?",
-      "{{start_info}}, {{triggerTask}}부터 시작해서 {{title}} 끝내고 {{purpose}}되기",
-      "{{userName}}님께서 {{title}} 미션을 시작합니다. 목표 타이틀:{{purpose}} 시작:{{start_info}}",
-      "{{userName}}의 오늘 목표는 {{title}}을 완료하는 것이다. 일단 {{triggerTask}}부터 시작해볼까?",
-      "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}}, {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다",
-      "{{start_info}} {{title}}을/를 실천하기로 했다.",
-      "{{purpose}} {{userName}}이 된다는 것은 {{title}}을 수행한다는 것."
-    ],
-    "IN_PROGRESS": [
-      "{{purpose}}이/가 되기 위해 {{title}}을/를 수행하는 중 ({{duration}}째)"
-    ],
-    "COMPLETED": [
-      "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
-    ],
-    "PERFECT": [
-      "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
-    ]
+    "ko": {
+      "EXECUTION_TITLE": "{{purpose}}{{particle:이/가}} 되기 위한 {{title}}",
+      "INACTIVE": [
+        "{{title}} 땡땡이치기"
+      ],
+      "INACTIVE_OFF_DAY": [
+        "오늘은 {{title}}을 하지 않는 날"
+      ],
+      "NOT_STARTED": [
+        "{{userName}}은 {{purpose}}이/가 되기 위해 {{title}}을/를 완료하기로 하고 일단 {{triggerTask}}부터 시작했다.",
+        "{{start_info}}, 일단 {{triggerTask}}만 해내면 {{title}}은 금방 끝나지",
+        "뭐? {{title}}을/를 {{totalTargetDuration}}동안 완료하면 {{purpose}}이/가 될 수 있다고?",
+        "{{start_info}}, {{triggerTask}}부터 시작해서 {{title}} 끝내고 {{purpose}}되기",
+        "{{userName}}님께서 {{title}} 미션을 시작합니다. 목표 타이틀:{{purpose}} 시작:{{start_info}}",
+        "{{userName}}의 오늘 목표는 {{title}}을 완료하는 것이다. 일단 {{triggerTask}}부터 시작해볼까?",
+        "{{purpose}}이/가 되기 위해 {{title}}을/를 {{days}}, {{start_info}} {{totalTargetDuration}}동안 실천하기로 했다",
+        "{{start_info}} {{title}}을/를 실천하기로 했다.",
+        "{{purpose}} {{userName}}이 된다는 것은 {{title}}을 수행한다는 것."
+      ],
+      "IN_PROGRESS": [
+        "{{purpose}}이/가 되기 위해 {{title}}을/를 수행하는 중 ({{duration}}째)"
+      ],
+      "COMPLETED": [
+        "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
+      ],
+      "PERFECT": [
+        "{{userName}}님이 {{purpose}}이/가 되기 위해서 {{title}}을/를 {{startTime}}부터 {{endTime}}까지 {{duration}}에 걸쳐 수행하였습니다."
+      ]
+    },
+    "en": {
+      "EXECUTION_TITLE": "{{title}} to become {{purpose}}",
+      "INACTIVE": [
+        "Skipping {{title}} today"
+      ],
+      "INACTIVE_OFF_DAY": [
+        "Today is not a scheduled day for {{title}}"
+      ],
+      "NOT_STARTED": [
+        "To become {{purpose}}, {{userName}} decided to complete {{title}} and started with {{triggerTask}} first.",
+        "{{start_info}}, once {{triggerTask}} is done, {{title}} will be finished in no time!",
+        "What? Completing {{title}} in {{totalTargetDuration}} will make me {{purpose}}?",
+        "{{start_info}}, start with {{triggerTask}}, finish {{title}}, and become {{purpose}}!",
+        "{{userName}} is starting the {{title}} mission. Target title: {{purpose}}, Start: {{start_info}}",
+        "{{userName}}'s goal today is to complete {{title}}. Shall we start with {{triggerTask}} first?",
+        "To become {{purpose}}, {{userName}} decided to practice {{title}} for {{days}}, {{start_info}} {{totalTargetDuration}}.",
+        "Decided to practice {{title}} on {{start_info}}.",
+        "To become {{purpose}} {{userName}} means performing {{title}}."
+      ],
+      "IN_PROGRESS": [
+        "Performing {{title}} to become {{purpose}} (for {{duration}})"
+      ],
+      "COMPLETED": [
+        "{{userName}} successfully performed {{title}} from {{startTime}} to {{endTime}} for {{duration}} to become {{purpose}}."
+      ],
+      "PERFECT": [
+        "{{userName}} successfully performed {{title}} from {{startTime}} to {{endTime}} for {{duration}} to become {{purpose}}."
+      ]
+    },
+    "ja": {
+      "EXECUTION_TITLE": "{{purpose}}になるための{{title}}",
+      "INACTIVE": [
+        "{{title}}をサボる"
+      ],
+      "INACTIVE_OFF_DAY": [
+        "今日は{{title}}をやらない日"
+      ],
+      "NOT_STARTED": [
+        "{{userName}}は{{purpose}}になるために{{title}}を完了することにし、ひとまず{{triggerTask}}から開始した。",
+        "{{start_info}}、とりあえず{{triggerTask}}さえ終わらせれば{{title}}はすぐに終わるさ。",
+        "えっ？{{title}}を{{totalTargetDuration}}間完了すれば{{purpose}}になれるって？",
+        "{{start_info}}、{{triggerTask}}から始めて{{title}}を終わらせて{{purpose}}になろう。",
+        "{{userName}}さんが{{title}}ミッションを開始します。目標タイトル:{{purpose}} 開始:{{start_info}}",
+        "{{userName}}の今日の目標は{{title}}を完了することだ。ひとまず{{triggerTask}}から始めてみようか？",
+        "{{purpose}}になるために{{title}}を{{days}}、{{start_info}} {{totalTargetDuration}}間実践することにした。",
+        "{{start_info}}に{{title}}を実践することにした。",
+        "{{purpose}} {{userName}}になるということは、{{title}}を実行するということ。"
+      ],
+      "IN_PROGRESS": [
+        "{{purpose}}になるために{{title}}を実行中（{{duration}}経過）"
+      ],
+      "COMPLETED": [
+        "{{userName}}さんが{{purpose}}になるために{{title}}を{{startTime}}부터 {{endTime}}까지 {{duration}}にわたって実行しました。"
+      ],
+      "PERFECT": [
+        "{{userName}}さんが{{purpose}}になるために{{title}}を{{startTime}}부터 {{endTime}}까지 {{duration}}にわたって実行しました。"
+      ]
+    }
   },
   "checkCheckSettings": {
     "intervalMinutes": 39,
     "evolutionStages": [
-      { "minClicks": 0, "iconId": "egg", "label": "알" }, 
-      { "minClicks": 1, "iconId": "broken_egg", "label": "깨진 알" }, 
-      { "minClicks": 2, "iconId": "chick_in_shell", "label": "알껍질 병아리" },
-      { "minClicks": 3, "iconId": "chick_hat_shell", "label": "껍질모자 병아리" }, 
-      { "minClicks": 4, "iconId": "yellow_chick", "label": "노란 병아리" },
-      { "minClicks": 5, "iconId": "orange_chick", "label": "주황 병아리" },           
-      { "minClicks": 6, "iconId": "orange_chick_comb", "label": "벼슬 주황 병아리" },
-      { "minClicks": 7, "iconId": "white_chicken", "label": "흰 닭" },
-      { "minClicks": 8, "iconId": "ribbon_white_chicken", "label": "리본 흰 닭" },
-      { "minClicks": 9, "iconId": "flower_white_chicken", "label": "꽃 흰 닭" },
-      { "minClicks": 10, "iconId": "yellow_chicken", "label": "노란 닭" },
-      { "minClicks": 11, "iconId": "flower_yellow_chicken", "label": "꽃 노란 닭" },
-      { "minClicks": 12, "iconId": "red_chicken", "label": "빨간 닭" },
-      { "minClicks": 13, "iconId": "flower_red_chicken", "label": "꽃 빨간 닭" },
-      { "minClicks": 14, "iconId": "phoenix", "label": "피닉스" },
-      { "minClicks": 15, "iconId": "crown_phoenix", "label": "왕관 피닉스" }
+      { "minClicks": 0, "iconId": "egg", "label": { "ko": "알", "en": "Egg", "ja": "卵" } }, 
+      { "minClicks": 1, "iconId": "broken_egg", "label": { "ko": "깨진 알", "en": "Cracked Egg", "ja": "ひび割れた卵" } }, 
+      { "minClicks": 2, "iconId": "chick_in_shell", "label": { "ko": "알껍질 병아리", "en": "Chick in Shell", "ja": "殻の中のひよこ" } },
+      { "minClicks": 3, "iconId": "chick_hat_shell", "label": { "ko": "껍질모자 병아리", "en": "Chick wearing Shell", "ja": "殻をかぶったひよこ" } }, 
+      { "minClicks": 4, "iconId": "yellow_chick", "label": { "ko": "노란 병아리", "en": "Yellow Chick", "ja": "黄色いひよこ" } },
+      { "minClicks": 5, "iconId": "orange_chick", "label": { "ko": "주황 병아리", "en": "Orange Chick", "ja": "オレンジ色のひよこ" } },           
+      { "minClicks": 6, "iconId": "orange_chick_comb", "label": { "ko": "벼슬 주황 병아리", "en": "Orange Chick with Comb", "ja": "とさか付きオレンジひよこ" } },
+      { "minClicks": 7, "iconId": "white_chicken", "label": { "ko": "흰 닭", "en": "White Chicken", "ja": "白いニワトリ" } },
+      { "minClicks": 8, "iconId": "ribbon_white_chicken", "label": { "ko": "리본 흰 닭", "en": "White Chicken with Ribbon", "ja": "リボンの白いニワトリ" } },
+      { "minClicks": 9, "iconId": "flower_white_chicken", "label": { "ko": "꽃 흰 닭", "en": "White Chicken with Flower", "ja": "花の白いニワトリ" } },
+      { "minClicks": 10, "iconId": "yellow_chicken", "label": { "ko": "노란 닭", "en": "Yellow Chicken", "ja": "黄色いニワトリ" } },
+      { "minClicks": 11, "iconId": "flower_yellow_chicken", "label": { "ko": "꽃 노란 닭", "en": "Yellow Chicken with Flower", "ja": "花の黄色いニワトリ" } },
+      { "minClicks": 12, "iconId": "red_chicken", "label": { "ko": "빨간 닭", "en": "Red Chicken", "ja": "赤いニワトリ" } },
+      { "minClicks": 13, "iconId": "flower_red_chicken", "label": { "ko": "꽃 빨간 닭", "en": "Red Chicken with Flower", "ja": "花の赤いニワトリ" } },
+      { "minClicks": 14, "iconId": "phoenix", "label": { "ko": "피닉스", "en": "Phoenix", "ja": "フェニックス" } },
+      { "minClicks": 15, "iconId": "crown_phoenix", "label": { "ko": "왕관 피닉스", "en": "Phoenix with Crown", "ja": "クラウンフェニックス" } }
     ]
   },
   "wakeUpCheckInSettings": {
-    "_comment": "기상 체크인 유예 시간 설정 (단위: 분)",
     "earlyWindowMinutes": 30,
     "lateWindowMinutes": 10
   }
