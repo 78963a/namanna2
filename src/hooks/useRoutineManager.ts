@@ -95,43 +95,33 @@ const speakAsync = (message: string, isEnabled: boolean, _variables?: any): Prom
 };
 
 const rebuildActivityLogs = (userData: UserData, now: Date, existingLogState?: Record<string, number[]>): Record<string, number[]> => {
-  const logs: Record<string, number[]> = { 
-    ...(userData.dailyActivityLog || {}),
-    ...(existingLogState || {})
-  };
-  const [resetH] = (userData.resetTime || '00:00').split(':').map(Number);
+  const logs: Record<string, number[]> = {};
+  
+  const allKeys = new Set([
+    ...Object.keys(userData.dailyActivityLog || {}),
+    ...Object.keys(existingLogState || {})
+  ]);
+
+  allKeys.forEach(key => {
+    const userLog = userData.dailyActivityLog?.[key];
+    const stateLog = existingLogState?.[key];
+    if (userLog && stateLog) {
+      const merged = new Array(1440).fill(0);
+      for (let i = 0; i < 1440; i++) {
+        merged[i] = userLog[i] !== 0 ? userLog[i] : stateLog[i];
+      }
+      logs[key] = merged;
+    } else if (userLog) {
+      logs[key] = [...userLog];
+    } else if (stateLog) {
+      logs[key] = [...stateLog];
+    }
+  });
 
   const todayCalStr = formatDate(now);
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const yesterdayCalStr = formatDate(yesterday);
   const datesToRebuild = [yesterdayCalStr, todayCalStr];
-
-  const getCalendarDate = (effDateStr: string, timeStr: string): Date | null => {
-    if (!timeStr) return null;
-    const parts = effDateStr.split('-').map(Number);
-    if (parts.length !== 3) return null;
-    const effDate = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
-    const [h, m, s] = timeStr.split(':').map(Number);
-    
-    const d = new Date(effDate);
-    if (h >= resetH) {
-      d.setHours(h, m, s || 0, 0);
-    } else {
-      d.setDate(d.getDate() + 1);
-      d.setHours(h, m, s || 0, 0);
-    }
-    return d;
-  };
-
-  const getResetTimeOfDate = (effDateStr: string): Date | null => {
-    const parts = effDateStr.split('-').map(Number);
-    if (parts.length !== 3) return null;
-    const d = new Date(parts[0], parts[1] - 1, parts[2] + 1);
-    d.setHours(resetH, 0, 0, 0);
-    return d;
-  };
-
-  const currentEffDateStr = formatDate(getEffectiveDateObject(now, resetH));
 
   datesToRebuild.forEach(calDateStr => {
     const parts = calDateStr.split('-').map(Number);
@@ -153,55 +143,9 @@ const rebuildActivityLogs = (userData: UserData, now: Date, existingLogState?: R
         continue;
       }
 
-      let timerRunning = false;
-
-      if (calDateStr === currentEffDateStr) {
-        userData.routineChunks.forEach(chunk => {
-          chunk.tasks.forEach(task => {
-            if (task.startTime && task.status === TaskStatus.IN_PROGRESS && !task.isPaused && !task.completed) {
-              const startCalDate = getCalendarDate(currentEffDateStr, task.startTime);
-              const resetCalDate = getResetTimeOfDate(currentEffDateStr);
-              if (startCalDate && resetCalDate) {
-                const endCalDate = now > resetCalDate ? resetCalDate : now;
-                if (minuteDate >= startCalDate && minuteDate <= endCalDate) {
-                  timerRunning = true;
-                }
-              }
-            }
-          });
-        });
-      }
-
-      if (userData.taskHistory) {
-        userData.taskHistory.forEach(entry => {
-          if (entry.date !== calDateStr) return;
-          if (entry.startTime) {
-            const startCalDate = getCalendarDate(entry.date, entry.startTime);
-            let endCalDate: Date | null = null;
-            if (entry.endTime) {
-              endCalDate = getCalendarDate(entry.date, entry.endTime);
-            } else if (entry.duration !== null && entry.duration !== undefined && entry.duration > 0) {
-              if (startCalDate) {
-                endCalDate = new Date(startCalDate.getTime() + entry.duration * 1000);
-              }
-            } else {
-              endCalDate = startCalDate;
-            }
-
-            if (startCalDate && endCalDate) {
-              if (minuteDate >= startCalDate && minuteDate <= endCalDate) {
-                timerRunning = true;
-              }
-            }
-          }
-        });
-      }
-
-      if (timerRunning) {
-        log[m] = 3; // 타이머 실행 중 background
-      } else {
-        log[m] = 1; // 비활성 black
-      }
+      // 과거 미기록된 빈 시간(0)은 타이머 startTime 기준으로 소급 역산하지 않고,
+      // 무조건 1(앱 미실행/비활성 검은색)로만 메워 과거 자던 시간이 주황색으로 오염되는 것을 방지합니다.
+      log[m] = 1;
     }
 
     logs[calDateStr] = log;
@@ -741,11 +685,13 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
             const logs = { ...(prev.dailyActivityLog || {}) };
             const currentLog = [...(logs[calDateStr] || new Array(1440).fill(0))];
             currentLog[currentMinutesSinceMidnight] = color;
+
             for (let i = 0; i < currentMinutesSinceMidnight; i++) {
               if (currentLog[i] === 0) {
                 currentLog[i] = 1;
               }
             }
+
             logs[calDateStr] = currentLog;
             return { ...prev, dailyActivityLog: logs };
           });
@@ -754,11 +700,13 @@ export const useRoutineManager = (_props: UseRoutineManagerProps) => {
             const logs = { ...prev };
             const currentLog = [...(logs[calDateStr] || new Array(1440).fill(0))];
             currentLog[currentMinutesSinceMidnight] = color;
+
             for (let i = 0; i < currentMinutesSinceMidnight; i++) {
               if (currentLog[i] === 0) {
                 currentLog[i] = 1;
               }
             }
+
             logs[calDateStr] = currentLog;
             return logs;
           });

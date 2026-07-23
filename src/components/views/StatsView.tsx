@@ -1351,7 +1351,7 @@ export const StatsView: React.FC<StatsViewProps> = ({
                                 <td className={`px-2 py-2 font-bold whitespace-nowrap ${isSunday(row.date) ? 'text-red-800' : 'text-slate-500'}`}>{row.date.split('-').slice(1).join('/')}</td>
                                 <td className="px-2 py-2 font-black text-violet-600">{row.rate}</td>
                                 <td className="px-2 py-2 font-bold text-slate-700 whitespace-nowrap">
-                                  {viewAllType === 'group' ? row.status : `${row.totalActive}${row.breakdown}`}
+                                  {viewAllType === 'group' ? t('status.' + row.status, { defaultValue: row.status }) : `${row.totalActive}${row.breakdown}`}
                                 </td>
                                 <td className="px-2 py-2 text-center font-black text-slate-700">
                                   <div className="flex flex-col md:flex-row md:items-center md:justify-center gap-0 md:gap-1 tracking-tighter">
